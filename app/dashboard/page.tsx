@@ -24,14 +24,14 @@ import Link from 'next/link'
 
 interface DashboardData {
   profile: {
-    display_name: string
+    display_name: string | null
     email: string
-    preferred_language: string
   }
   onboarding: {
     style_samples: string[]
     subjects: string[]
     delivery_days: string[]
+    preferred_language: string
   }
   metrics: {
     articles_generated: number
@@ -112,8 +112,8 @@ export default function DashboardPage() {
     )
   }
 
-  const firstName = data.profile.display_name.split(' ')[0]
-  const languageInfo = getLanguageInfo(data.profile.preferred_language)
+  const firstName = data.profile.display_name?.split(' ')[0] || 'there'
+  const languageInfo = getLanguageInfo(data.onboarding.preferred_language)
   const deliveryDaysResult = formatDeliveryDays(data.onboarding.delivery_days)
   const truncatedSubjects = truncateSubjects(data.onboarding.subjects)
   const displayedArticles = limitRecentArticles(data.recentArticles, 5)
@@ -195,7 +195,9 @@ export default function DashboardPage() {
                         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">
                           Name
                         </p>
-                        <p className="font-semibold text-sm">{data.profile.display_name}</p>
+                        <p className="font-semibold text-sm">
+                          {data.profile.display_name || 'Not set'}
+                        </p>
                       </div>
                     </div>
 

@@ -1,8 +1,9 @@
-"use server"
+'use server'
 
-import { getServerSupabaseClient } from "@/lib/supabase-client"
-import { getStripeClient } from "@/lib/stripe-client"
-import type { UserProfile } from "@/lib/types"
+import { getServerSupabaseClient } from '@/lib/supabase-client'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { getStripeClient } from '@/lib/stripe-client'
+import type { UserProfile } from '@/lib/types'
 
 export async function signUpAction(email: string, password: string, displayName: string) {
   try {
@@ -13,12 +14,12 @@ export async function signUpAction(email: string, password: string, displayName:
       email,
       password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
       },
     })
 
     if (authError) throw authError
-    if (!authData.user) throw new Error("Failed to create user")
+    if (!authData.user) throw new Error('Failed to create user')
 
     // Create Stripe customer
     const stripe = getStripeClient()
@@ -29,14 +30,16 @@ export async function signUpAction(email: string, password: string, displayName:
       },
     })
 
-    // Create user profile in database
-    const { error: profileError } = await supabase.from("user_profiles").insert({
+    // Create user profile in database using admin client to bypass RLS
+    // This is necessary because auth.uid() is not available immediately after signup
+    const supabaseAdmin = getSupabaseAdmin()
+    const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
       id: authData.user.id,
       email,
       display_name: displayName,
       stripe_customer_id: customer.id,
-      subscription_status: "trial",
-      subscription_plan: "free",
+      subscription_status: 'trial',
+      subscription_plan: 'free',
     })
 
     if (profileError) throw profileError
@@ -44,10 +47,10 @@ export async function signUpAction(email: string, password: string, displayName:
     return {
       success: true,
       user: authData.user,
-      message: "Signup successful. Please check your email to confirm.",
+      message: 'Signup successful. Please check your email to confirm.',
     }
   } catch (error) {
-    console.error("[Auth] Signup error:", error)
+    console.error('[Auth] Signup error:', error)
     throw error
   }
 }
@@ -68,7 +71,7 @@ export async function signInAction(email: string, password: string) {
       user: data.user,
     }
   } catch (error) {
-    console.error("[Auth] Signin error:", error)
+    console.error('[Auth] Signin error:', error)
     throw error
   }
 }
@@ -80,7 +83,7 @@ export async function signOutAction() {
     if (error) throw error
     return { success: true }
   } catch (error) {
-    console.error("[Auth] Signout error:", error)
+    console.error('[Auth] Signout error:', error)
     throw error
   }
 }
@@ -97,16 +100,16 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     if (userError || !user) return null
 
     const { data: profile, error: profileError } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("id", user.id)
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
       .single()
 
     if (profileError) return null
 
     return profile as UserProfile
   } catch (error) {
-    console.error("[Auth] Get user profile error:", error)
+    console.error('[Auth] Get user profile error:', error)
     return null
   }
 }

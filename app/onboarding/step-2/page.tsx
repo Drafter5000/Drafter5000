@@ -1,12 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Sparkles, X, Loader2, Lightbulb, AlertCircle } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Plus,
+  Sparkles,
+  X,
+  Loader2,
+  Lightbulb,
+  AlertCircle,
+  ArrowRight,
+  ArrowLeft,
+} from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation'
 
@@ -29,7 +40,28 @@ export default function Step2Page() {
   const [aiActive, setAiActive] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [aiLoading, setAiLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadExistingData = async () => {
+      if (!user) return
+      try {
+        const data = await apiClient.get<{ subjects: string[] }>(
+          `/onboarding/progress?user_id=${user.id}`
+        )
+        if (data.subjects?.length > 0) {
+          setSubjects(data.subjects)
+        }
+      } catch {
+        // No existing data
+      } finally {
+        setInitialLoading(false)
+      }
+    }
+    loadExistingData()
+  }, [user])
 
   const addSubject = (subject: string) => {
     if (isSubjectValid(subject, subjects)) {
@@ -43,11 +75,11 @@ export default function Step2Page() {
   }
 
   const activateAI = () => {
-    setLoading(true)
+    setAiLoading(true)
     setTimeout(() => {
       setAiActive(true)
-      setAiSuggestions(AI_SUGGESTIONS)
-      setLoading(false)
+      setAiSuggestions(AI_SUGGESTIONS.filter(s => !subjects.includes(s)))
+      setAiLoading(false)
     }, 800)
   }
 
@@ -68,50 +100,60 @@ export default function Step2Page() {
         user_id: user.id,
         subjects,
       })
-
       router.push('/onboarding/step-3')
-    } catch (err: any) {
-      setError(err.message || 'Failed to save subjects')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save subjects'
+      setError(message)
     } finally {
       setLoading(false)
     }
   }
 
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 mb-6">
-          <Lightbulb className="h-8 w-8 text-primary" />
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-amber-500/10">
+          <Lightbulb className="h-8 w-8 text-amber-500" />
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">Choose Topics</h1>
-        <p className="text-muted-foreground text-lg max-w-lg mx-auto leading-relaxed">
-          Select subjects for your articles. One subject = one article per cycle
-        </p>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Choose Your Topics</h1>
+          <p className="text-muted-foreground mt-2 max-w-lg mx-auto">
+            Add subjects you want to write about. Each topic becomes one article in your queue.
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div className="flex gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
-          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <p className="text-sm">{error}</p>
-        </div>
+        <Alert variant="destructive" className="max-w-2xl mx-auto">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <Card className="border-2">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              Your Subjects
-              {subjects.length > 0 && (
-                <span className="text-xs font-normal text-muted-foreground bg-secondary px-2 py-1 rounded-full">
-                  {subjects.length} added
-                </span>
-              )}
-            </CardTitle>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-amber-500" />
+                Your Topics
+              </CardTitle>
+              {subjects.length > 0 && <Badge variant="secondary">{subjects.length} added</Badge>}
+            </div>
+            <CardDescription>Type a topic and press Enter or click Add</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Enter a subject..."
+                placeholder="Enter a topic..."
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={e => {
@@ -120,36 +162,40 @@ export default function Step2Page() {
                     addSubject(inputValue)
                   }
                 }}
-                className="h-12"
               />
-              <Button
-                onClick={() => addSubject(inputValue)}
-                disabled={!inputValue.trim()}
-                className="h-12 px-4"
-              >
-                <Plus className="h-5 w-5" />
+              <Button onClick={() => addSubject(inputValue)} disabled={!inputValue.trim()}>
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <div className="min-h-[260px] max-h-[320px] overflow-y-auto space-y-2">
+
+            <div className="min-h-[280px] max-h-[320px] overflow-y-auto space-y-2">
               {subjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
                     <Lightbulb className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground">No subjects added yet</p>
+                  <p className="text-sm text-muted-foreground">No topics added yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Add your first topic above or use AI suggestions
+                  </p>
                 </div>
               ) : (
                 subjects.map((subject, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-4 rounded-xl border bg-secondary/30 group hover:bg-secondary/50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg border bg-card group hover:bg-accent/50 transition-colors"
                   >
-                    <span className="text-sm font-medium">{subject}</span>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="h-6 w-6 p-0 justify-center">
+                        {index + 1}
+                      </Badge>
+                      <span className="text-sm font-medium">{subject}</span>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => removeSubject(index)}
-                      className="h-8 w-8 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -160,29 +206,29 @@ export default function Step2Page() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-primary/20 bg-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              AI Helper
-            </CardTitle>
-            {!aiActive && (
-              <Button
-                onClick={activateAI}
-                size="sm"
-                disabled={loading}
-                className="shadow-lg shadow-primary/20"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  'Activate'
-                )}
-              </Button>
-            )}
+        <Card className="border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                AI Suggestions
+              </CardTitle>
+              {!aiActive && (
+                <Button onClick={activateAI} size="sm" disabled={aiLoading}>
+                  {aiLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Generate Ideas'
+                  )}
+                </Button>
+              )}
+            </div>
+            <CardDescription>
+              {aiActive ? 'Click a suggestion to add it' : 'Get AI-powered topic ideas'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {!aiActive ? (
@@ -190,23 +236,26 @@ export default function Step2Page() {
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
-                <p className="text-sm text-muted-foreground">Activate to get AI suggestions</p>
+                <p className="text-sm text-muted-foreground">Need inspiration?</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Click Generate Ideas to get suggestions
+                </p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[320px] overflow-y-auto">
                 {aiSuggestions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Sparkles className="h-6 w-6 text-primary mb-3" />
-                    <p className="text-sm text-muted-foreground">All suggestions added!</p>
+                    <p className="text-sm font-medium text-primary">All suggestions added!</p>
                   </div>
                 ) : (
                   aiSuggestions.map((suggestion, index) => (
                     <button
                       key={index}
                       onClick={() => addFromAI(suggestion)}
-                      className="w-full text-left p-4 rounded-xl border-2 border-transparent bg-background hover:border-primary/30 hover:bg-primary/5 transition-all text-sm flex items-center gap-3 group"
+                      className="w-full text-left p-3 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/30 transition-colors text-sm flex items-center gap-3"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                         <Plus className="h-4 w-4 text-primary" />
                       </div>
                       <span className="font-medium">{suggestion}</span>
@@ -219,21 +268,36 @@ export default function Step2Page() {
         </Card>
       </div>
 
-      <div className="flex justify-between pt-6">
-        <Button
-          variant="outline"
-          onClick={() => router.push('/onboarding/step-1')}
-          className="gap-2 border-2 h-12 px-6 bg-transparent"
-        >
+      <div className="flex items-center justify-between pt-6 border-t">
+        <Button variant="outline" onClick={() => router.push('/onboarding/step-1')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <Button
-          onClick={handleNext}
-          disabled={!isSubjectListValid(subjects) || loading}
-          className="gap-2 shadow-lg shadow-primary/20 h-12 px-8"
-        >
-          {loading ? 'Saving...' : 'Continue'}
-        </Button>
+
+        <div className="flex items-center gap-4">
+          {subjects.length > 0 && (
+            <span className="text-sm text-muted-foreground hidden sm:block">
+              {subjects.length} topic{subjects.length !== 1 ? 's' : ''} ready
+            </span>
+          )}
+          <Button
+            onClick={handleNext}
+            disabled={!isSubjectListValid(subjects) || loading}
+            size="lg"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )

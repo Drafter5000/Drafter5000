@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { getServerSupabaseClient } from '@/lib/supabase-client'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,8 +31,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user' }, { status: 400 })
     }
 
-    // Create user profile
-    const { error: profileError } = await supabase.from('user_profiles').insert({
+    // Create user profile using admin client to bypass RLS
+    // This is necessary because auth.uid() is not available immediately after signup
+    const supabaseAdmin = getSupabaseAdmin()
+    const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
       id: authData.user.id,
       email,
       subscription_status: 'trial',

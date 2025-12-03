@@ -36,19 +36,19 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Redirect authenticated users away from login/signup FIRST
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
   // Allow public routes
   if (publicRoutes.includes(pathname)) {
     return supabaseResponse
   }
 
   // Protect authenticated routes
-  if (!user && !publicRoutes.includes(pathname)) {
+  if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Redirect authenticated users away from login/signup
-  if (user && (pathname === '/login' || pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return supabaseResponse
