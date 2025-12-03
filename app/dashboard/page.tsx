@@ -1,34 +1,26 @@
-"use client"
+'use client'
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
-import { ProtectedRoute } from "@/components/protected-route"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { MetricCard } from "@/components/metric-card"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { apiClient } from "@/lib/api-client"
-import { FileText, Sparkles, Calendar, Mail, Plus, ArrowRight, AlertCircle } from "lucide-react"
-import Link from "next/link"
-
-const LANGUAGE_MAP: Record<string, { label: string; flag: string }> = {
-  en: { label: "English", flag: "🇺🇸" },
-  es: { label: "Spanish", flag: "🇪🇸" },
-  fr: { label: "French", flag: "🇫🇷" },
-  de: { label: "German", flag: "🇩🇪" },
-  it: { label: "Italian", flag: "🇮🇹" },
-  pt: { label: "Portuguese", flag: "🇵🇹" },
-  nl: { label: "Dutch", flag: "🇳🇱" },
-  pl: { label: "Polish", flag: "🇵🇱" },
-  ru: { label: "Russian", flag: "🇷🇺" },
-  ja: { label: "Japanese", flag: "🇯🇵" },
-  zh: { label: "Chinese", flag: "🇨🇳" },
-  ko: { label: "Korean", flag: "🇰🇷" },
-  ar: { label: "Arabic", flag: "🇸🇦" },
-  hi: { label: "Hindi", flag: "🇮🇳" },
-}
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/auth-provider'
+import { ProtectedRoute } from '@/components/protected-route'
+import { DashboardHeader } from '@/components/dashboard-header'
+import { MetricCard } from '@/components/metric-card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { apiClient } from '@/lib/api-client'
+import {
+  getLanguageInfo,
+  getStatusBadgeVariant,
+  formatDeliveryDays,
+  truncateSubjects,
+  limitRecentArticles,
+  getDayLabel,
+  type ArticleStatus,
+} from '@/lib/dashboard-utils'
+import { FileText, Sparkles, Calendar, Mail, Plus, ArrowRight, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
 
 interface DashboardData {
   profile: {
@@ -49,7 +41,7 @@ interface DashboardData {
   recentArticles: Array<{
     id: string
     subject: string
-    status: "draft" | "pending" | "sent"
+    status: 'draft' | 'pending' | 'sent'
     generated_at: string
     sent_at: string | null
   }>
@@ -68,11 +60,13 @@ export default function DashboardPage() {
 
       try {
         setLoading(true)
-        const dashboardData = await apiClient.get<DashboardData>(`/dashboard/metrics?user_id=${user.id}`)
+        const dashboardData = await apiClient.get<DashboardData>(
+          `/dashboard/metrics?user_id=${user.id}`
+        )
         setData(dashboardData)
       } catch (err: any) {
-        setError(err.message || "Failed to load dashboard")
-        console.error("Dashboard error:", err)
+        setError(err.message || 'Failed to load dashboard')
+        console.error('Dashboard error:', err)
       } finally {
         setLoading(false)
       }
@@ -109,7 +103,7 @@ export default function DashboardPage() {
             <div className="max-w-7xl mx-auto">
               <div className="flex gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
                 <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                <p>{error || "Failed to load dashboard"}</p>
+                <p>{error || 'Failed to load dashboard'}</p>
               </div>
             </div>
           </main>
@@ -118,17 +112,11 @@ export default function DashboardPage() {
     )
   }
 
-  const firstName = data.profile.display_name.split(" ")[0]
-  const dayLabels: Record<string, string> = {
-    mon: "Mon",
-    tue: "Tue",
-    wed: "Wed",
-    thu: "Thu",
-    fri: "Fri",
-    sat: "Sat",
-    sun: "Sun",
-  }
-  const languageInfo = LANGUAGE_MAP[data.profile.preferred_language] || LANGUAGE_MAP["en"]
+  const firstName = data.profile.display_name.split(' ')[0]
+  const languageInfo = getLanguageInfo(data.profile.preferred_language)
+  const deliveryDaysResult = formatDeliveryDays(data.onboarding.delivery_days)
+  const truncatedSubjects = truncateSubjects(data.onboarding.subjects)
+  const displayedArticles = limitRecentArticles(data.recentArticles, 5)
 
   return (
     <ProtectedRoute>
@@ -140,7 +128,9 @@ export default function DashboardPage() {
             {/* Welcome Section */}
             <div>
               <h2 className="text-3xl md:text-4xl font-bold mb-2">Welcome back, {firstName}! 👋</h2>
-              <p className="text-muted-foreground text-lg">Here's an overview of your article generation system</p>
+              <p className="text-muted-foreground text-lg">
+                Here's an overview of your article generation system
+              </p>
             </div>
 
             {/* Metrics Grid */}
@@ -196,11 +186,15 @@ export default function DashboardPage() {
                   <CardContent className="space-y-4">
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Email</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">
+                          Email
+                        </p>
                         <p className="font-semibold text-sm break-all">{data.profile.email}</p>
                       </div>
                       <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">Name</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-medium">
+                          Name
+                        </p>
                         <p className="font-semibold text-sm">{data.profile.display_name}</p>
                       </div>
                     </div>
@@ -211,12 +205,12 @@ export default function DashboardPage() {
                           Delivery Days ({data.onboarding.delivery_days.length}/7)
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {data.onboarding.delivery_days.length === 7 ? (
+                          {deliveryDaysResult.type === 'everyday' ? (
                             <Badge>Everyday</Badge>
                           ) : (
-                            data.onboarding.delivery_days.map((day) => (
+                            data.onboarding.delivery_days.map(day => (
                               <Badge key={day} variant="secondary">
-                                {dayLabels[day]}
+                                {getDayLabel(day)}
                               </Badge>
                             ))
                           )}
@@ -254,14 +248,17 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
                       <div>
                         <p className="text-sm text-muted-foreground">Trained on</p>
-                        <p className="text-2xl font-bold text-primary">{data.onboarding.style_samples.length}</p>
+                        <p className="text-2xl font-bold text-primary">
+                          {data.onboarding.style_samples.length}
+                        </p>
                       </div>
                       <FileText className="h-8 w-8 text-primary/50" />
                     </div>
                     <p className="text-xs text-muted-foreground mt-3">
-                      Your AI model has analyzed {data.onboarding.style_samples.length} sample article
-                      {data.onboarding.style_samples.length !== 1 ? "s" : ""} to learn your unique voice and writing
-                      patterns.
+                      Your AI model has analyzed {data.onboarding.style_samples.length} sample
+                      article
+                      {data.onboarding.style_samples.length !== 1 ? 's' : ''} to learn your unique
+                      voice and writing patterns.
                     </p>
                   </CardContent>
                 </Card>
@@ -283,13 +280,15 @@ export default function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {data.onboarding.subjects.length === 0 ? (
+                  {truncatedSubjects.displayed.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
                         <Sparkles className="h-6 w-6 text-muted-foreground" />
                       </div>
                       <p className="text-sm font-medium mb-3">No topics in queue</p>
-                      <p className="text-xs text-muted-foreground mb-4">Add subjects to start generating articles</p>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Add subjects to start generating articles
+                      </p>
                       <Link href="/onboarding/step-2" className="w-full">
                         <Button size="sm" className="w-full gap-2">
                           Add Topics <Plus className="h-4 w-4" />
@@ -298,7 +297,7 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {data.onboarding.subjects.slice(0, 8).map((subject, index) => (
+                      {truncatedSubjects.displayed.map((subject, index) => (
                         <div
                           key={index}
                           className="text-sm p-3 rounded-lg bg-secondary/50 border border-border/30 hover:border-primary/30 transition-colors"
@@ -311,9 +310,9 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       ))}
-                      {data.onboarding.subjects.length > 8 && (
+                      {truncatedSubjects.remaining > 0 && (
                         <p className="text-xs text-muted-foreground p-3 text-center">
-                          +{data.onboarding.subjects.length - 8} more topics
+                          +{truncatedSubjects.remaining} more topics
                         </p>
                       )}
                     </div>
@@ -323,7 +322,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Recent Articles */}
-            {data.recentArticles.length > 0 && (
+            {displayedArticles.length > 0 && (
               <Card className="border-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -333,7 +332,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {data.recentArticles.slice(0, 5).map((article) => (
+                    {displayedArticles.map(article => (
                       <div
                         key={article.id}
                         className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/30 hover:border-primary/30 transition-colors"
@@ -344,15 +343,7 @@ export default function DashboardPage() {
                             {new Date(article.generated_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <Badge
-                          variant={
-                            article.status === "sent"
-                              ? "default"
-                              : article.status === "pending"
-                                ? "secondary"
-                                : "outline"
-                          }
-                        >
+                        <Badge variant={getStatusBadgeVariant(article.status as ArticleStatus)}>
                           {article.status}
                         </Badge>
                       </div>

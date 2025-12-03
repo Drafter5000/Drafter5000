@@ -7,7 +7,7 @@ export class APIClient {
 
   async request<T>(
     endpoint: string,
-    options?: RequestInit & { params?: Record<string, any> }
+    options?: RequestInit & { params?: Record<string, string | number | boolean> }
   ): Promise<T> {
     const { params, ...requestInit } = options || {}
 
@@ -18,20 +18,38 @@ export class APIClient {
       })
     }
 
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...requestInit.headers,
-      },
-      ...requestInit,
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
-      throw new Error(error.error || error.message || `API error: ${response.status}`)
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...requestInit.headers,
+        },
+        ...requestInit,
+      })
+    } catch (networkError) {
+      throw new Error('Network error. Please check your connection.')
     }
 
-    return response.json()
+    const contentType = response.headers.get('content-type') || ''
+    const isJson = contentType.includes('application/json')
+
+    if (!response.ok) {
+      if (isJson) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(
+          errorData.error || errorData.message || `Request failed: ${response.status}`
+        )
+      }
+      throw new Error(`Request failed: ${response.status} ${response.statusText}`)
+    }
+
+    if (isJson) {
+      return response.json()
+    }
+
+    // For successful non-JSON responses, return empty object
+    return {} as T
   }
 
   get<T>(endpoint: string, options?: RequestInit) {

@@ -99,6 +99,29 @@ Before starting any task:
 - Provide meaningful error messages
 - Log errors with context using `console.error`
 
+#### Backend API Error Handling
+
+- All API routes MUST return JSON responses with proper Content-Type headers
+- Always validate environment variables at the start of API routes
+- Parse request body in a try-catch to handle malformed JSON
+- Return appropriate HTTP status codes:
+  - 400: Bad Request (validation errors, missing fields)
+  - 401: Unauthorized (authentication failures)
+  - 403: Forbidden (authorization failures)
+  - 404: Not Found
+  - 500: Internal Server Error (unexpected errors)
+- Error response format: `{ error: "Human-readable message" }`
+- Never expose internal error details to clients in production
+- Use typed error handling: `catch (error: unknown)` with instanceof checks
+
+#### Frontend Error Handling
+
+- Use the `apiClient` from `/lib/api-client.ts` for all API calls
+- Display user-friendly error messages from API responses
+- Handle network errors gracefully with fallback messages
+- Show loading states during async operations
+- Clear error states when user retries an action
+
 ### Naming Conventions
 
 - Components: PascalCase (`UserProfile.tsx`)
