@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/components/auth-provider"
-import { PenLine, Sparkles } from "lucide-react"
-import { useState, useEffect } from "react"
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/auth-provider'
+import { PenLine, Sparkles } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 export function Header() {
   const { user, loading } = useAuth()
@@ -23,7 +23,7 @@ export function Header() {
           <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
             <PenLine className="h-4.5 w-4.5 text-primary-foreground" />
           </div>
-          <span>ArticleForge</span>
+          <span>Drafter</span>
         </Link>
         <nav className="flex items-center gap-4">
           <Link

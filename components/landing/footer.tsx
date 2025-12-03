@@ -1,40 +1,40 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { PenLine, Twitter, Github, Linkedin, Mail } from "lucide-react"
+import Link from 'next/link'
+import { PenLine, Twitter, Github, Linkedin, Mail } from 'lucide-react'
 
 const footerLinks = {
   product: [
-    { name: "Features", href: "#features" },
-    { name: "Pricing", href: "/pricing" },
-    { name: "API", href: "#" },
-    { name: "Integrations", href: "#" },
+    { name: 'Features', href: '#features' },
+    { name: 'Pricing', href: '/pricing' },
+    { name: 'API', href: '#' },
+    { name: 'Integrations', href: '#' },
   ],
   company: [
-    { name: "About", href: "#" },
-    { name: "Blog", href: "#" },
-    { name: "Careers", href: "#" },
-    { name: "Press", href: "#" },
+    { name: 'About', href: '#' },
+    { name: 'Blog', href: '#' },
+    { name: 'Careers', href: '#' },
+    { name: 'Press', href: '#' },
   ],
   resources: [
-    { name: "Documentation", href: "#" },
-    { name: "Help Center", href: "#" },
-    { name: "Community", href: "#" },
-    { name: "Templates", href: "#" },
+    { name: 'Documentation', href: '#' },
+    { name: 'Help Center', href: '#' },
+    { name: 'Community', href: '#' },
+    { name: 'Templates', href: '#' },
   ],
   legal: [
-    { name: "Privacy", href: "#" },
-    { name: "Terms", href: "#" },
-    { name: "Security", href: "#" },
-    { name: "Cookies", href: "#" },
+    { name: 'Privacy', href: '#' },
+    { name: 'Terms', href: '#' },
+    { name: 'Security', href: '#' },
+    { name: 'Cookies', href: '#' },
   ],
 }
 
 const socialLinks = [
-  { icon: Twitter, href: "#", label: "Twitter" },
-  { icon: Github, href: "#", label: "GitHub" },
-  { icon: Linkedin, href: "#", label: "LinkedIn" },
-  { icon: Mail, href: "#", label: "Email" },
+  { icon: Twitter, href: '#', label: 'Twitter' },
+  { icon: Github, href: '#', label: 'GitHub' },
+  { icon: Linkedin, href: '#', label: 'LinkedIn' },
+  { icon: Mail, href: '#', label: 'Email' },
 ]
 
 export function Footer() {
@@ -48,10 +48,11 @@ export function Footer() {
               <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
                 <PenLine className="h-4.5 w-4.5 text-primary-foreground" />
               </div>
-              <span>ArticleForge</span>
+              <span>Drafter</span>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
-              AI-powered content creation that sounds like you. Transform your writing workflow today.
+              AI-powered content creation that sounds like you. Transform your writing workflow
+              today.
             </p>
             <div className="flex items-center gap-4">
               {socialLinks.map((social, index) => (
@@ -73,7 +74,10 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.product.map((link, index) => (
                 <li key={index}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {link.name}
                   </Link>
                 </li>
@@ -86,7 +90,10 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.company.map((link, index) => (
                 <li key={index}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {link.name}
                   </Link>
                 </li>
@@ -99,7 +106,10 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.resources.map((link, index) => (
                 <li key={index}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {link.name}
                   </Link>
                 </li>
@@ -112,7 +122,10 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.legal.map((link, index) => (
                 <li key={index}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {link.name}
                   </Link>
                 </li>
@@ -123,7 +136,7 @@ export function Footer() {
 
         <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ArticleForge. All rights reserved.
+            © {new Date().getFullYear()} Drafter. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
             Made with ❤️ for content creators worldwide

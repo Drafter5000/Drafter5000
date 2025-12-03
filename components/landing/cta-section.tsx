@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { ArrowRight, Sparkles, Zap, Shield } from "lucide-react"
-import Link from "next/link"
+import { motion } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { ArrowRight, Sparkles, Zap, Shield } from 'lucide-react'
+import Link from 'next/link'
 
 export function CTASection() {
   return (
@@ -14,13 +14,13 @@ export function CTASection() {
         <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(20, 184, 166, 0.15) 0%, transparent 60%)",
+            background: 'radial-gradient(circle, rgba(20, 184, 166, 0.15) 0%, transparent 60%)',
           }}
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.5, 0.8, 0.5],
           }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
@@ -43,25 +43,32 @@ export function CTASection() {
           </motion.div>
 
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            Ready to transform your{" "}
+            Ready to transform your{' '}
             <span className="bg-gradient-to-r from-primary via-chart-2 to-primary bg-[length:200%_auto] animate-gradient-x bg-clip-text text-transparent">
               content creation?
             </span>
           </h2>
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Join thousands of writers who are already saving time and creating better content with ArticleForge. 
-            Start your free trial today.
+            Join thousands of writers who are already saving time and creating better content with
+            Drafter. Start your free trial today.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Link href="/onboarding/step-1">
-              <Button size="lg" className="gap-2 shadow-2xl shadow-primary/30 text-lg px-10 h-14 rounded-2xl">
+              <Button
+                size="lg"
+                className="gap-2 shadow-2xl shadow-primary/30 text-lg px-10 h-14 rounded-2xl"
+              >
                 Start Writing Today <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
             <Link href="/pricing">
-              <Button size="lg" variant="outline" className="border-2 text-lg px-10 h-14 rounded-2xl bg-background/50 backdrop-blur-sm">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 text-lg px-10 h-14 rounded-2xl bg-background/50 backdrop-blur-sm"
+              >
                 View All Plans
               </Button>
             </Link>

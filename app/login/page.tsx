@@ -1,22 +1,22 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { LogIn, Mail, Lock, AlertCircle, Loader2 } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
-import Link from "next/link"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Header } from '@/components/header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { LogIn, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,10 +26,10 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      await apiClient.post("/auth/login", { email, password })
-      router.push("/dashboard")
+      await apiClient.post('/auth/login', { email, password })
+      router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message || "Failed to sign in")
+      setError(err.message || 'Failed to sign in')
     } finally {
       setLoading(false)
     }
@@ -50,7 +50,7 @@ export default function LoginPage() {
               <LogIn className="h-8 w-8 text-primary" />
             </div>
             <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription className="text-base">Sign in to your ArticleForge account</CardDescription>
+            <CardDescription className="text-base">Sign in to your Drafter account</CardDescription>
           </CardHeader>
           <CardContent className="px-8 pb-8">
             <form onSubmit={handleLogin} className="space-y-5">
@@ -71,7 +71,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   required
                   disabled={loading}
                   className="h-12"
@@ -88,7 +88,7 @@ export default function LoginPage() {
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   required
                   disabled={loading}
                   className="h-12"
@@ -106,7 +106,7 @@ export default function LoginPage() {
                     Signing in...
                   </>
                 ) : (
-                  "Sign In"
+                  'Sign In'
                 )}
               </Button>
             </form>

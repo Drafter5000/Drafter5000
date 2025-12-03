@@ -1,17 +1,17 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/components/auth-provider"
-import { PenLine, Sparkles, Menu, X } from "lucide-react"
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/auth-provider'
+import { PenLine, Sparkles, Menu, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const navLinks = [
-  { name: "Features", href: "#features" },
-  { name: "How it Works", href: "#how-it-works" },
-  { name: "Testimonials", href: "#testimonials" },
-  { name: "Pricing", href: "/pricing" },
+  { name: 'Features', href: '#features' },
+  { name: 'How it Works', href: '#how-it-works' },
+  { name: 'Testimonials', href: '#testimonials' },
+  { name: 'Pricing', href: '/pricing' },
 ]
 
 export function MarketingHeader() {
@@ -23,8 +23,8 @@ export function MarketingHeader() {
   useEffect(() => {
     setMounted(true)
     const handleScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   if (!mounted) return null
@@ -36,21 +36,21 @@ export function MarketingHeader() {
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled 
-            ? "bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm" 
-            : "bg-transparent"
+          scrolled
+            ? 'bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm'
+            : 'bg-transparent'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 font-bold text-xl group">
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.05, rotate: 5 }}
               className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow"
             >
               <PenLine className="h-5 w-5 text-white" />
             </motion.div>
-            <span className="hidden sm:inline">ArticleForge</span>
+            <span className="hidden sm:inline">Drafter</span>
           </Link>
 
           {/* Desktop Navigation */}

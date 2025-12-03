@@ -1,60 +1,73 @@
-"use client"
+'use client'
 
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Check, Zap } from "lucide-react"
-import { useState } from "react"
-import { apiClient } from "@/lib/api-client"
-import { useAuth } from "@/components/auth-provider"
+import { Header } from '@/components/header'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Check, Zap } from 'lucide-react'
+import { useState } from 'react'
+import { apiClient } from '@/lib/api-client'
+import { useAuth } from '@/components/auth-provider'
 
 const PLANS = [
   {
-    id: "free",
-    name: "Free",
+    id: 'free',
+    name: 'Free',
     price: 0,
-    description: "Perfect for getting started",
+    description: 'Perfect for getting started',
     articles_per_month: 2,
-    features: ["2 articles per month", "Email delivery", "AI style learning", "Basic scheduling", "Email support"],
-    cta: "Get Started",
+    features: [
+      '2 articles per month',
+      'Email delivery',
+      'AI style learning',
+      'Basic scheduling',
+      'Email support',
+    ],
+    cta: 'Get Started',
     highlighted: false,
   },
   {
-    id: "pro",
-    name: "Pro",
+    id: 'pro',
+    name: 'Pro',
     price: 70,
-    description: "Most popular for creators",
+    description: 'Most popular for creators',
     articles_per_month: 20,
     features: [
-      "20 articles per month",
-      "Priority email delivery",
-      "Advanced AI customization",
-      "Flexible scheduling",
-      "Priority support",
-      "Analytics dashboard",
-      "Custom tone control",
+      '20 articles per month',
+      'Priority email delivery',
+      'Advanced AI customization',
+      'Flexible scheduling',
+      'Priority support',
+      'Analytics dashboard',
+      'Custom tone control',
     ],
-    cta: "Start Free Trial",
+    cta: 'Start Free Trial',
     highlighted: true,
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
+    id: 'enterprise',
+    name: 'Enterprise',
     price: 299,
-    description: "For teams and agencies",
+    description: 'For teams and agencies',
     articles_per_month: 100,
     features: [
-      "100 articles per month",
-      "Instant delivery",
-      "White-label option",
-      "Team collaboration",
-      "24/7 dedicated support",
-      "Advanced analytics",
-      "Custom integrations",
-      "SLA guarantee",
+      '100 articles per month',
+      'Instant delivery',
+      'White-label option',
+      'Team collaboration',
+      '24/7 dedicated support',
+      'Advanced analytics',
+      'Custom integrations',
+      'SLA guarantee',
     ],
-    cta: "Contact Sales",
+    cta: 'Contact Sales',
     highlighted: false,
   },
 ]
@@ -66,16 +79,18 @@ export default function PricingPage() {
   const handleCheckout = async (planId: string) => {
     if (!user) {
       // Redirect to login/signup
-      window.location.href = "/signup"
+      window.location.href = '/signup'
       return
     }
 
     setLoading(planId)
     try {
-      const { sessionUrl } = await apiClient.post<{ sessionUrl: string }>("/stripe/checkout", { plan_id: planId })
+      const { sessionUrl } = await apiClient.post<{ sessionUrl: string }>('/stripe/checkout', {
+        plan_id: planId,
+      })
       window.location.href = sessionUrl
     } catch (error) {
-      console.error("Checkout error:", error)
+      console.error('Checkout error:', error)
     } finally {
       setLoading(null)
     }
@@ -103,13 +118,13 @@ export default function PricingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {PLANS.map((plan) => (
+            {PLANS.map(plan => (
               <Card
                 key={plan.id}
                 className={`border-2 relative flex flex-col transition-all hover:shadow-lg ${
                   plan.highlighted
-                    ? "border-primary/50 shadow-xl shadow-primary/10 md:scale-105 md:z-10"
-                    : "border-border"
+                    ? 'border-primary/50 shadow-xl shadow-primary/10 md:scale-105 md:z-10'
+                    : 'border-border'
                 }`}
               >
                 {plan.highlighted && (
@@ -118,19 +133,21 @@ export default function PricingPage() {
                   </div>
                 )}
 
-                <CardHeader className={plan.highlighted ? "pt-8" : ""}>
+                <CardHeader className={plan.highlighted ? 'pt-8' : ''}>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-6">
                     <span className="text-5xl font-bold">${plan.price}</span>
                     <span className="text-muted-foreground"> / month</span>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-3">{plan.articles_per_month} articles per month</p>
+                  <p className="text-sm text-muted-foreground mt-3">
+                    {plan.articles_per_month} articles per month
+                  </p>
                 </CardHeader>
 
                 <CardContent className="flex-1">
                   <div className="space-y-4">
-                    {plan.features.map((feature) => (
+                    {plan.features.map(feature => (
                       <div key={feature} className="flex items-start gap-3">
                         <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                         <span className="text-sm">{feature}</span>
@@ -140,10 +157,10 @@ export default function PricingPage() {
                 </CardContent>
 
                 <CardFooter>
-                  {plan.id === "enterprise" ? (
-                    <a href="mailto:sales@articleforge.com" className="w-full">
+                  {plan.id === 'enterprise' ? (
+                    <a href="mailto:sales@drafter.com" className="w-full">
                       <Button
-                        variant={plan.highlighted ? "default" : "outline"}
+                        variant={plan.highlighted ? 'default' : 'outline'}
                         className="w-full gap-2 shadow-lg shadow-primary/20"
                       >
                         {plan.cta}
@@ -153,10 +170,10 @@ export default function PricingPage() {
                     <Button
                       onClick={() => handleCheckout(plan.id)}
                       disabled={loading === plan.id}
-                      variant={plan.highlighted ? "default" : "outline"}
+                      variant={plan.highlighted ? 'default' : 'outline'}
                       className="w-full gap-2 shadow-lg shadow-primary/20"
                     >
-                      {loading === plan.id ? "Processing..." : plan.cta}
+                      {loading === plan.id ? 'Processing...' : plan.cta}
                     </Button>
                   )}
                 </CardFooter>

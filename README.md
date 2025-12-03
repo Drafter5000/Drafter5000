@@ -1,4 +1,4 @@
-# ArticleForge Pro - Production MVP
+# Drafter - Production MVP
 
 A full-stack SaaS platform for AI-powered article generation with personalized writing styles.
 
@@ -14,8 +14,8 @@ A full-stack SaaS platform for AI-powered article generation with personalized w
 
 ## Project Structure
 
-\`\`\`
-articleforge-pro/
+```
+drafter/
 ├── app/                          # Next.js app directory
 │   ├── api/                      # Backend API routes
 │   │   ├── auth/                 # Authentication endpoints
@@ -54,7 +54,7 @@ articleforge-pro/
 ├── package.json                 # Dependencies
 ├── tsconfig.json                # TypeScript config
 └── README.md                    # This file
-\`\`\`
+```
 
 ## Quick Start
 
@@ -68,10 +68,10 @@ articleforge-pro/
 
 ### Installation
 
-\`\`\`bash
+```bash
 # Clone repository
 git clone <repo-url>
-cd articleforge-pro
+cd drafter
 
 # Install dependencies
 npm install
@@ -84,7 +84,7 @@ cp .env.example .env.local
 
 # Run development server
 npm run dev
-\`\`\`
+```
 
 Open http://localhost:3000 in your browser.
 
@@ -94,7 +94,7 @@ Open http://localhost:3000 in your browser.
 
 Create a `.env.local` file with the following:
 
-\`\`\`env
+```env
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -117,14 +117,14 @@ GOOGLE_SHEETS_ARTICLES_ID=spreadsheet_id_2
 
 # Vercel
 NEXT_PUBLIC_VERCEL_URL=your_vercel_domain.com
-\`\`\`
+```
 
 ### Supabase Setup
 
 1. Create a Supabase project
 2. Run the following SQL to create required tables:
 
-\`\`\`sql
+```sql
 -- User profiles
 CREATE TABLE public.user_profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -189,7 +189,7 @@ CREATE POLICY "Users can update own onboarding data" ON public.onboarding_data
 
 CREATE POLICY "Users can view own articles" ON public.articles
   FOR SELECT USING (auth.uid() = user_id);
-\`\`\`
+```
 
 ### Stripe Setup
 
@@ -226,9 +226,9 @@ See `docs/STRIPE_INTEGRATION.md` for complete setup guide.
 2. Connect repository to Vercel
 3. Add environment variables in Vercel dashboard
 4. Deploy:
-   \`\`\`bash
+   ```bash
    vercel --prod
-   \`\`\`
+   ```
 
 ### Production Checklist
 
@@ -297,29 +297,32 @@ All tables use Row Level Security (RLS) with policies ensuring users only access
 
 ## Testing
 
-\`\`\`bash
+```bash
 # Run tests
 npm run test
 
 # Test coverage
 npm run test:coverage
-\`\`\`
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
 **Supabase Connection Error**
+
 - Verify URL and anon key in .env.local
 - Check network connectivity
 - Ensure RLS policies are correct
 
 **Stripe Webhook Not Firing**
+
 - Verify webhook URL in Stripe dashboard
 - Check webhook secret matches environment variable
 - Ensure POST requests are accepted
 
 **Google Sheets Write Fails**
+
 - Verify credentials.json path
 - Ensure service account has sheet editor permissions
 - Check spreadsheet IDs are correct
@@ -327,6 +330,7 @@ npm run test:coverage
 ## Documentation
 
 Additional documentation is available in the `docs/` folder:
+
 - `docs/DEPLOYMENT.md` - Production deployment guide
 - `docs/STRIPE_INTEGRATION.md` - Complete Stripe billing setup
 - `docs/STRIPE_QUICK_START.md` - 5-minute Stripe setup
@@ -335,10 +339,11 @@ Additional documentation is available in the `docs/` folder:
 ## Support
 
 For issues or questions:
+
 - Documentation: See `docs/` folder
-- Email: support@articleforge.com
+- Email: support@drafter.com
 - Issues: GitHub issue tracker
 
 ## License
 
-Proprietary - ArticleForge Pro
+Proprietary - Drafter
