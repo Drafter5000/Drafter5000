@@ -1,106 +1,206 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Target, Sparkles, Clock, Send, CheckCircle2 } from 'lucide-react';
+import { FileText, Sparkles, Calendar, Mail, ArrowRight } from 'lucide-react';
 
 const steps = [
   {
-    icon: Target,
+    icon: FileText,
     number: '01',
     title: 'Train Your AI',
     description:
-      'Paste your existing articles or writing samples. Our AI analyzes your unique voice, vocabulary, and style patterns to create a personalized writing model.',
-    color: 'from-violet-500 to-purple-600',
+      'Paste your existing articles or writing samples. Our AI analyzes your unique voice, vocabulary, and style patterns.',
+    highlight: 'Takes only 5 minutes',
+    color: 'bg-violet-500',
+    lightColor: 'bg-violet-500/10',
+    textColor: 'text-violet-500',
   },
   {
     icon: Sparkles,
     number: '02',
-    title: 'Choose Your Topics',
+    title: 'Choose Topics',
     description:
-      'Select from AI-suggested topics or add your own. Our system understands your niche and generates relevant, engaging topic ideas.',
-    color: 'from-primary to-teal-400',
+      'Select from AI-suggested topics or add your own. Our system understands your niche and generates relevant ideas.',
+    highlight: 'AI-powered suggestions',
+    color: 'bg-primary',
+    lightColor: 'bg-primary/10',
+    textColor: 'text-primary',
   },
   {
-    icon: Clock,
+    icon: Calendar,
     number: '03',
-    title: 'Set Your Schedule',
+    title: 'Set Schedule',
     description:
-      "Pick the days and frequency for article delivery. Whether daily, weekly, or custom schedules, we've got you covered.",
-    color: 'from-amber-500 to-orange-500',
+      'Pick the days and frequency for article delivery. Daily, weekly, or custom schedules available.',
+    highlight: 'Flexible delivery',
+    color: 'bg-amber-500',
+    lightColor: 'bg-amber-500/10',
+    textColor: 'text-amber-500',
   },
   {
-    icon: Send,
+    icon: Mail,
     number: '04',
-    title: 'Receive & Publish',
+    title: 'Receive Articles',
     description:
-      'Get professionally written articles delivered to your inbox. Review, edit if needed, and publish to your platform of choice.',
-    color: 'from-pink-500 to-rose-500',
+      'Get professionally written articles delivered to your inbox. Review, edit, and publish anywhere.',
+    highlight: 'Ready to publish',
+    color: 'bg-emerald-500',
+    lightColor: 'bg-emerald-500/10',
+    textColor: 'text-emerald-500',
   },
 ];
 
 export function HowItWorksSection() {
   return (
-    <section className="py-32 px-6 bg-gradient-to-b from-background via-secondary/30 to-background relative overflow-hidden">
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-chart-2/5 rounded-full blur-3xl" />
-
-      <div className="max-w-7xl mx-auto relative">
+    <section className="py-24 px-6 bg-gradient-to-b from-background to-secondary/20 relative overflow-hidden">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-20"
+          transition={{ duration: 0.5 }}
+          className="text-center mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-chart-2/10 text-chart-2 text-sm font-medium mb-6">
-            <CheckCircle2 className="h-4 w-4" />
+          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Simple Process
           </span>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            How it{' '}
-            <span className="bg-gradient-to-r from-chart-2 to-primary bg-clip-text text-transparent">
-              works
-            </span>
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Get started in minutes with our simple four-step process
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Get your personalized AI writer up and running in four simple steps
           </p>
         </motion.div>
 
-        <div className="relative">
-          {/* Connection line */}
-          <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2" />
+        {/* Desktop: Horizontal Process */}
+        <div className="hidden lg:block">
+          <div className="relative">
+            {/* Connection Line */}
+            <div className="absolute top-16 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-violet-500/30 via-amber-500/30 to-emerald-500/30" />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((step, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.15 }}
-                className="relative"
-              >
-                <div className="group p-8 rounded-3xl bg-card border border-border hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full">
-                  {/* Step number badge */}
-                  <div className="absolute -top-4 left-8 px-4 py-1 rounded-full bg-background border border-border text-sm font-bold text-muted-foreground">
-                    Step {step.number}
+            <div className="grid grid-cols-4 gap-6">
+              {steps.map((step, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="relative"
+                >
+                  {/* Step Circle */}
+                  <div className="flex justify-center mb-8">
+                    <div
+                      className={`relative z-10 h-32 w-32 rounded-full ${step.lightColor} flex items-center justify-center`}
+                    >
+                      <div
+                        className={`h-20 w-20 rounded-full ${step.color} flex items-center justify-center shadow-lg`}
+                      >
+                        <step.icon className="h-9 w-9 text-white" />
+                      </div>
+                    </div>
                   </div>
 
-                  <div
-                    className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${step.color} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <step.icon className="h-7 w-7 text-white" />
+                  {/* Content */}
+                  <div className="text-center">
+                    <span className={`inline-block text-xs font-bold ${step.textColor} mb-2`}>
+                      STEP {step.number}
+                    </span>
+                    <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                      {step.description}
+                    </p>
+                    <span
+                      className={`inline-block text-xs font-medium ${step.textColor} ${step.lightColor} px-3 py-1 rounded-full`}
+                    >
+                      {step.highlight}
+                    </span>
                   </div>
 
-                  <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{step.description}</p>
-                </div>
-              </motion.div>
-            ))}
+                  {/* Arrow */}
+                  {index < steps.length - 1 && (
+                    <div className="absolute top-16 -right-3 z-20 hidden lg:block">
+                      <ArrowRight className="h-6 w-6 text-muted-foreground/30" />
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Mobile/Tablet: Vertical Timeline */}
+        <div className="lg:hidden">
+          <div className="relative">
+            {/* Vertical Line */}
+            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border" />
+
+            <div className="space-y-8">
+              {steps.map((step, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="relative flex gap-6"
+                >
+                  {/* Icon Circle */}
+                  <div className="relative z-10 shrink-0">
+                    <div
+                      className={`h-16 w-16 rounded-full ${step.lightColor} flex items-center justify-center`}
+                    >
+                      <div
+                        className={`h-12 w-12 rounded-full ${step.color} flex items-center justify-center shadow-md`}
+                      >
+                        <step.icon className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content Card */}
+                  <div className="flex-1 pb-8">
+                    <div className="bg-card border border-border rounded-2xl p-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className={`text-xs font-bold ${step.textColor}`}>
+                          STEP {step.number}
+                        </span>
+                        <span
+                          className={`text-xs font-medium ${step.textColor} ${step.lightColor} px-2 py-0.5 rounded-full`}
+                        >
+                          {step.highlight}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {step.description}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="text-center mt-16"
+        >
+          <p className="text-muted-foreground mb-4">
+            Ready to get started? It only takes 5 minutes.
+          </p>
+          <a
+            href="/signup"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors"
+          >
+            Start Free Trial
+            <ArrowRight className="h-4 w-4" />
+          </a>
+        </motion.div>
       </div>
     </section>
   );
