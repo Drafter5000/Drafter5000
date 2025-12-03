@@ -1,38 +1,40 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { AlertCircle, Loader2, CheckCircle2 } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
-import Link from "next/link"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Header } from '@/components/header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { AlertCircle, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
+import Link from 'next/link'
 
 export default function SignupPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const validateForm = () => {
     if (!email || !password || !confirmPassword) {
-      setError("Please fill in all fields")
+      setError('Please fill in all fields')
       return false
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters")
+      setError('Password must be at least 8 characters')
       return false
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError('Passwords do not match')
       return false
     }
     return true
@@ -46,11 +48,11 @@ export default function SignupPage() {
     setError(null)
 
     try {
-      await apiClient.post("/auth/signup", { email, password })
+      await apiClient.post('/auth/signup', { email, password })
       setSuccess(true)
-      setTimeout(() => router.push("/login"), 2000)
+      setTimeout(() => router.push('/login'), 2000)
     } catch (err: any) {
-      setError(err.message || "Failed to create account")
+      setError(err.message || 'Failed to create account')
     } finally {
       setLoading(false)
     }
@@ -88,7 +90,9 @@ export default function SignupPage() {
         <Card className="max-w-md mx-auto border-2 shadow-2xl shadow-primary/5">
           <CardHeader className="text-center pb-2 pt-8">
             <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
-            <CardDescription className="text-base">Join thousands generating AI articles</CardDescription>
+            <CardDescription className="text-base">
+              Join thousands generating AI articles
+            </CardDescription>
           </CardHeader>
           <CardContent className="px-8 pb-8">
             <form onSubmit={handleSignup} className="space-y-5">
@@ -108,7 +112,7 @@ export default function SignupPage() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   required
                   disabled={loading}
                   className="h-12"
@@ -119,16 +123,26 @@ export default function SignupPage() {
                 <Label htmlFor="password" className="text-sm font-medium">
                   Password
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="h-12"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="h-12 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground">At least 8 characters</p>
               </div>
 
@@ -136,16 +150,30 @@ export default function SignupPage() {
                 <Label htmlFor="confirmPassword" className="text-sm font-medium">
                   Confirm Password
                 </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="h-12"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="h-12 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <Button
@@ -159,7 +187,7 @@ export default function SignupPage() {
                     Creating account...
                   </>
                 ) : (
-                  "Sign Up Free"
+                  'Sign Up Free'
                 )}
               </Button>
             </form>
