@@ -1,69 +1,76 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, User, Globe, AlertCircle, Loader2 } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/auth-provider'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Calendar, User, Globe, AlertCircle, Loader2 } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
+import { isStep3FormValid } from '@/lib/onboarding-validation'
+import {
+  toggleDay as toggleDayUtil,
+  toggleAllDays,
+  areAllDaysSelected,
+  DayCode,
+} from '@/lib/day-selection'
 
 const DAYS = [
-  { id: "mon", label: "Monday" },
-  { id: "tue", label: "Tuesday" },
-  { id: "wed", label: "Wednesday" },
-  { id: "thu", label: "Thursday" },
-  { id: "fri", label: "Friday" },
-  { id: "sat", label: "Saturday" },
-  { id: "sun", label: "Sunday" },
+  { id: 'mon' as DayCode, label: 'Monday' },
+  { id: 'tue' as DayCode, label: 'Tuesday' },
+  { id: 'wed' as DayCode, label: 'Wednesday' },
+  { id: 'thu' as DayCode, label: 'Thursday' },
+  { id: 'fri' as DayCode, label: 'Friday' },
+  { id: 'sat' as DayCode, label: 'Saturday' },
+  { id: 'sun' as DayCode, label: 'Sunday' },
 ]
 
 const LANGUAGES = [
-  { code: "en", label: "English", flag: "🇺🇸" },
-  { code: "es", label: "Spanish", flag: "🇪🇸" },
-  { code: "fr", label: "French", flag: "🇫🇷" },
-  { code: "de", label: "German", flag: "🇩🇪" },
-  { code: "it", label: "Italian", flag: "🇮🇹" },
-  { code: "pt", label: "Portuguese", flag: "🇵🇹" },
-  { code: "nl", label: "Dutch", flag: "🇳🇱" },
-  { code: "pl", label: "Polish", flag: "🇵🇱" },
-  { code: "ru", label: "Russian", flag: "🇷🇺" },
-  { code: "ja", label: "Japanese", flag: "🇯🇵" },
-  { code: "zh", label: "Chinese", flag: "🇨🇳" },
-  { code: "ko", label: "Korean", flag: "🇰🇷" },
-  { code: "ar", label: "Arabic", flag: "🇸🇦" },
-  { code: "hi", label: "Hindi", flag: "🇮🇳" },
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
+  { code: 'fr', label: 'French', flag: '🇫🇷' },
+  { code: 'de', label: 'German', flag: '🇩🇪' },
+  { code: 'it', label: 'Italian', flag: '🇮🇹' },
+  { code: 'pt', label: 'Portuguese', flag: '🇵🇹' },
+  { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
+  { code: 'pl', label: 'Polish', flag: '🇵🇱' },
+  { code: 'ru', label: 'Russian', flag: '🇷🇺' },
+  { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
+  { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
+  { code: 'ko', label: 'Korean', flag: '🇰🇷' },
+  { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
+  { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
 ]
-
-const ALL_DAY_IDS = DAYS.map((d) => d.id)
 
 export default function Step3Page() {
   const router = useRouter()
   const { user } = useAuth()
-  const [email, setEmail] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [frequency, setFrequency] = useState<string[]>([])
-  const [language, setLanguage] = useState("en")
+  const [email, setEmail] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [frequency, setFrequency] = useState<DayCode[]>([])
+  const [language, setLanguage] = useState('en')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const toggleDay = (dayId: string) => {
-    setFrequency((prev) => (prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId]))
+  const handleToggleDay = (dayId: DayCode) => {
+    setFrequency(prev => toggleDayUtil(prev, dayId))
   }
 
-  const isEveryday = frequency.length === 7
+  const isEveryday = areAllDaysSelected(frequency)
 
-  const toggleEveryday = () => {
-    if (isEveryday) {
-      setFrequency([])
-    } else {
-      setFrequency(ALL_DAY_IDS)
-    }
+  const handleToggleEveryday = () => {
+    setFrequency(prev => toggleAllDays(prev))
   }
 
   const handleComplete = async () => {
@@ -73,7 +80,7 @@ export default function Step3Page() {
 
     try {
       // Save to Supabase and provision customer in Google Sheets
-      await apiClient.post("/onboarding/step-3", {
+      await apiClient.post('/onboarding/step-3', {
         user_id: user.id,
         email,
         display_name: `${firstName} ${lastName}`,
@@ -82,16 +89,16 @@ export default function Step3Page() {
       })
 
       // Redirect to dashboard on success
-      router.push("/dashboard")
+      router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message || "Failed to complete setup")
+      setError(err.message || 'Failed to complete setup')
     } finally {
       setLoading(false)
     }
   }
 
-  const isValid = email && firstName && lastName && frequency.length > 0
-  const selectedLanguage = LANGUAGES.find((l) => l.code === language)
+  const isValid = isStep3FormValid(email, firstName, lastName, frequency)
+  const selectedLanguage = LANGUAGES.find(l => l.code === language)
 
   return (
     <div className="space-y-8">
@@ -132,7 +139,7 @@ export default function Step3Page() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   className="h-12"
                   disabled={loading}
                 />
@@ -147,7 +154,7 @@ export default function Step3Page() {
                     id="firstName"
                     placeholder="John"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={e => setFirstName(e.target.value)}
                     className="h-12"
                     disabled={loading}
                   />
@@ -160,7 +167,7 @@ export default function Step3Page() {
                     id="lastName"
                     placeholder="Doe"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={e => setLastName(e.target.value)}
                     className="h-12"
                     disabled={loading}
                   />
@@ -181,21 +188,21 @@ export default function Step3Page() {
               <div
                 className={`flex items-center space-x-3 p-4 rounded-xl border-2 transition-all cursor-pointer ${
                   isEveryday
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-primary/30 hover:bg-secondary/30"
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:border-primary/30 hover:bg-secondary/30'
                 }`}
-                onClick={toggleEveryday}
+                onClick={handleToggleEveryday}
               >
                 <Checkbox
                   id="everyday"
                   checked={isEveryday}
-                  onCheckedChange={toggleEveryday}
+                  onCheckedChange={handleToggleEveryday}
                   className="h-5 w-5"
                   disabled={loading}
                 />
                 <Label
                   htmlFor="everyday"
-                  className={`text-sm font-semibold cursor-pointer ${isEveryday ? "text-primary" : ""}`}
+                  className={`text-sm font-semibold cursor-pointer ${isEveryday ? 'text-primary' : ''}`}
                 >
                   Every Day
                 </Label>
@@ -206,20 +213,20 @@ export default function Step3Page() {
                   Or select specific days
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {DAYS.map((day) => (
+                  {DAYS.map(day => (
                     <div
                       key={day.id}
                       className={`flex items-center space-x-2 p-2.5 rounded-lg border transition-all cursor-pointer ${
                         frequency.includes(day.id)
-                          ? "border-primary/50 bg-primary/5"
-                          : "border-border hover:border-primary/30 hover:bg-secondary/30"
+                          ? 'border-primary/50 bg-primary/5'
+                          : 'border-border hover:border-primary/30 hover:bg-secondary/30'
                       }`}
-                      onClick={() => toggleDay(day.id)}
+                      onClick={() => handleToggleDay(day.id)}
                     >
                       <Checkbox
                         id={day.id}
                         checked={frequency.includes(day.id)}
-                        onCheckedChange={() => toggleDay(day.id)}
+                        onCheckedChange={() => handleToggleDay(day.id)}
                         className="h-4 w-4"
                         disabled={loading}
                       />
@@ -234,7 +241,7 @@ export default function Step3Page() {
               {frequency.length > 0 && (
                 <div className="pt-2 text-sm text-muted-foreground">
                   <span className="font-semibold text-foreground">{frequency.length}</span> day
-                  {frequency.length !== 1 ? "s" : ""} per week
+                  {frequency.length !== 1 ? 's' : ''} per week
                 </div>
               )}
             </CardContent>
@@ -263,7 +270,7 @@ export default function Step3Page() {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {LANGUAGES.map((lang) => (
+                    {LANGUAGES.map(lang => (
                       <SelectItem key={lang.code} value={lang.code}>
                         <span className="flex items-center gap-2">
                           <span className="text-lg">{lang.flag}</span>
@@ -276,19 +283,24 @@ export default function Step3Page() {
               </div>
 
               <div className="p-4 rounded-xl bg-secondary/50 border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Selected Language</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                  Selected Language
+                </p>
                 <div className="flex items-center gap-3">
                   <span className="text-4xl">{selectedLanguage?.flag}</span>
                   <div>
                     <p className="font-semibold text-lg">{selectedLanguage?.label}</p>
-                    <p className="text-sm text-muted-foreground">Articles in {selectedLanguage?.label}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Articles in {selectedLanguage?.label}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-primary">Note:</span> Style is analyzed regardless of language
+                  <span className="font-medium text-primary">Note:</span> Style is analyzed
+                  regardless of language
                 </p>
               </div>
             </CardContent>
@@ -299,7 +311,7 @@ export default function Step3Page() {
       <div className="flex justify-between pt-6 max-w-4xl mx-auto">
         <Button
           variant="outline"
-          onClick={() => router.push("/onboarding/step-2")}
+          onClick={() => router.push('/onboarding/step-2')}
           disabled={loading}
           className="gap-2 border-2 h-12 px-6 bg-transparent"
         >
@@ -316,7 +328,7 @@ export default function Step3Page() {
               Completing Setup...
             </>
           ) : (
-            "Complete Setup"
+            'Complete Setup'
           )}
         </Button>
       </div>

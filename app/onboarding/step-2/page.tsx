@@ -1,40 +1,41 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Sparkles, X, Loader2, Lightbulb, AlertCircle } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/auth-provider'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus, Sparkles, X, Loader2, Lightbulb, AlertCircle } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
+import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation'
 
 const AI_SUGGESTIONS = [
-  "The Future of Remote Work in 2025",
-  "Building a Personal Brand Online",
-  "Productivity Hacks That Actually Work",
-  "The Art of Effective Communication",
-  "Sustainable Living Tips for Beginners",
-  "Mental Health in the Digital Age",
-  "Investing Strategies for Millennials",
-  "The Power of Habit Formation",
+  'The Future of Remote Work in 2025',
+  'Building a Personal Brand Online',
+  'Productivity Hacks That Actually Work',
+  'The Art of Effective Communication',
+  'Sustainable Living Tips for Beginners',
+  'Mental Health in the Digital Age',
+  'Investing Strategies for Millennials',
+  'The Power of Habit Formation',
 ]
 
 export default function Step2Page() {
   const router = useRouter()
   const { user } = useAuth()
   const [subjects, setSubjects] = useState<string[]>([])
-  const [inputValue, setInputValue] = useState("")
+  const [inputValue, setInputValue] = useState('')
   const [aiActive, setAiActive] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const addSubject = (subject: string) => {
-    if (subject.trim() && !subjects.includes(subject.trim())) {
+    if (isSubjectValid(subject, subjects)) {
       setSubjects([...subjects, subject.trim()])
     }
-    setInputValue("")
+    setInputValue('')
   }
 
   const removeSubject = (index: number) => {
@@ -51,10 +52,10 @@ export default function Step2Page() {
   }
 
   const addFromAI = (suggestion: string) => {
-    if (!subjects.includes(suggestion)) {
+    if (isSubjectValid(suggestion, subjects)) {
       setSubjects([...subjects, suggestion])
+      setAiSuggestions(aiSuggestions.filter(s => s !== suggestion))
     }
-    setAiSuggestions(aiSuggestions.filter((s) => s !== suggestion))
   }
 
   const handleNext = async () => {
@@ -63,14 +64,14 @@ export default function Step2Page() {
     setError(null)
 
     try {
-      await apiClient.post("/onboarding/step-2", {
+      await apiClient.post('/onboarding/step-2', {
         user_id: user.id,
         subjects,
       })
 
-      router.push("/onboarding/step-3")
+      router.push('/onboarding/step-3')
     } catch (err: any) {
-      setError(err.message || "Failed to save subjects")
+      setError(err.message || 'Failed to save subjects')
     } finally {
       setLoading(false)
     }
@@ -112,16 +113,20 @@ export default function Step2Page() {
               <Input
                 placeholder="Enter a subject..."
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
                     e.preventDefault()
                     addSubject(inputValue)
                   }
                 }}
                 className="h-12"
               />
-              <Button onClick={() => addSubject(inputValue)} disabled={!inputValue.trim()} className="h-12 px-4">
+              <Button
+                onClick={() => addSubject(inputValue)}
+                disabled={!inputValue.trim()}
+                className="h-12 px-4"
+              >
                 <Plus className="h-5 w-5" />
               </Button>
             </div>
@@ -162,14 +167,19 @@ export default function Step2Page() {
               AI Helper
             </CardTitle>
             {!aiActive && (
-              <Button onClick={activateAI} size="sm" disabled={loading} className="shadow-lg shadow-primary/20">
+              <Button
+                onClick={activateAI}
+                size="sm"
+                disabled={loading}
+                className="shadow-lg shadow-primary/20"
+              >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Loading...
                   </>
                 ) : (
-                  "Activate"
+                  'Activate'
                 )}
               </Button>
             )}
@@ -212,17 +222,17 @@ export default function Step2Page() {
       <div className="flex justify-between pt-6">
         <Button
           variant="outline"
-          onClick={() => router.push("/onboarding/step-1")}
+          onClick={() => router.push('/onboarding/step-1')}
           className="gap-2 border-2 h-12 px-6 bg-transparent"
         >
           Back
         </Button>
         <Button
           onClick={handleNext}
-          disabled={subjects.length === 0 || loading}
+          disabled={!isSubjectListValid(subjects) || loading}
           className="gap-2 shadow-lg shadow-primary/20 h-12 px-8"
         >
-          {loading ? "Saving..." : "Continue"}
+          {loading ? 'Saving...' : 'Continue'}
         </Button>
       </div>
     </div>

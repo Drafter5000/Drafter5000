@@ -1,19 +1,20 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Card } from "@/components/ui/card"
-import { FileText, CheckCircle2, AlertCircle } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/auth-provider'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Card } from '@/components/ui/card'
+import { FileText, CheckCircle2, AlertCircle } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
+import { countWords, isStyleSampleValid } from '@/lib/onboarding-validation'
 
 export default function Step1Page() {
   const router = useRouter()
   const { user } = useAuth()
-  const [articles, setArticles] = useState(["", "", ""])
+  const [articles, setArticles] = useState(['', '', ''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,8 +24,8 @@ export default function Step1Page() {
     setArticles(updated)
   }
 
-  const hasAtLeastOneArticle = articles.some((a) => a.trim().length > 0)
-  const filledCount = articles.filter((a) => a.trim().length > 0).length
+  const hasAtLeastOneArticle = isStyleSampleValid(articles)
+  const filledCount = articles.filter(a => a.trim().length > 0).length
 
   const handleNext = async () => {
     if (!user) return
@@ -33,14 +34,14 @@ export default function Step1Page() {
 
     try {
       // Save to Supabase
-      await apiClient.post("/onboarding/step-1", {
+      await apiClient.post('/onboarding/step-1', {
         user_id: user.id,
-        style_samples: articles.filter((a) => a.trim()),
+        style_samples: articles.filter(a => a.trim()),
       })
 
-      router.push("/onboarding/step-2")
+      router.push('/onboarding/step-2')
     } catch (err: any) {
-      setError(err.message || "Failed to save articles")
+      setError(err.message || 'Failed to save articles')
     } finally {
       setLoading(false)
     }
@@ -54,7 +55,8 @@ export default function Step1Page() {
         </div>
         <h1 className="text-3xl md:text-4xl font-bold mb-4">Define Your Style</h1>
         <p className="text-muted-foreground text-lg max-w-lg mx-auto leading-relaxed">
-          Share 3 articles you've written (or whose style you want to emulate) so our AI can learn your unique voice
+          Share 3 articles you've written (or whose style you want to emulate) so our AI can learn
+          your unique voice
         </p>
       </div>
 
@@ -71,18 +73,21 @@ export default function Step1Page() {
             key={num}
             className={`p-6 border-2 transition-all duration-300 ${
               articles[index].trim()
-                ? "border-primary/30 bg-primary/5"
-                : "border-border bg-card hover:border-primary/20"
+                ? 'border-primary/30 bg-primary/5'
+                : 'border-border bg-card hover:border-primary/20'
             }`}
           >
             <div className="flex items-center justify-between mb-4">
-              <Label htmlFor={`article-${num}`} className="text-sm font-semibold flex items-center gap-2">
+              <Label
+                htmlFor={`article-${num}`}
+                className="text-sm font-semibold flex items-center gap-2"
+              >
                 Article {num}
                 {articles[index].trim() && <CheckCircle2 className="h-4 w-4 text-primary" />}
               </Label>
               {articles[index].trim() && (
                 <span className="text-xs text-muted-foreground">
-                  {articles[index].split(/\s+/).filter(Boolean).length} words
+                  {countWords(articles[index])} words
                 </span>
               )}
             </div>
@@ -91,7 +96,7 @@ export default function Step1Page() {
               placeholder={`Paste article ${num} here...`}
               className="min-h-[280px] resize-none bg-background border-border focus:border-primary transition-colors"
               value={articles[index]}
-              onChange={(e) => updateArticle(index, e.target.value)}
+              onChange={e => updateArticle(index, e.target.value)}
             />
           </Card>
         ))}
@@ -107,7 +112,7 @@ export default function Step1Page() {
           className="gap-2 shadow-lg shadow-primary/20 px-8 h-12"
           size="lg"
         >
-          {loading ? "Saving..." : "Continue"}
+          {loading ? 'Saving...' : 'Continue'}
         </Button>
       </div>
     </div>

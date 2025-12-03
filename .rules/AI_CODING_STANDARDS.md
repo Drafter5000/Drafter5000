@@ -11,6 +11,7 @@ This document defines the standard practices that AI assistants must follow when
 - **DO NOT** run `bun test` or any testing commands
 - **DO NOT** run `bun run dev` or start the development server
 - **DO NOT** create additional markdown files - use only this single file for documentation
+- ** DO NOT** use `npm`,`pnpm` or `yarn`. just use the `bun` for the installation and all the packages related tasks performance.
 
 ---
 
