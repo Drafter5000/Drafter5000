@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
+import { type NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-const publicRoutes = ["/", "/login", "/pricing", "/auth/callback"]
+const publicRoutes = ['/', '/login', '/signup', '/pricing', '/auth/callback']
 
 export async function middleware(request: NextRequest) {
   const supabaseResponse = NextResponse.next({
@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
           })
         },
       },
-    },
+    }
   )
 
   const {
@@ -38,17 +38,17 @@ export async function middleware(request: NextRequest) {
 
   // Protect authenticated routes
   if (!user && !publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url))
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from login
-  if (user && pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+  // Redirect authenticated users away from login/signup
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
