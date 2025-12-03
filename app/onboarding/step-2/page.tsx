@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth-provider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Plus,
   Sparkles,
@@ -17,9 +17,9 @@ import {
   AlertCircle,
   ArrowRight,
   ArrowLeft,
-} from 'lucide-react'
-import { apiClient } from '@/lib/api-client'
-import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation'
+} from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation';
 
 const AI_SUGGESTIONS = [
   'The Future of Remote Work in 2025',
@@ -30,91 +30,91 @@ const AI_SUGGESTIONS = [
   'Mental Health in the Digital Age',
   'Investing Strategies for Millennials',
   'The Power of Habit Formation',
-]
+];
 
 export default function Step2Page() {
-  const router = useRouter()
-  const { user } = useAuth()
-  const [subjects, setSubjects] = useState<string[]>([])
-  const [inputValue, setInputValue] = useState('')
-  const [aiActive, setAiActive] = useState(false)
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [aiLoading, setAiLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { user } = useAuth();
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [aiActive, setAiActive] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadExistingData = async () => {
-      if (!user) return
+      if (!user) return;
       try {
         const data = await apiClient.get<{ subjects: string[] }>(
           `/onboarding/progress?user_id=${user.id}`
-        )
+        );
         if (data.subjects?.length > 0) {
-          setSubjects(data.subjects)
+          setSubjects(data.subjects);
         }
       } catch {
         // No existing data
       } finally {
-        setInitialLoading(false)
+        setInitialLoading(false);
       }
-    }
-    loadExistingData()
-  }, [user])
+    };
+    loadExistingData();
+  }, [user]);
 
   const addSubject = (subject: string) => {
     if (isSubjectValid(subject, subjects)) {
-      setSubjects([...subjects, subject.trim()])
+      setSubjects([...subjects, subject.trim()]);
     }
-    setInputValue('')
-  }
+    setInputValue('');
+  };
 
   const removeSubject = (index: number) => {
-    setSubjects(subjects.filter((_, i) => i !== index))
-  }
+    setSubjects(subjects.filter((_, i) => i !== index));
+  };
 
   const activateAI = () => {
-    setAiLoading(true)
+    setAiLoading(true);
     setTimeout(() => {
-      setAiActive(true)
-      setAiSuggestions(AI_SUGGESTIONS.filter(s => !subjects.includes(s)))
-      setAiLoading(false)
-    }, 800)
-  }
+      setAiActive(true);
+      setAiSuggestions(AI_SUGGESTIONS.filter(s => !subjects.includes(s)));
+      setAiLoading(false);
+    }, 800);
+  };
 
   const addFromAI = (suggestion: string) => {
     if (isSubjectValid(suggestion, subjects)) {
-      setSubjects([...subjects, suggestion])
-      setAiSuggestions(aiSuggestions.filter(s => s !== suggestion))
+      setSubjects([...subjects, suggestion]);
+      setAiSuggestions(aiSuggestions.filter(s => s !== suggestion));
     }
-  }
+  };
 
   const handleNext = async () => {
-    if (!user) return
-    setLoading(true)
-    setError(null)
+    if (!user) return;
+    setLoading(true);
+    setError(null);
 
     try {
       await apiClient.post('/onboarding/step-2', {
         user_id: user.id,
         subjects,
-      })
-      router.push('/onboarding/step-3')
+      });
+      router.push('/onboarding/step-3');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save subjects'
-      setError(message)
+      const message = err instanceof Error ? err.message : 'Failed to save subjects';
+      setError(message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   return (
@@ -158,8 +158,8 @@ export default function Step2Page() {
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addSubject(inputValue)
+                    e.preventDefault();
+                    addSubject(inputValue);
                   }
                 }}
               />
@@ -300,5 +300,5 @@ export default function Step2Page() {
         </div>
       </div>
     </div>
-  )
+  );
 }

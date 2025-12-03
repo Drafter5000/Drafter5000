@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { motion } from 'framer-motion'
-import { HelpCircle, Plus, Minus } from 'lucide-react'
-import { useState } from 'react'
+import { motion } from 'framer-motion';
+import { HelpCircle, Plus, Minus } from 'lucide-react';
+import { useState } from 'react';
 
 const faqs = [
   {
@@ -35,7 +35,7 @@ const faqs = [
     answer:
       'Yes, you can cancel your subscription at any time with no questions asked. Your access will continue until the end of your billing period.',
   },
-]
+];
 
 function FAQItem({
   question,
@@ -43,10 +43,10 @@ function FAQItem({
   isOpen,
   onClick,
 }: {
-  question: string
-  answer: string
-  isOpen: boolean
-  onClick: () => void
+  question: string;
+  answer: string;
+  isOpen: boolean;
+  onClick: () => void;
 }) {
   return (
     <motion.div
@@ -79,11 +79,11 @@ function FAQItem({
         <p className="pb-6 text-muted-foreground leading-relaxed pr-12">{answer}</p>
       </motion.div>
     </motion.div>
-  )
+  );
 }
 
 export function FAQSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0)
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
     <section className="py-32 px-6 bg-secondary/20">
@@ -121,5 +121,5 @@ export function FAQSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

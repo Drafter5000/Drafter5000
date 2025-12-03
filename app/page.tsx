@@ -1,10 +1,10 @@
-"use client"
+'use client';
 
-import { MarketingHeader } from "@/components/marketing-header"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { ArrowRight, Sparkles, Zap, Shield, Play } from "lucide-react"
+import { MarketingHeader } from '@/components/marketing-header';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ArrowRight, Sparkles, Zap, Shield, Play } from 'lucide-react';
 import {
   Hero3D,
   HeroVisual,
@@ -18,7 +18,7 @@ import {
   GradientText,
   BrandsSection,
   FAQSection,
-} from "@/components/landing"
+} from '@/components/landing';
 
 export default function Home() {
   return (
@@ -47,7 +47,9 @@ export default function Home() {
                 >
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span>AI-Powered Writing Assistant</span>
-                  <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs">New</span>
+                  <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs">
+                    New
+                  </span>
                 </motion.div>
 
                 <motion.h1
@@ -56,9 +58,7 @@ export default function Home() {
                   transition={{ duration: 0.8, delay: 0.3 }}
                   className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]"
                 >
-                  Articles that{" "}
-                  <GradientText>sound like you</GradientText>{" "}
-                  wrote them
+                  Articles that <GradientText>sound like you</GradientText> wrote them
                 </motion.h1>
 
                 <motion.p
@@ -67,7 +67,7 @@ export default function Home() {
                   transition={{ duration: 0.6, delay: 0.5 }}
                   className="text-xl text-muted-foreground max-w-lg leading-relaxed"
                 >
-                  Train our AI on your writing style, pick your topics, and receive professionally 
+                  Train our AI on your writing style, pick your topics, and receive professionally
                   written articles delivered straight to your inbox. It's that simple.
                 </motion.p>
 
@@ -78,13 +78,16 @@ export default function Home() {
                   className="flex flex-wrap gap-4 pt-4"
                 >
                   <Link href="/onboarding/step-1">
-                    <Button size="lg" className="gap-2 shadow-2xl shadow-primary/30 text-lg px-8 h-14 rounded-2xl">
+                    <Button
+                      size="lg"
+                      className="gap-2 shadow-2xl shadow-primary/30 text-lg px-8 h-14 rounded-2xl"
+                    >
                       Get Started Free <ArrowRight className="h-5 w-5" />
                     </Button>
                   </Link>
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
+                  <Button
+                    size="lg"
+                    variant="outline"
                     className="border-2 text-lg px-8 h-14 rounded-2xl bg-background/50 backdrop-blur-sm gap-2"
                   >
                     <Play className="h-5 w-5" />
@@ -176,5 +179,5 @@ export default function Home() {
       {/* Footer */}
       <Footer />
     </div>
-  )
+  );
 }

@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import { motion } from "framer-motion"
-import { Sparkles, BarChart3, FileText, Zap, Check } from "lucide-react"
+import { motion } from 'framer-motion';
+import { Sparkles, BarChart3, FileText, Zap, Check } from 'lucide-react';
 
 export function HeroVisual() {
   return (
@@ -12,7 +12,7 @@ export function HeroVisual() {
         animate={{ opacity: 1, y: 0, rotateX: 0 }}
         transition={{ duration: 0.8, delay: 0.3 }}
         className="relative"
-        style={{ perspective: "1000px" }}
+        style={{ perspective: '1000px' }}
       >
         <div className="relative rounded-3xl border-2 border-border bg-card p-8 shadow-2xl shadow-primary/10 overflow-hidden">
           {/* Window controls */}
@@ -27,7 +27,7 @@ export function HeroVisual() {
             {/* Title skeleton */}
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: "75%" }}
+              animate={{ width: '75%' }}
               transition={{ duration: 1, delay: 0.5 }}
               className="h-6 bg-gradient-to-r from-foreground/20 to-foreground/5 rounded-lg"
             />
@@ -65,7 +65,7 @@ export function HeroVisual() {
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 1, 0] }}
             transition={{ duration: 1, repeat: Infinity, delay: 1.5 }}
-            style={{ bottom: "40%", right: "25%" }}
+            style={{ bottom: '40%', right: '25%' }}
           />
 
           {/* Gradient overlay */}
@@ -116,7 +116,7 @@ export function HeroVisual() {
           <div className="flex items-center gap-2 text-sm">
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             >
               <Zap className="h-4 w-4 text-chart-4" />
             </motion.div>
@@ -137,5 +137,5 @@ export function HeroVisual() {
         </div>
       </motion.div>
     </div>
-  )
+  );
 }

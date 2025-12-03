@@ -1,51 +1,57 @@
-"use client"
+'use client';
 
-import { motion, useInView } from "framer-motion"
-import { useRef, useEffect, useState } from "react"
+import { motion, useInView } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
 
 const stats = [
-  { value: 50000, suffix: "+", label: "Articles Generated", description: "High-quality content created" },
-  { value: 12000, suffix: "+", label: "Happy Writers", description: "Content creators worldwide" },
-  { value: 99, suffix: "%", label: "Satisfaction Rate", description: "From our customers" },
-  { value: 150, suffix: "+", label: "Countries", description: "Global reach" },
-]
+  {
+    value: 50000,
+    suffix: '+',
+    label: 'Articles Generated',
+    description: 'High-quality content created',
+  },
+  { value: 12000, suffix: '+', label: 'Happy Writers', description: 'Content creators worldwide' },
+  { value: 99, suffix: '%', label: 'Satisfaction Rate', description: 'From our customers' },
+  { value: 150, suffix: '+', label: 'Countries', description: 'Global reach' },
+];
 
 function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
-  const [count, setCount] = useState(0)
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true })
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
 
   useEffect(() => {
     if (isInView) {
-      const duration = 2000
-      const steps = 60
-      const increment = value / steps
-      let current = 0
+      const duration = 2000;
+      const steps = 60;
+      const increment = value / steps;
+      let current = 0;
       const timer = setInterval(() => {
-        current += increment
+        current += increment;
         if (current >= value) {
-          setCount(value)
-          clearInterval(timer)
+          setCount(value);
+          clearInterval(timer);
         } else {
-          setCount(Math.floor(current))
+          setCount(Math.floor(current));
         }
-      }, duration / steps)
-      return () => clearInterval(timer)
+      }, duration / steps);
+      return () => clearInterval(timer);
     }
-  }, [isInView, value])
+  }, [isInView, value]);
 
   return (
     <span ref={ref} className="tabular-nums">
-      {count.toLocaleString()}{suffix}
+      {count.toLocaleString()}
+      {suffix}
     </span>
-  )
+  );
 }
 
 export function StatsSection() {
   return (
     <section className="py-24 px-6 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-secondary/50 to-background" />
-      
+
       <div className="max-w-7xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -55,7 +61,9 @@ export function StatsSection() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Trusted by thousands of creators</h2>
-          <p className="text-muted-foreground text-lg">Join the growing community of content creators</p>
+          <p className="text-muted-foreground text-lg">
+            Join the growing community of content creators
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -78,5 +86,5 @@ export function StatsSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

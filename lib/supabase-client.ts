@@ -1,8 +1,8 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function getServerSupabaseClient() {
-  const cookieStore = await cookies()
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,26 +10,26 @@ export async function getServerSupabaseClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll()
+          return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
-            )
+            );
           } catch {
             // Silently fail in Server Components
           }
         },
       },
     }
-  )
+  );
 }
 
 export async function getServerSupabaseSession() {
-  const supabase = await getServerSupabaseClient()
+  const supabase = await getServerSupabaseClient();
   const {
     data: { session },
-  } = await supabase.auth.getSession()
-  return session
+  } = await supabase.auth.getSession();
+  return session;
 }

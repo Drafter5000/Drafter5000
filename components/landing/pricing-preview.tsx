@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/button'
-import { Check, Sparkles, Zap, Crown } from 'lucide-react'
-import Link from 'next/link'
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Check, Sparkles, Zap, Crown } from 'lucide-react';
+import Link from 'next/link';
 
 const plans = [
   {
@@ -52,7 +52,7 @@ const plans = [
     href: '/pricing',
     popular: false,
   },
-]
+];
 
 export function PricingPreview() {
   return (
@@ -154,5 +154,5 @@ export function PricingPreview() {
         </div>
       </div>
     </section>
-  )
+  );
 }

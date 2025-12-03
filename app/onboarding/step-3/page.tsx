@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth-provider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/components/ui/select';
 import {
   Calendar,
   User,
@@ -26,15 +26,15 @@ import {
   Rocket,
   Mail,
   Sparkles,
-} from 'lucide-react'
-import { apiClient } from '@/lib/api-client'
-import { isStep3FormValid } from '@/lib/onboarding-validation'
+} from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import { isStep3FormValid } from '@/lib/onboarding-validation';
 import {
   toggleDay as toggleDayUtil,
   toggleAllDays,
   areAllDaysSelected,
   DayCode,
-} from '@/lib/day-selection'
+} from '@/lib/day-selection';
 
 const DAYS = [
   { id: 'mon' as DayCode, label: 'Monday', short: 'Mon' },
@@ -44,7 +44,7 @@ const DAYS = [
   { id: 'fri' as DayCode, label: 'Friday', short: 'Fri' },
   { id: 'sat' as DayCode, label: 'Saturday', short: 'Sat' },
   { id: 'sun' as DayCode, label: 'Sunday', short: 'Sun' },
-]
+];
 
 const LANGUAGES = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
@@ -61,61 +61,61 @@ const LANGUAGES = [
   { code: 'ko', label: 'Korean', flag: '🇰🇷' },
   { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
   { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
-]
+];
 
 export default function Step3Page() {
-  const router = useRouter()
-  const { user } = useAuth()
-  const [email, setEmail] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [frequency, setFrequency] = useState<DayCode[]>([])
-  const [language, setLanguage] = useState('en')
-  const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { user } = useAuth();
+  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [frequency, setFrequency] = useState<DayCode[]>([]);
+  const [language, setLanguage] = useState('en');
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load existing data and user email
   useEffect(() => {
     const loadExistingData = async () => {
-      if (!user) return
+      if (!user) return;
       try {
         // Pre-fill email from user
         if (user.email) {
-          setEmail(user.email)
+          setEmail(user.email);
         }
         const data = await apiClient.get<{ delivery_days: string[]; preferred_language: string }>(
           `/onboarding/progress?user_id=${user.id}`
-        )
+        );
         if (data.delivery_days?.length > 0) {
-          setFrequency(data.delivery_days as DayCode[])
+          setFrequency(data.delivery_days as DayCode[]);
         }
         if (data.preferred_language) {
-          setLanguage(data.preferred_language)
+          setLanguage(data.preferred_language);
         }
       } catch {
         // No existing data
       } finally {
-        setInitialLoading(false)
+        setInitialLoading(false);
       }
-    }
-    loadExistingData()
-  }, [user])
+    };
+    loadExistingData();
+  }, [user]);
 
   const handleToggleDay = (dayId: DayCode) => {
-    setFrequency(prev => toggleDayUtil(prev, dayId))
-  }
+    setFrequency(prev => toggleDayUtil(prev, dayId));
+  };
 
-  const isEveryday = areAllDaysSelected(frequency)
+  const isEveryday = areAllDaysSelected(frequency);
 
   const handleToggleEveryday = () => {
-    setFrequency(prev => toggleAllDays(prev))
-  }
+    setFrequency(prev => toggleAllDays(prev));
+  };
 
   const handleComplete = async () => {
-    if (!user) return
-    setLoading(true)
-    setError(null)
+    if (!user) return;
+    setLoading(true);
+    setError(null);
 
     try {
       await apiClient.post('/onboarding/step-3', {
@@ -124,25 +124,25 @@ export default function Step3Page() {
         display_name: `${firstName} ${lastName}`.trim(),
         preferred_language: language,
         delivery_days: frequency,
-      })
-      router.push('/dashboard')
+      });
+      router.push('/dashboard');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to complete setup'
-      setError(message)
+      const message = err instanceof Error ? err.message : 'Failed to complete setup';
+      setError(message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const isValid = isStep3FormValid(email, firstName, lastName, frequency)
-  const selectedLanguage = LANGUAGES.find(l => l.code === language)
+  const isValid = isStep3FormValid(email, firstName, lastName, frequency);
+  const selectedLanguage = LANGUAGES.find(l => l.code === language);
 
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   return (
@@ -272,7 +272,7 @@ export default function Step3Page() {
 
               <div className="grid grid-cols-2 gap-2">
                 {DAYS.map(day => {
-                  const isSelected = frequency.includes(day.id)
+                  const isSelected = frequency.includes(day.id);
                   return (
                     <div
                       key={day.id}
@@ -295,7 +295,7 @@ export default function Step3Page() {
                       />
                       <span className="text-sm font-medium">{day.short}</span>
                     </div>
-                  )
+                  );
                 })}
               </div>
 
@@ -435,5 +435,5 @@ export default function Step3Page() {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,40 +1,40 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { apiClient } from "@/lib/api-client"
-import { CreditCard, TrendingUp, AlertCircle, ExternalLink } from "lucide-react"
-import Link from "next/link"
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { apiClient } from '@/lib/api-client';
+import { CreditCard, TrendingUp, AlertCircle, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 interface UsageData {
-  plan: "free" | "pro" | "enterprise"
-  articles_used: number
-  articles_limit: number
-  percentage_used: number
-  can_generate: boolean
+  plan: 'free' | 'pro' | 'enterprise';
+  articles_used: number;
+  articles_limit: number;
+  percentage_used: number;
+  can_generate: boolean;
 }
 
 export function BillingStatusCard() {
-  const [usage, setUsage] = useState<UsageData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUsage = async () => {
       try {
-        const data = await apiClient.get<UsageData>("/stripe/usage")
-        setUsage(data)
+        const data = await apiClient.get<UsageData>('/stripe/usage');
+        setUsage(data);
       } catch (error) {
-        console.error("Usage fetch error:", error)
+        console.error('Usage fetch error:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchUsage()
-  }, [])
+    fetchUsage();
+  }, []);
 
   if (loading) {
     return (
@@ -49,13 +49,13 @@ export function BillingStatusCard() {
           <div className="h-24 bg-muted rounded-lg animate-pulse" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  if (!usage) return null
+  if (!usage) return null;
 
-  const planName = usage.plan.charAt(0).toUpperCase() + usage.plan.slice(1)
-  const isNearLimit = usage.percentage_used >= 80
+  const planName = usage.plan.charAt(0).toUpperCase() + usage.plan.slice(1);
+  const isNearLimit = usage.percentage_used >= 80;
 
   return (
     <Card className="border-2">
@@ -65,7 +65,7 @@ export function BillingStatusCard() {
             <CreditCard className="h-5 w-5 text-primary" />
             Subscription
           </CardTitle>
-          <Badge variant={usage.plan === "free" ? "secondary" : "default"}>{planName}</Badge>
+          <Badge variant={usage.plan === 'free' ? 'secondary' : 'default'}>{planName}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -100,7 +100,7 @@ export function BillingStatusCard() {
           </Button>
         </Link>
 
-        {usage.plan === "free" && (
+        {usage.plan === 'free' && (
           <Link href="/pricing" className="block">
             <Button size="sm" className="w-full gap-2">
               Upgrade Plan <ExternalLink className="h-3 w-3" />
@@ -109,5 +109,5 @@ export function BillingStatusCard() {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

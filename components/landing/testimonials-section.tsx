@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { motion } from 'framer-motion'
-import { Star, Quote } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { motion } from 'framer-motion';
+import { Star, Quote } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const testimonials = [
   {
@@ -59,7 +59,7 @@ const testimonials = [
       'Running multiple businesses means I need efficient tools. Drafter delivers consistent, high-quality content across all my brands. Game changer!',
     rating: 5,
   },
-]
+];
 
 export function TestimonialsSection() {
   return (
@@ -136,5 +136,5 @@ export function TestimonialsSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

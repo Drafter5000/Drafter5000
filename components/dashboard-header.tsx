@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useAuth } from "@/components/auth-provider";
-import { Button } from "@/components/ui/button";
-import { LogOut, Settings, CreditCard } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAuth } from '@/components/auth-provider';
+import { Button } from '@/components/ui/button';
+import { LogOut, Settings, CreditCard } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function DashboardHeader() {
   const { user, signOut } = useAuth();
@@ -12,7 +12,7 @@ export function DashboardHeader() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push("/");
+    router.push('/');
   };
 
   return (
@@ -22,36 +22,23 @@ export function DashboardHeader() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Welcome back, {user?.email?.split("@")[0]}
+              Welcome back, {user?.email?.split('@')[0]}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/dashboard/billing">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 bg-transparent"
-              >
+              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                 <CreditCard className="h-4 w-4" />
                 Billing
               </Button>
             </Link>
             <Link href="/dashboard/settings">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 bg-transparent"
-              >
+              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                 <Settings className="h-4 w-4" />
                 Settings
               </Button>
             </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="gap-2"
-            >
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>

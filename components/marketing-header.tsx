@@ -1,33 +1,33 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/components/auth-provider'
-import { PenLine, Sparkles, Menu, X } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/components/auth-provider';
+import { PenLine, Sparkles, Menu, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const navLinks = [
   { name: 'Features', href: '#features' },
   { name: 'How it Works', href: '#how-it-works' },
   { name: 'Testimonials', href: '#testimonials' },
   { name: 'Pricing', href: '/pricing' },
-]
+];
 
 export function MarketingHeader() {
-  const { user, loading } = useAuth()
-  const [mounted, setMounted] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-    const handleScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    setMounted(true);
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   return (
     <>
@@ -148,5 +148,5 @@ export function MarketingHeader() {
         )}
       </AnimatePresence>
     </>
-  )
+  );
 }

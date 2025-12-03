@@ -7,14 +7,14 @@
 /**
  * Day code constants for delivery schedule
  */
-export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
-export type DayCode = (typeof DAYS)[number]
+export type DayCode = (typeof DAYS)[number];
 
 /**
  * All days array for "every day" selection
  */
-export const ALL_DAYS: DayCode[] = [...DAYS]
+export const ALL_DAYS: DayCode[] = [...DAYS];
 
 /**
  * Toggles a day in the selected days array.
@@ -29,9 +29,9 @@ export const ALL_DAYS: DayCode[] = [...DAYS]
  */
 export function toggleDay(selectedDays: DayCode[], day: DayCode): DayCode[] {
   if (selectedDays.includes(day)) {
-    return selectedDays.filter(d => d !== day)
+    return selectedDays.filter(d => d !== day);
   }
-  return [...selectedDays, day]
+  return [...selectedDays, day];
 }
 
 /**
@@ -45,8 +45,8 @@ export function toggleDay(selectedDays: DayCode[], day: DayCode): DayCode[] {
  * Requirements: 3.3
  */
 export function toggleAllDays(selectedDays: DayCode[]): DayCode[] {
-  const allSelected = DAYS.every(day => selectedDays.includes(day))
-  return allSelected ? [] : [...ALL_DAYS]
+  const allSelected = DAYS.every(day => selectedDays.includes(day));
+  return allSelected ? [] : [...ALL_DAYS];
 }
 
 /**
@@ -56,5 +56,5 @@ export function toggleAllDays(selectedDays: DayCode[]): DayCode[] {
  * @returns true if all 7 days are selected
  */
 export function areAllDaysSelected(selectedDays: DayCode[]): boolean {
-  return DAYS.every(day => selectedDays.includes(day))
+  return DAYS.every(day => selectedDays.includes(day));
 }

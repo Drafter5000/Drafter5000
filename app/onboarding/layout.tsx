@@ -1,124 +1,124 @@
-'use client'
+'use client';
 
-import type React from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
-import { ProtectedRoute } from '@/components/protected-route'
-import { useAuth } from '@/components/auth-provider'
-import { Button } from '@/components/ui/button'
-import { ChevronLeft, CheckCircle2, Lock, Loader2, LayoutDashboard } from 'lucide-react'
-import { apiClient } from '@/lib/api-client'
+import type React from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import { ProtectedRoute } from '@/components/protected-route';
+import { useAuth } from '@/components/auth-provider';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, CheckCircle2, Lock, Loader2, LayoutDashboard } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
 
 interface OnboardingProgress {
-  style_samples: string[]
-  subjects: string[]
-  delivery_days: string[]
-  completed_at: string | null
+  style_samples: string[];
+  subjects: string[];
+  delivery_days: string[];
+  completed_at: string | null;
 }
 
 const STEPS = [
   { number: 1, title: 'Define Your Style', path: '/onboarding/step-1', shortTitle: 'Style' },
   { number: 2, title: 'Choose Topics', path: '/onboarding/step-2', shortTitle: 'Topics' },
   { number: 3, title: 'Delivery Settings', path: '/onboarding/step-3', shortTitle: 'Delivery' },
-]
+];
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { user } = useAuth()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [progress, setProgress] = useState<OnboardingProgress | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [progress, setProgress] = useState<OnboardingProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Fetch onboarding progress
   const fetchProgress = useCallback(async () => {
-    if (!user) return
+    if (!user) return;
     try {
       const data = await apiClient.get<OnboardingProgress>(
         `/onboarding/progress?user_id=${user.id}`
-      )
-      setProgress(data)
+      );
+      setProgress(data);
     } catch {
       // No progress yet, that's fine
-      setProgress({ style_samples: [], subjects: [], delivery_days: [], completed_at: null })
+      setProgress({ style_samples: [], subjects: [], delivery_days: [], completed_at: null });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [user])
+  }, [user]);
 
   // Refetch progress when pathname changes (user navigated to a new step)
   useEffect(() => {
-    fetchProgress()
-  }, [fetchProgress, pathname])
+    fetchProgress();
+  }, [fetchProgress, pathname]);
 
   useEffect(() => {
-    const step = STEPS.findIndex(s => s.path === pathname)
+    const step = STEPS.findIndex(s => s.path === pathname);
     if (step !== currentStep) {
-      setIsAnimating(true)
-      setTimeout(() => setIsAnimating(false), 300)
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 300);
     }
-    setCurrentStep(step >= 0 ? step : 0)
-  }, [pathname, currentStep])
+    setCurrentStep(step >= 0 ? step : 0);
+  }, [pathname, currentStep]);
 
   // Check if a step is completed
   const isStepCompleted = (stepNumber: number): boolean => {
-    if (!progress) return false
+    if (!progress) return false;
     switch (stepNumber) {
       case 1:
-        return progress.style_samples.length > 0
+        return progress.style_samples.length > 0;
       case 2:
-        return progress.subjects.length > 0
+        return progress.subjects.length > 0;
       case 3:
-        return progress.completed_at !== null
+        return progress.completed_at !== null;
       default:
-        return false
+        return false;
     }
-  }
+  };
 
   // Check if a step is accessible
   const isStepAccessible = (stepNumber: number): boolean => {
-    if (stepNumber === 1) return true
+    if (stepNumber === 1) return true;
     // Can access step N if step N-1 is completed
-    return isStepCompleted(stepNumber - 1)
-  }
+    return isStepCompleted(stepNumber - 1);
+  };
 
   const goToPreviousStep = () => {
     if (currentStep > 0) {
-      router.push(STEPS[currentStep - 1].path)
+      router.push(STEPS[currentStep - 1].path);
     }
-  }
+  };
 
   const navigateToStep = (stepIndex: number) => {
-    const targetStep = STEPS[stepIndex]
+    const targetStep = STEPS[stepIndex];
     if (isStepAccessible(targetStep.number)) {
-      router.push(targetStep.path)
+      router.push(targetStep.path);
     }
-  }
+  };
 
   // Redirect if trying to access a locked step (only on initial load, not on navigation)
-  const [initialCheckDone, setInitialCheckDone] = useState(false)
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   useEffect(() => {
     if (!loading && progress && !initialCheckDone) {
-      setInitialCheckDone(true)
-      const step = STEPS.findIndex(s => s.path === pathname)
+      setInitialCheckDone(true);
+      const step = STEPS.findIndex(s => s.path === pathname);
       if (step >= 0 && !isStepAccessible(STEPS[step].number)) {
         // Find the highest accessible step
-        let highestAccessible = 0
+        let highestAccessible = 0;
         for (let i = 0; i < STEPS.length; i++) {
           if (isStepAccessible(STEPS[i].number)) {
-            highestAccessible = i
+            highestAccessible = i;
           } else {
-            break
+            break;
           }
         }
-        router.push(STEPS[highestAccessible].path)
+        router.push(STEPS[highestAccessible].path);
       }
     }
-  }, [loading, progress, pathname, router, initialCheckDone])
+  }, [loading, progress, pathname, router, initialCheckDone]);
 
-  const progressPercentage = ((currentStep + 1) / STEPS.length) * 100
+  const progressPercentage = ((currentStep + 1) / STEPS.length) * 100;
 
   if (loading) {
     return (
@@ -130,7 +130,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
           </div>
         </div>
       </ProtectedRoute>
-    )
+    );
   }
 
   return (
@@ -193,9 +193,9 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
             {/* Step Indicators */}
             <div className="flex justify-between">
               {STEPS.map((step, index) => {
-                const isCompleted = isStepCompleted(step.number)
-                const isActive = index === currentStep
-                const isAccessible = isStepAccessible(step.number)
+                const isCompleted = isStepCompleted(step.number);
+                const isActive = index === currentStep;
+                const isAccessible = isStepAccessible(step.number);
 
                 return (
                   <button
@@ -238,7 +238,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
                     </div>
                     <span className="hidden sm:inline font-medium text-sm">{step.shortTitle}</span>
                   </button>
-                )
+                );
               })}
             </div>
           </div>
@@ -257,5 +257,5 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
         </div>
       </div>
     </ProtectedRoute>
-  )
+  );
 }

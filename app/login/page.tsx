@@ -1,33 +1,33 @@
-'use client'
+'use client';
 
-import type React from 'react'
+import type React from 'react';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth-provider'
-import { Header } from '@/components/header'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { LogIn, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react'
-import { getBrowserSupabaseClient } from '@/lib/supabase-browser'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
+import { Header } from '@/components/header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { LogIn, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { getBrowserSupabaseClient } from '@/lib/supabase-browser';
+import Link from 'next/link';
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      router.push('/dashboard')
+      router.push('/dashboard');
     }
-  }, [user, authLoading, router])
+  }, [user, authLoading, router]);
 
   // Show loading while checking auth
   if (authLoading) {
@@ -35,7 +35,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   // Don't render login form if user is logged in (will redirect)
@@ -44,32 +44,32 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
-      const supabase = getBrowserSupabaseClient()
+      const supabase = getBrowserSupabaseClient();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
       // Auth state change will trigger redirect via useEffect
-      router.push('/dashboard')
-      router.refresh()
+      router.push('/dashboard');
+      router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in')
+      setError(err.message || 'Failed to sign in');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -157,5 +157,5 @@ export default function LoginPage() {
         </Card>
       </main>
     </div>
-  )
+  );
 }

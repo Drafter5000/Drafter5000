@@ -1,38 +1,42 @@
-"use client"
+'use client';
 
-import { motion } from "framer-motion"
-import { Target, Sparkles, Clock, Send, CheckCircle2 } from "lucide-react"
+import { motion } from 'framer-motion';
+import { Target, Sparkles, Clock, Send, CheckCircle2 } from 'lucide-react';
 
 const steps = [
   {
     icon: Target,
-    number: "01",
-    title: "Train Your AI",
-    description: "Paste your existing articles or writing samples. Our AI analyzes your unique voice, vocabulary, and style patterns to create a personalized writing model.",
-    color: "from-violet-500 to-purple-600",
+    number: '01',
+    title: 'Train Your AI',
+    description:
+      'Paste your existing articles or writing samples. Our AI analyzes your unique voice, vocabulary, and style patterns to create a personalized writing model.',
+    color: 'from-violet-500 to-purple-600',
   },
   {
     icon: Sparkles,
-    number: "02",
-    title: "Choose Your Topics",
-    description: "Select from AI-suggested topics or add your own. Our system understands your niche and generates relevant, engaging topic ideas.",
-    color: "from-primary to-teal-400",
+    number: '02',
+    title: 'Choose Your Topics',
+    description:
+      'Select from AI-suggested topics or add your own. Our system understands your niche and generates relevant, engaging topic ideas.',
+    color: 'from-primary to-teal-400',
   },
   {
     icon: Clock,
-    number: "03",
-    title: "Set Your Schedule",
-    description: "Pick the days and frequency for article delivery. Whether daily, weekly, or custom schedules, we've got you covered.",
-    color: "from-amber-500 to-orange-500",
+    number: '03',
+    title: 'Set Your Schedule',
+    description:
+      "Pick the days and frequency for article delivery. Whether daily, weekly, or custom schedules, we've got you covered.",
+    color: 'from-amber-500 to-orange-500',
   },
   {
     icon: Send,
-    number: "04",
-    title: "Receive & Publish",
-    description: "Get professionally written articles delivered to your inbox. Review, edit if needed, and publish to your platform of choice.",
-    color: "from-pink-500 to-rose-500",
+    number: '04',
+    title: 'Receive & Publish',
+    description:
+      'Get professionally written articles delivered to your inbox. Review, edit if needed, and publish to your platform of choice.',
+    color: 'from-pink-500 to-rose-500',
   },
-]
+];
 
 export function HowItWorksSection() {
   return (
@@ -54,7 +58,7 @@ export function HowItWorksSection() {
             Simple Process
           </span>
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            How it{" "}
+            How it{' '}
             <span className="bg-gradient-to-r from-chart-2 to-primary bg-clip-text text-transparent">
               works
             </span>
@@ -84,7 +88,9 @@ export function HowItWorksSection() {
                     Step {step.number}
                   </div>
 
-                  <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${step.color} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <div
+                    className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${step.color} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  >
                     <step.icon className="h-7 w-7 text-white" />
                   </div>
 
@@ -97,5 +103,5 @@ export function HowItWorksSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

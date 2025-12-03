@@ -1,15 +1,15 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { ProtectedRoute } from "@/components/protected-route"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { apiClient } from "@/lib/api-client"
-import { SUBSCRIPTION_PLANS } from "@/lib/stripe-client"
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/components/auth-provider';
+import { ProtectedRoute } from '@/components/protected-route';
+import { DashboardHeader } from '@/components/dashboard-header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { apiClient } from '@/lib/api-client';
+import { SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 import {
   CreditCard,
   Calendar,
@@ -19,65 +19,65 @@ import {
   ExternalLink,
   Loader2,
   Zap,
-} from "lucide-react"
-import Link from "next/link"
+} from 'lucide-react';
+import Link from 'next/link';
 
 interface UsageData {
-  plan: "free" | "pro" | "enterprise"
-  articles_used: number
-  articles_limit: number
-  percentage_used: number
-  can_generate: boolean
+  plan: 'free' | 'pro' | 'enterprise';
+  articles_used: number;
+  articles_limit: number;
+  percentage_used: number;
+  can_generate: boolean;
 }
 
 interface SubscriptionData {
-  plan: string
-  status: string
-  current_period_start?: number
-  current_period_end?: number
-  cancel_at_period_end?: boolean
-  canceled_at?: number
+  plan: string;
+  status: string;
+  current_period_start?: number;
+  current_period_end?: number;
+  cancel_at_period_end?: boolean;
+  canceled_at?: number;
 }
 
 export default function BillingPage() {
-  const { user } = useAuth()
-  const [usage, setUsage] = useState<UsageData | null>(null)
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [portalLoading, setPortalLoading] = useState(false)
+  const { user } = useAuth();
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     const fetchBillingData = async () => {
-      if (!user) return
+      if (!user) return;
 
       try {
-        setLoading(true)
+        setLoading(true);
         const [usageData, subscriptionData] = await Promise.all([
-          apiClient.get<UsageData>("/stripe/usage"),
-          apiClient.get<SubscriptionData>("/stripe/subscription"),
-        ])
-        setUsage(usageData)
-        setSubscription(subscriptionData)
+          apiClient.get<UsageData>('/stripe/usage'),
+          apiClient.get<SubscriptionData>('/stripe/subscription'),
+        ]);
+        setUsage(usageData);
+        setSubscription(subscriptionData);
       } catch (error) {
-        console.error("Billing data error:", error)
+        console.error('Billing data error:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchBillingData()
-  }, [user])
+    fetchBillingData();
+  }, [user]);
 
   const handleManageSubscription = async () => {
     try {
-      setPortalLoading(true)
-      const { url } = await apiClient.post<{ url: string }>("/stripe/portal", {})
-      window.location.href = url
+      setPortalLoading(true);
+      const { url } = await apiClient.post<{ url: string }>('/stripe/portal', {});
+      window.location.href = url;
     } catch (error) {
-      console.error("Portal error:", error)
-      setPortalLoading(false)
+      console.error('Portal error:', error);
+      setPortalLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -93,18 +93,18 @@ export default function BillingPage() {
           </main>
         </div>
       </ProtectedRoute>
-    )
+    );
   }
 
-  const planDetails = usage ? SUBSCRIPTION_PLANS[usage.plan] : SUBSCRIPTION_PLANS.free
+  const planDetails = usage ? SUBSCRIPTION_PLANS[usage.plan] : SUBSCRIPTION_PLANS.free;
   const statusColor =
-    subscription?.status === "active"
-      ? "bg-green-500/10 text-green-600 border-green-500/20"
-      : subscription?.status === "past_due"
-        ? "bg-red-500/10 text-red-600 border-red-500/20"
-        : subscription?.status === "canceled"
-          ? "bg-gray-500/10 text-gray-600 border-gray-500/20"
-          : "bg-blue-500/10 text-blue-600 border-blue-500/20"
+    subscription?.status === 'active'
+      ? 'bg-green-500/10 text-green-600 border-green-500/20'
+      : subscription?.status === 'past_due'
+        ? 'bg-red-500/10 text-red-600 border-red-500/20'
+        : subscription?.status === 'canceled'
+          ? 'bg-gray-500/10 text-gray-600 border-gray-500/20'
+          : 'bg-blue-500/10 text-blue-600 border-blue-500/20';
 
   return (
     <ProtectedRoute>
@@ -117,10 +117,16 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-2">Billing & Usage</h2>
-                <p className="text-muted-foreground text-lg">Manage your subscription and track usage</p>
+                <p className="text-muted-foreground text-lg">
+                  Manage your subscription and track usage
+                </p>
               </div>
-              {usage?.plan !== "free" && (
-                <Button onClick={handleManageSubscription} disabled={portalLoading} className="gap-2">
+              {usage?.plan !== 'free' && (
+                <Button
+                  onClick={handleManageSubscription}
+                  disabled={portalLoading}
+                  className="gap-2"
+                >
                   {portalLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -143,13 +149,17 @@ export default function BillingPage() {
                   <div>
                     <CardTitle className="text-2xl mb-2">{planDetails.name} Plan</CardTitle>
                     <CardDescription>
-                      {usage?.plan === "free" ? "Get started with basic features" : "Your current subscription"}
+                      {usage?.plan === 'free'
+                        ? 'Get started with basic features'
+                        : 'Your current subscription'}
                     </CardDescription>
                   </div>
                   <Badge className={`${statusColor} border`}>
-                    {subscription?.status === "active" && <CheckCircle className="h-3 w-3 mr-1" />}
-                    {subscription?.status === "past_due" && <AlertCircle className="h-3 w-3 mr-1" />}
-                    {subscription?.status || "Active"}
+                    {subscription?.status === 'active' && <CheckCircle className="h-3 w-3 mr-1" />}
+                    {subscription?.status === 'past_due' && (
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                    )}
+                    {subscription?.status || 'Active'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -165,7 +175,7 @@ export default function BillingPage() {
                     <div>
                       <p className="font-medium">Subscription Canceling</p>
                       <p className="text-sm">
-                        Your subscription will end on{" "}
+                        Your subscription will end on{' '}
                         {subscription.current_period_end &&
                           new Date(subscription.current_period_end * 1000).toLocaleDateString()}
                       </p>
@@ -173,12 +183,14 @@ export default function BillingPage() {
                   </div>
                 )}
 
-                {subscription?.status === "past_due" && (
+                {subscription?.status === 'past_due' && (
                   <div className="flex gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600">
                     <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium">Payment Failed</p>
-                      <p className="text-sm">Please update your payment method to continue your subscription</p>
+                      <p className="text-sm">
+                        Please update your payment method to continue your subscription
+                      </p>
                     </div>
                   </div>
                 )}
@@ -188,14 +200,19 @@ export default function BillingPage() {
                     <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
                       <div className="flex items-center gap-2 text-muted-foreground mb-1">
                         <Calendar className="h-4 w-4" />
-                        <p className="text-xs uppercase tracking-wider font-medium">Next Billing Date</p>
+                        <p className="text-xs uppercase tracking-wider font-medium">
+                          Next Billing Date
+                        </p>
                       </div>
                       <p className="font-semibold">
-                        {new Date(subscription.current_period_end * 1000).toLocaleDateString("en-US", {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                        {new Date(subscription.current_period_end * 1000).toLocaleDateString(
+                          'en-US',
+                          {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                          }
+                        )}
                       </p>
                     </div>
                   )}
@@ -211,7 +228,7 @@ export default function BillingPage() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Features included:</p>
                   <ul className="grid md:grid-cols-2 gap-2">
-                    {planDetails.features.map((feature) => (
+                    {planDetails.features.map(feature => (
                       <li key={feature} className="flex items-start gap-2 text-sm">
                         <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                         <span>{feature}</span>
@@ -248,11 +265,13 @@ export default function BillingPage() {
                     </p>
                   </div>
 
-                  {!usage.can_generate && usage.plan === "free" && (
+                  {!usage.can_generate && usage.plan === 'free' && (
                     <div className="flex gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
                       <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-primary" />
                       <div className="flex-1">
-                        <p className="font-medium text-primary">Upgrade to generate more articles</p>
+                        <p className="font-medium text-primary">
+                          Upgrade to generate more articles
+                        </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           Upgrade to Pro for 20 articles/month or Enterprise for 100 articles/month
                         </p>
@@ -269,7 +288,7 @@ export default function BillingPage() {
             )}
 
             {/* Upgrade Options */}
-            {usage?.plan === "free" && (
+            {usage?.plan === 'free' && (
               <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
                 <CardHeader>
                   <CardTitle>Upgrade Your Plan</CardTitle>
@@ -301,5 +320,5 @@ export default function BillingPage() {
         </main>
       </div>
     </ProtectedRoute>
-  )
+  );
 }

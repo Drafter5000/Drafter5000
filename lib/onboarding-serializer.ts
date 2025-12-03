@@ -20,27 +20,27 @@ export const COLUMN_ORDER = {
   STATUS: 5,
   STYLE_SAMPLES: 6,
   SUBJECTS: 7,
-} as const
+} as const;
 
-export const TOTAL_COLUMNS = 8
+export const TOTAL_COLUMNS = 8;
 
 /**
  * Separator used for joining array fields in serialized rows
  */
-export const ARRAY_SEPARATOR = ','
+export const ARRAY_SEPARATOR = ',';
 
 /**
  * Represents the complete onboarding data structure for Google Sheets row serialization
  */
 export interface OnboardingRowData {
-  email: string
-  display_name: string
-  created_at: string
-  preferred_language: string
-  delivery_days: string[]
-  status: 'active' | 'paused'
-  style_samples: string[]
-  subjects: string[]
+  email: string;
+  display_name: string;
+  created_at: string;
+  preferred_language: string;
+  delivery_days: string[];
+  status: 'active' | 'paused';
+  style_samples: string[];
+  subjects: string[];
 }
 
 /**
@@ -62,7 +62,7 @@ export function serializeToRow(data: OnboardingRowData): string[] {
     data.status,
     data.style_samples.join(ARRAY_SEPARATOR),
     data.subjects.join(ARRAY_SEPARATOR),
-  ]
+  ];
 }
 
 /**
@@ -76,12 +76,12 @@ export function serializeToRow(data: OnboardingRowData): string[] {
  */
 export function deserializeFromRow(row: string[]): OnboardingRowData {
   if (row.length !== TOTAL_COLUMNS) {
-    throw new Error(`Invalid row length: expected ${TOTAL_COLUMNS} columns, got ${row.length}`)
+    throw new Error(`Invalid row length: expected ${TOTAL_COLUMNS} columns, got ${row.length}`);
   }
 
-  const status = row[COLUMN_ORDER.STATUS]
+  const status = row[COLUMN_ORDER.STATUS];
   if (status !== 'active' && status !== 'paused') {
-    throw new Error(`Invalid status value: expected 'active' or 'paused', got '${status}'`)
+    throw new Error(`Invalid status value: expected 'active' or 'paused', got '${status}'`);
   }
 
   return {
@@ -93,7 +93,7 @@ export function deserializeFromRow(row: string[]): OnboardingRowData {
     status: status,
     style_samples: parseArrayField(row[COLUMN_ORDER.STYLE_SAMPLES]),
     subjects: parseArrayField(row[COLUMN_ORDER.SUBJECTS]),
-  }
+  };
 }
 
 /**
@@ -108,7 +108,7 @@ function parseArrayField(value: string): string[] {
   // Only return empty array if the value is completely empty
   // This distinguishes between "" (no elements) and "," (elements that happen to be empty)
   if (value === '') {
-    return []
+    return [];
   }
-  return value.split(ARRAY_SEPARATOR)
+  return value.split(ARRAY_SEPARATOR);
 }

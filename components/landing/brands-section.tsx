@@ -1,15 +1,15 @@
-"use client"
+'use client';
 
-import { motion } from "framer-motion"
+import { motion } from 'framer-motion';
 
 const brands = [
-  { name: "TechCrunch", logo: "TC" },
-  { name: "Forbes", logo: "F" },
-  { name: "Wired", logo: "W" },
-  { name: "The Verge", logo: "TV" },
-  { name: "Mashable", logo: "M" },
-  { name: "Engadget", logo: "E" },
-]
+  { name: 'TechCrunch', logo: 'TC' },
+  { name: 'Forbes', logo: 'F' },
+  { name: 'Wired', logo: 'W' },
+  { name: 'The Verge', logo: 'TV' },
+  { name: 'Mashable', logo: 'M' },
+  { name: 'Engadget', logo: 'E' },
+];
 
 export function BrandsSection() {
   return (
@@ -43,5 +43,5 @@ export function BrandsSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

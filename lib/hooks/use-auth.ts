@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
+import { getBrowserSupabaseClient } from '@/lib/supabase-browser';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -29,11 +29,9 @@ export function useAuth() {
 
     getUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event: any, session: any) => {
-        setUser(session?.user || null);
-      }
-    );
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      setUser(session?.user || null);
+    });
 
     return () => {
       authListener?.subscription.unsubscribe();
@@ -44,7 +42,7 @@ export function useAuth() {
     try {
       const supabase = getBrowserSupabaseClient();
       await supabase.auth.signOut();
-      router.push("/");
+      router.push('/');
     } catch (err) {
       setError(err as Error);
     }

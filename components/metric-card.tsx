@@ -1,12 +1,12 @@
-import { Card, CardContent } from "@/components/ui/card"
-import type { LucideIcon } from "lucide-react"
+import { Card, CardContent } from '@/components/ui/card';
+import type { LucideIcon } from 'lucide-react';
 
 interface MetricCardProps {
-  title: string
-  value: string | number
-  description?: string
-  icon: LucideIcon
-  trend?: { value: number; isPositive: boolean }
+  title: string;
+  value: string | number;
+  description?: string;
+  icon: LucideIcon;
+  trend?: { value: number; isPositive: boolean };
 }
 
 export function MetricCard({ title, value, description, icon: Icon, trend }: MetricCardProps) {
@@ -19,8 +19,10 @@ export function MetricCard({ title, value, description, icon: Icon, trend }: Met
             <p className="text-3xl font-bold mt-2">{value}</p>
             {description && <p className="text-sm text-muted-foreground mt-2">{description}</p>}
             {trend && (
-              <p className={`text-sm font-medium mt-3 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}>
-                {trend.isPositive ? "↑" : "↓"} {trend.value}% from last month
+              <p
+                className={`text-sm font-medium mt-3 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {trend.isPositive ? '↑' : '↓'} {trend.value}% from last month
               </p>
             )}
           </div>
@@ -30,5 +32,5 @@ export function MetricCard({ title, value, description, icon: Icon, trend }: Met
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

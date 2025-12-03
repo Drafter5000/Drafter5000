@@ -1,71 +1,71 @@
-'use client'
+'use client';
 
-import type React from 'react'
+import type React from 'react';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth-provider'
-import { Header } from '@/components/header'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { AlertCircle, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react'
-import { apiClient } from '@/lib/api-client'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
+import { Header } from '@/components/header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import Link from 'next/link';
 
 export default function SignupPage() {
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      router.push('/dashboard')
+      router.push('/dashboard');
     }
-  }, [user, authLoading, router])
+  }, [user, authLoading, router]);
 
   const validateForm = () => {
     if (!email || !password || !confirmPassword) {
-      setError('Please fill in all fields')
-      return false
+      setError('Please fill in all fields');
+      return false;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return false
+      setError('Password must be at least 8 characters');
+      return false;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return false
+      setError('Passwords do not match');
+      return false;
     }
-    return true
-  }
+    return true;
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm()) return
+    e.preventDefault();
+    if (!validateForm()) return;
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      await apiClient.post('/auth/signup', { email, password })
-      setSuccess(true)
-      setTimeout(() => router.push('/login'), 2000)
+      await apiClient.post('/auth/signup', { email, password });
+      setSuccess(true);
+      setTimeout(() => router.push('/login'), 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to create account')
+      setError(err.message || 'Failed to create account');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Show loading while checking auth
   if (authLoading || user) {
@@ -73,7 +73,7 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   if (success) {
@@ -93,7 +93,7 @@ export default function SignupPage() {
           </Card>
         </main>
       </div>
-    )
+    );
   }
 
   return (
@@ -220,5 +220,5 @@ export default function SignupPage() {
         </Card>
       </main>
     </div>
-  )
+  );
 }

@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/button'
-import { ArrowRight, Sparkles, Zap, Shield } from 'lucide-react'
-import Link from 'next/link'
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Sparkles, Zap, Shield } from 'lucide-react';
+import Link from 'next/link';
 
 export function CTASection() {
   return (
@@ -91,5 +91,5 @@ export function CTASection() {
         </motion.div>
       </div>
     </section>
-  )
+  );
 }

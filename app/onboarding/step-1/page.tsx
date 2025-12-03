@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth-provider'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Progress } from '@/components/ui/progress'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import {
   FileText,
   CheckCircle2,
@@ -18,81 +18,81 @@ import {
   Loader2,
   Info,
   Circle,
-} from 'lucide-react'
-import { apiClient } from '@/lib/api-client'
-import { countWords, isStyleSampleValid } from '@/lib/onboarding-validation'
+} from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import { countWords, isStyleSampleValid } from '@/lib/onboarding-validation';
 
 export default function Step1Page() {
-  const router = useRouter()
-  const { user } = useAuth()
-  const [articles, setArticles] = useState(['', '', ''])
-  const [activeTab, setActiveTab] = useState('1')
-  const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { user } = useAuth();
+  const [articles, setArticles] = useState(['', '', '']);
+  const [activeTab, setActiveTab] = useState('1');
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadExistingData = async () => {
-      if (!user) return
+      if (!user) return;
       try {
         const data = await apiClient.get<{ style_samples: string[] }>(
           `/onboarding/progress?user_id=${user.id}`
-        )
+        );
         if (data.style_samples?.length > 0) {
-          const padded = [...data.style_samples, '', '', ''].slice(0, 3)
-          setArticles(padded)
+          const padded = [...data.style_samples, '', '', ''].slice(0, 3);
+          setArticles(padded);
         }
       } catch {
         // No existing data
       } finally {
-        setInitialLoading(false)
+        setInitialLoading(false);
       }
-    }
-    loadExistingData()
-  }, [user])
+    };
+    loadExistingData();
+  }, [user]);
 
   const updateArticle = (index: number, value: string) => {
-    const updated = [...articles]
-    updated[index] = value
-    setArticles(updated)
-  }
+    const updated = [...articles];
+    updated[index] = value;
+    setArticles(updated);
+  };
 
-  const hasAtLeastOneArticle = isStyleSampleValid(articles)
-  const filledCount = articles.filter(a => a.trim().length > 0).length
-  const progressValue = (filledCount / 3) * 100
+  const hasAtLeastOneArticle = isStyleSampleValid(articles);
+  const filledCount = articles.filter(a => a.trim().length > 0).length;
+  const progressValue = (filledCount / 3) * 100;
 
   const handleNext = async () => {
-    if (!user) return
-    setLoading(true)
-    setError(null)
+    if (!user) return;
+    setLoading(true);
+    setError(null);
 
     try {
       await apiClient.post('/onboarding/step-1', {
         user_id: user.id,
         style_samples: articles.filter(a => a.trim()),
-      })
-      router.push('/onboarding/step-2')
+      });
+      router.push('/onboarding/step-2');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save articles'
-      setError(message)
+      const message = err instanceof Error ? err.message : 'Failed to save articles';
+      setError(message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   const getArticleStatus = (index: number) => {
-    const hasContent = articles[index].trim().length > 0
-    const wordCount = countWords(articles[index])
-    return { hasContent, wordCount }
-  }
+    const hasContent = articles[index].trim().length > 0;
+    const wordCount = countWords(articles[index]);
+    return { hasContent, wordCount };
+  };
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
@@ -119,7 +119,7 @@ export default function Step1Page() {
           <Progress value={progressValue} className="h-2" />
           <div className="flex justify-between mt-3">
             {[1, 2, 3].map((num, index) => {
-              const { hasContent } = getArticleStatus(index)
+              const { hasContent } = getArticleStatus(index);
               return (
                 <div key={num} className="flex items-center gap-2 text-sm">
                   {hasContent ? (
@@ -136,7 +136,7 @@ export default function Step1Page() {
                     </Badge>
                   )}
                 </div>
-              )
+              );
             })}
           </div>
         </CardContent>
@@ -165,7 +165,7 @@ export default function Step1Page() {
           <div className="px-6 pt-4">
             <TabsList>
               {[1, 2, 3].map((num, index) => {
-                const { hasContent, wordCount } = getArticleStatus(index)
+                const { hasContent, wordCount } = getArticleStatus(index);
                 return (
                   <TabsTrigger key={num} value={String(num)} className="gap-2 cursor-pointer">
                     {hasContent ? (
@@ -183,13 +183,13 @@ export default function Step1Page() {
                       </Badge>
                     )}
                   </TabsTrigger>
-                )
+                );
               })}
             </TabsList>
           </div>
 
           {[1, 2, 3].map((num, index) => {
-            const { hasContent, wordCount } = getArticleStatus(index)
+            const { hasContent, wordCount } = getArticleStatus(index);
             return (
               <TabsContent key={num} value={String(num)} className="mt-0">
                 <CardContent className="pt-6 space-y-4">
@@ -252,7 +252,7 @@ export default function Step1Page() {
                   </div>
                 </CardContent>
               </TabsContent>
-            )
+            );
           })}
         </Tabs>
       </Card>
@@ -285,5 +285,5 @@ export default function Step1Page() {
         </Button>
       </div>
     </div>
-  )
+  );
 }

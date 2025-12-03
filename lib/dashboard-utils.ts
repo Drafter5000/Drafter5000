@@ -2,8 +2,8 @@
  * Dashboard utility functions for data transformation and display logic
  */
 
-export type ArticleStatus = 'draft' | 'pending' | 'sent'
-export type BadgeVariant = 'default' | 'secondary' | 'outline'
+export type ArticleStatus = 'draft' | 'pending' | 'sent';
+export type BadgeVariant = 'default' | 'secondary' | 'outline';
 
 /**
  * Maps article status to badge variant for consistent styling
@@ -14,19 +14,19 @@ export type BadgeVariant = 'default' | 'secondary' | 'outline'
 export function getStatusBadgeVariant(status: ArticleStatus): BadgeVariant {
   switch (status) {
     case 'sent':
-      return 'default'
+      return 'default';
     case 'pending':
-      return 'secondary'
+      return 'secondary';
     case 'draft':
-      return 'outline'
+      return 'outline';
     default:
-      return 'outline'
+      return 'outline';
   }
 }
 
 export interface LanguageInfo {
-  label: string
-  flag: string
+  label: string;
+  flag: string;
 }
 
 const LANGUAGE_MAP: Record<string, LanguageInfo> = {
@@ -44,24 +44,24 @@ const LANGUAGE_MAP: Record<string, LanguageInfo> = {
   ko: { label: 'Korean', flag: '🇰🇷' },
   ar: { label: 'Arabic', flag: '🇸🇦' },
   hi: { label: 'Hindi', flag: '🇮🇳' },
-}
+};
 
 /**
  * Maps language codes to display labels and flag emojis
  * Returns English as default for unknown codes
  */
 export function getLanguageInfo(code: string): LanguageInfo {
-  return LANGUAGE_MAP[code] || LANGUAGE_MAP['en']
+  return LANGUAGE_MAP[code] || LANGUAGE_MAP['en'];
 }
 
 /**
  * Returns list of supported language codes
  */
 export function getSupportedLanguages(): string[] {
-  return Object.keys(LANGUAGE_MAP)
+  return Object.keys(LANGUAGE_MAP);
 }
 
-export type DeliveryDaysResult = { type: 'everyday' } | { type: 'days'; days: string[] }
+export type DeliveryDaysResult = { type: 'everyday' } | { type: 'days'; days: string[] };
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Mon',
@@ -71,7 +71,7 @@ const DAY_LABELS: Record<string, string> = {
   fri: 'Fri',
   sat: 'Sat',
   sun: 'Sun',
-}
+};
 
 /**
  * Formats delivery days array for display
@@ -79,27 +79,27 @@ const DAY_LABELS: Record<string, string> = {
  */
 export function formatDeliveryDays(days: string[]): DeliveryDaysResult {
   if (days.length === 7) {
-    return { type: 'everyday' }
+    return { type: 'everyday' };
   }
   return {
     type: 'days',
     days: days.map(day => DAY_LABELS[day] || day),
-  }
+  };
 }
 
 /**
  * Returns the day label for a given day code
  */
 export function getDayLabel(day: string): string {
-  return DAY_LABELS[day] || day
+  return DAY_LABELS[day] || day;
 }
 
 export interface TruncatedSubjects {
-  displayed: string[]
-  remaining: number
+  displayed: string[];
+  remaining: number;
 }
 
-const MAX_DISPLAYED_SUBJECTS = 8
+const MAX_DISPLAYED_SUBJECTS = 8;
 
 /**
  * Truncates subjects array for display
@@ -110,12 +110,12 @@ export function truncateSubjects(subjects: string[]): TruncatedSubjects {
     return {
       displayed: subjects,
       remaining: 0,
-    }
+    };
   }
   return {
     displayed: subjects.slice(0, MAX_DISPLAYED_SUBJECTS),
     remaining: subjects.length - MAX_DISPLAYED_SUBJECTS,
-  }
+  };
 }
 
 /**
@@ -125,12 +125,12 @@ export function numberSubjects(subjects: string[]): Array<{ index: number; subje
   return subjects.map((subject, i) => ({
     index: i + 1,
     subject,
-  }))
+  }));
 }
 
 /**
  * Limits articles array to maximum display count
  */
 export function limitRecentArticles<T>(articles: T[], limit: number = 5): T[] {
-  return articles.slice(0, limit)
+  return articles.slice(0, limit);
 }

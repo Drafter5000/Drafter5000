@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/components/auth-provider'
-import { PenLine, Sparkles } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/components/auth-provider';
+import { PenLine, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export function Header() {
-  const { user, loading } = useAuth()
-  const [mounted, setMounted] = useState(false)
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/70 backdrop-blur-xl border-b border-border/50">
@@ -66,5 +66,5 @@ export function Header() {
         </nav>
       </div>
     </header>
-  )
+  );
 }

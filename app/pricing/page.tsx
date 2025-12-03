@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { Header } from '@/components/header'
-import { Button } from '@/components/ui/button'
+import { Header } from '@/components/header';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -9,12 +9,12 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Check, Zap } from 'lucide-react'
-import { useState } from 'react'
-import { apiClient } from '@/lib/api-client'
-import { useAuth } from '@/components/auth-provider'
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Check, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/components/auth-provider';
 
 const PLANS = [
   {
@@ -70,31 +70,31 @@ const PLANS = [
     cta: 'Contact Sales',
     highlighted: false,
   },
-]
+];
 
 export default function PricingPage() {
-  const { user } = useAuth()
-  const [loading, setLoading] = useState<string | null>(null)
+  const { user } = useAuth();
+  const [loading, setLoading] = useState<string | null>(null);
 
   const handleCheckout = async (planId: string) => {
     if (!user) {
       // Redirect to login/signup
-      window.location.href = '/signup'
-      return
+      window.location.href = '/signup';
+      return;
     }
 
-    setLoading(planId)
+    setLoading(planId);
     try {
       const { sessionUrl } = await apiClient.post<{ sessionUrl: string }>('/stripe/checkout', {
         plan_id: planId,
-      })
-      window.location.href = sessionUrl
+      });
+      window.location.href = sessionUrl;
     } catch (error) {
-      console.error('Checkout error:', error)
+      console.error('Checkout error:', error);
     } finally {
-      setLoading(null)
+      setLoading(null);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -204,5 +204,5 @@ export default function PricingPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

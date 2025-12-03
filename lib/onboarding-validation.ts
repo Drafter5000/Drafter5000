@@ -14,11 +14,11 @@
  * Requirements: 1.2
  */
 export function countWords(text: string): number {
-  const trimmed = text.trim()
+  const trimmed = text.trim();
   if (trimmed === '') {
-    return 0
+    return 0;
   }
-  return trimmed.split(/\s+/).filter(Boolean).length
+  return trimmed.split(/\s+/).filter(Boolean).length;
 }
 
 /**
@@ -31,7 +31,7 @@ export function countWords(text: string): number {
  * Requirements: 1.3, 1.5
  */
 export function isStyleSampleValid(samples: string[]): boolean {
-  return samples.some(sample => sample.trim().length > 0)
+  return samples.some(sample => sample.trim().length > 0);
 }
 
 /**
@@ -45,12 +45,12 @@ export function isStyleSampleValid(samples: string[]): boolean {
  * Requirements: 2.2, 2.6
  */
 export function isSubjectValid(subject: string, existingSubjects: string[]): boolean {
-  const trimmed = subject.trim()
+  const trimmed = subject.trim();
   if (trimmed === '') {
-    return false
+    return false;
   }
   // Check for duplicates (case-insensitive)
-  return !existingSubjects.some(existing => existing.toLowerCase() === trimmed.toLowerCase())
+  return !existingSubjects.some(existing => existing.toLowerCase() === trimmed.toLowerCase());
 }
 
 /**
@@ -63,7 +63,7 @@ export function isSubjectValid(subject: string, existingSubjects: string[]): boo
  * Requirements: 2.5
  */
 export function isSubjectListValid(subjects: string[]): boolean {
-  return subjects.length > 0
+  return subjects.length > 0;
 }
 
 /**
@@ -89,7 +89,7 @@ export function isStep3FormValid(
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     deliveryDays.length > 0
-  )
+  );
 }
 
 /**
@@ -110,11 +110,11 @@ export function selectAISuggestion(
 ): { subjects: string[]; suggestions: string[] } {
   // Only add if valid (not duplicate, not empty)
   if (!isSubjectValid(suggestion, subjects)) {
-    return { subjects, suggestions }
+    return { subjects, suggestions };
   }
 
   return {
     subjects: [...subjects, suggestion],
     suggestions: suggestions.filter(s => s !== suggestion),
-  }
+  };
 }

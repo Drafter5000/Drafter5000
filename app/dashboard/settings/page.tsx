@@ -1,82 +1,90 @@
-"use client"
+'use client';
 
-import { useAuth } from "@/components/auth-provider"
-import { ProtectedRoute } from "@/components/protected-route"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Loader2 } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { apiClient } from "@/lib/api-client"
-import Link from "next/link"
+import { useAuth } from '@/components/auth-provider';
+import { ProtectedRoute } from '@/components/protected-route';
+import { DashboardHeader } from '@/components/dashboard-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { apiClient } from '@/lib/api-client';
+import Link from 'next/link';
 
 const DAYS = [
-  { id: "mon", label: "Monday" },
-  { id: "tue", label: "Tuesday" },
-  { id: "wed", label: "Wednesday" },
-  { id: "thu", label: "Thursday" },
-  { id: "fri", label: "Friday" },
-  { id: "sat", label: "Saturday" },
-  { id: "sun", label: "Sunday" },
-]
+  { id: 'mon', label: 'Monday' },
+  { id: 'tue', label: 'Tuesday' },
+  { id: 'wed', label: 'Wednesday' },
+  { id: 'thu', label: 'Thursday' },
+  { id: 'fri', label: 'Friday' },
+  { id: 'sat', label: 'Saturday' },
+  { id: 'sun', label: 'Sunday' },
+];
 
 const LANGUAGES = [
-  { code: "en", label: "English", flag: "🇺🇸" },
-  { code: "es", label: "Spanish", flag: "🇪🇸" },
-  { code: "fr", label: "French", flag: "🇫🇷" },
-  { code: "de", label: "German", flag: "🇩🇪" },
-  { code: "it", label: "Italian", flag: "🇮🇹" },
-  { code: "pt", label: "Portuguese", flag: "🇵🇹" },
-  { code: "nl", label: "Dutch", flag: "🇳🇱" },
-  { code: "pl", label: "Polish", flag: "🇵🇱" },
-  { code: "ru", label: "Russian", flag: "🇷🇺" },
-  { code: "ja", label: "Japanese", flag: "🇯🇵" },
-  { code: "zh", label: "Chinese", flag: "🇨🇳" },
-  { code: "ko", label: "Korean", flag: "🇰🇷" },
-  { code: "ar", label: "Arabic", flag: "🇸🇦" },
-  { code: "hi", label: "Hindi", flag: "🇮🇳" },
-]
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
+  { code: 'fr', label: 'French', flag: '🇫🇷' },
+  { code: 'de', label: 'German', flag: '🇩🇪' },
+  { code: 'it', label: 'Italian', flag: '🇮🇹' },
+  { code: 'pt', label: 'Portuguese', flag: '🇵🇹' },
+  { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
+  { code: 'pl', label: 'Polish', flag: '🇵🇱' },
+  { code: 'ru', label: 'Russian', flag: '🇷🇺' },
+  { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
+  { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
+  { code: 'ko', label: 'Korean', flag: '🇰🇷' },
+  { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
+  { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
+];
 
 export default function SettingsPage() {
-  const router = useRouter()
-  const { user } = useAuth()
-  const [email, setEmail] = useState("")
-  const [displayName, setDisplayName] = useState("")
-  const [language, setLanguage] = useState("en")
-  const [deliveryDays, setDeliveryDays] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const router = useRouter();
+  const { user } = useAuth();
+  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [language, setLanguage] = useState('en');
+  const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const toggleDay = (dayId: string) => {
-    setDeliveryDays((prev) => (prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId]))
-  }
+    setDeliveryDays(prev =>
+      prev.includes(dayId) ? prev.filter(d => d !== dayId) : [...prev, dayId]
+    );
+  };
 
   const handleSave = async () => {
-    if (!user) return
-    setLoading(true)
+    if (!user) return;
+    setLoading(true);
 
     try {
-      await apiClient.put("/dashboard/settings", {
+      await apiClient.put('/dashboard/settings', {
         user_id: user.id,
         email,
         display_name: displayName,
         preferred_language: language,
         delivery_days: deliveryDays,
-      })
+      });
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
-      console.error("Error saving settings:", error)
+      console.error('Error saving settings:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <ProtectedRoute>
@@ -116,7 +124,7 @@ export default function SettingsPage() {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={e => setEmail(e.target.value)}
                     disabled={loading}
                   />
                 </div>
@@ -126,7 +134,7 @@ export default function SettingsPage() {
                     id="displayName"
                     placeholder="John Doe"
                     value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
+                    onChange={e => setDisplayName(e.target.value)}
                     disabled={loading}
                   />
                 </div>
@@ -141,7 +149,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Select delivery days</Label>
                   <div className="grid grid-cols-2 gap-4">
-                    {DAYS.map((day) => (
+                    {DAYS.map(day => (
                       <div key={day.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={day.id}
@@ -164,7 +172,7 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {LANGUAGES.map((lang) => (
+                      {LANGUAGES.map(lang => (
                         <SelectItem key={lang.code} value={lang.code}>
                           {lang.flag} {lang.label}
                         </SelectItem>
@@ -187,12 +195,12 @@ export default function SettingsPage() {
                   Saving...
                 </>
               ) : (
-                "Save Changes"
+                'Save Changes'
               )}
             </Button>
           </div>
         </main>
       </div>
     </ProtectedRoute>
-  )
+  );
 }

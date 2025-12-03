@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth-provider'
-import { ProtectedRoute } from '@/components/protected-route'
-import { DashboardHeader } from '@/components/dashboard-header'
-import { MetricCard } from '@/components/metric-card'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { apiClient } from '@/lib/api-client'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
+import { ProtectedRoute } from '@/components/protected-route';
+import { DashboardHeader } from '@/components/dashboard-header';
+import { MetricCard } from '@/components/metric-card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { apiClient } from '@/lib/api-client';
 import {
   getLanguageInfo,
   getStatusBadgeVariant,
@@ -18,62 +18,62 @@ import {
   limitRecentArticles,
   getDayLabel,
   type ArticleStatus,
-} from '@/lib/dashboard-utils'
-import { FileText, Sparkles, Calendar, Mail, Plus, ArrowRight, AlertCircle } from 'lucide-react'
-import Link from 'next/link'
+} from '@/lib/dashboard-utils';
+import { FileText, Sparkles, Calendar, Mail, Plus, ArrowRight, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface DashboardData {
   profile: {
-    display_name: string | null
-    email: string
-  }
+    display_name: string | null;
+    email: string;
+  };
   onboarding: {
-    style_samples: string[]
-    subjects: string[]
-    delivery_days: string[]
-    preferred_language: string
-  }
+    style_samples: string[];
+    subjects: string[];
+    delivery_days: string[];
+    preferred_language: string;
+  };
   metrics: {
-    articles_generated: number
-    articles_sent: number
-    draft_articles: number
-  }
+    articles_generated: number;
+    articles_sent: number;
+    draft_articles: number;
+  };
   recentArticles: Array<{
-    id: string
-    subject: string
-    status: 'draft' | 'pending' | 'sent'
-    generated_at: string
-    sent_at: string | null
-  }>
+    id: string;
+    subject: string;
+    status: 'draft' | 'pending' | 'sent';
+    generated_at: string;
+    sent_at: string | null;
+  }>;
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const { user } = useAuth()
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { user } = useAuth();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user) return
+      if (!user) return;
 
       try {
-        setLoading(true)
+        setLoading(true);
         const dashboardData = await apiClient.get<DashboardData>(
           `/dashboard/metrics?user_id=${user.id}`
-        )
-        setData(dashboardData)
+        );
+        setData(dashboardData);
       } catch (err: any) {
-        setError(err.message || 'Failed to load dashboard')
-        console.error('Dashboard error:', err)
+        setError(err.message || 'Failed to load dashboard');
+        console.error('Dashboard error:', err);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchDashboardData()
-  }, [user])
+    fetchDashboardData();
+  }, [user]);
 
   if (loading) {
     return (
@@ -91,7 +91,7 @@ export default function DashboardPage() {
           </main>
         </div>
       </ProtectedRoute>
-    )
+    );
   }
 
   if (error || !data) {
@@ -109,14 +109,14 @@ export default function DashboardPage() {
           </main>
         </div>
       </ProtectedRoute>
-    )
+    );
   }
 
-  const firstName = data.profile.display_name?.split(' ')[0] || 'there'
-  const languageInfo = getLanguageInfo(data.onboarding.preferred_language)
-  const deliveryDaysResult = formatDeliveryDays(data.onboarding.delivery_days)
-  const truncatedSubjects = truncateSubjects(data.onboarding.subjects)
-  const displayedArticles = limitRecentArticles(data.recentArticles, 5)
+  const firstName = data.profile.display_name?.split(' ')[0] || 'there';
+  const languageInfo = getLanguageInfo(data.onboarding.preferred_language);
+  const deliveryDaysResult = formatDeliveryDays(data.onboarding.delivery_days);
+  const truncatedSubjects = truncateSubjects(data.onboarding.subjects);
+  const displayedArticles = limitRecentArticles(data.recentArticles, 5);
 
   return (
     <ProtectedRoute>
@@ -358,5 +358,5 @@ export default function DashboardPage() {
         </main>
       </div>
     </ProtectedRoute>
-  )
+  );
 }

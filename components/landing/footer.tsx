@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { PenLine, Twitter, Github, Linkedin, Mail } from 'lucide-react'
+import Link from 'next/link';
+import { PenLine, Twitter, Github, Linkedin, Mail } from 'lucide-react';
 
 const footerLinks = {
   product: [
@@ -28,14 +28,14 @@ const footerLinks = {
     { name: 'Security', href: '#' },
     { name: 'Cookies', href: '#' },
   ],
-}
+};
 
 const socialLinks = [
   { icon: Twitter, href: '#', label: 'Twitter' },
   { icon: Github, href: '#', label: 'GitHub' },
   { icon: Linkedin, href: '#', label: 'LinkedIn' },
   { icon: Mail, href: '#', label: 'Email' },
-]
+];
 
 export function Footer() {
   return (
@@ -144,5 +144,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }

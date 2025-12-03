@@ -1,15 +1,15 @@
-"use client"
+'use client';
 
-import { motion } from "framer-motion"
-import { ReactNode } from "react"
+import { motion } from 'framer-motion';
+import { ReactNode } from 'react';
 
 interface AnimatedTextProps {
-  children: ReactNode
-  className?: string
-  delay?: number
+  children: ReactNode;
+  className?: string;
+  delay?: number;
 }
 
-export function AnimatedHeading({ children, className = "", delay = 0 }: AnimatedTextProps) {
+export function AnimatedHeading({ children, className = '', delay = 0 }: AnimatedTextProps) {
   return (
     <motion.h1
       initial={{ opacity: 0, y: 30 }}
@@ -19,34 +19,42 @@ export function AnimatedHeading({ children, className = "", delay = 0 }: Animate
     >
       {children}
     </motion.h1>
-  )
+  );
 }
 
-export function AnimatedParagraph({ children, className = "", delay = 0 }: AnimatedTextProps) {
+export function AnimatedParagraph({ children, className = '', delay = 0 }: AnimatedTextProps) {
   return (
     <motion.p
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay, ease: "easeOut" }}
+      transition={{ duration: 0.6, delay, ease: 'easeOut' }}
       className={className}
     >
       {children}
     </motion.p>
-  )
+  );
 }
 
-export function GradientText({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function GradientText({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <span className={`bg-gradient-to-r from-primary via-chart-2 to-primary bg-[length:200%_auto] animate-gradient-x bg-clip-text text-transparent ${className}`}>
+    <span
+      className={`bg-gradient-to-r from-primary via-chart-2 to-primary bg-[length:200%_auto] animate-gradient-x bg-clip-text text-transparent ${className}`}
+    >
       {children}
     </span>
-  )
+  );
 }
 
-export function TypewriterText({ text, className = "" }: { text: string; className?: string }) {
+export function TypewriterText({ text, className = '' }: { text: string; className?: string }) {
   return (
     <motion.span className={className}>
-      {text.split("").map((char, index) => (
+      {text.split('').map((char, index) => (
         <motion.span
           key={index}
           initial={{ opacity: 0 }}
@@ -57,5 +65,5 @@ export function TypewriterText({ text, className = "" }: { text: string; classNa
         </motion.span>
       ))}
     </motion.span>
-  )
+  );
 }
