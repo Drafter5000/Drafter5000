@@ -1,11 +1,14 @@
 export class APIClient {
   private baseUrl: string
 
-  constructor(baseUrl = "/api") {
+  constructor(baseUrl = '/api') {
     this.baseUrl = baseUrl
   }
 
-  async request<T>(endpoint: string, options?: RequestInit & { params?: Record<string, any> }): Promise<T> {
+  async request<T>(
+    endpoint: string,
+    options?: RequestInit & { params?: Record<string, any> }
+  ): Promise<T> {
     const { params, ...requestInit } = options || {}
 
     const url = new URL(`${this.baseUrl}${endpoint}`, window.location.origin)
@@ -17,7 +20,7 @@ export class APIClient {
 
     const response = await fetch(url, {
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...requestInit.headers,
       },
       ...requestInit,
@@ -25,20 +28,20 @@ export class APIClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}))
-      throw new Error(error.message || `API error: ${response.status}`)
+      throw new Error(error.error || error.message || `API error: ${response.status}`)
     }
 
     return response.json()
   }
 
   get<T>(endpoint: string, options?: RequestInit) {
-    return this.request<T>(endpoint, { ...options, method: "GET" })
+    return this.request<T>(endpoint, { ...options, method: 'GET' })
   }
 
   post<T>(endpoint: string, data?: any, options?: RequestInit) {
     return this.request<T>(endpoint, {
       ...options,
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(data),
     })
   }
@@ -46,13 +49,13 @@ export class APIClient {
   put<T>(endpoint: string, data?: any, options?: RequestInit) {
     return this.request<T>(endpoint, {
       ...options,
-      method: "PUT",
+      method: 'PUT',
       body: JSON.stringify(data),
     })
   }
 
   delete<T>(endpoint: string, options?: RequestInit) {
-    return this.request<T>(endpoint, { ...options, method: "DELETE" })
+    return this.request<T>(endpoint, { ...options, method: 'DELETE' })
   }
 }
 
