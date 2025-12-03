@@ -82,6 +82,10 @@ CREATE POLICY "Users can update their own profile"
   ON user_profiles FOR UPDATE 
   USING (auth.uid() = id);
 
+CREATE POLICY "Users can insert their own profile" 
+  ON user_profiles FOR INSERT 
+  WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Users can view their own onboarding data" 
   ON onboarding_data FOR SELECT 
   USING (auth.uid() = user_id);

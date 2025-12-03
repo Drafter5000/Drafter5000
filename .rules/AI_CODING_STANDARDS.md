@@ -59,7 +59,8 @@ Before starting any task:
 
 ### Components
 
-- Create reusable components in `/components/ui/`
+- **STRICTLY use shadcn/ui components** from `/components/ui/` for all UI elements
+- If a required component doesn't exist in shadcn/ui, create it in `/components/` (common folder)
 - Feature-specific components go in `/components/[feature]/`
 - Use composition over inheritance
 - Keep components small and focused

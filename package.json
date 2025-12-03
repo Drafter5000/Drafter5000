@@ -9,7 +9,13 @@
     "start": "next start",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:migrate": "bun run scripts/db-migrate.ts",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:studio": "supabase studio",
+    "db:types": "supabase gen types typescript --local > lib/database.types.ts",
+    "db:reset": "supabase db reset"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

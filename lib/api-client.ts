@@ -20,12 +20,12 @@ export class APIClient {
 
     let response: Response
     try {
-      response = await fetch(url, {
+      response = await fetch(url.toString(), {
+        ...requestInit,
         headers: {
           'Content-Type': 'application/json',
           ...requestInit.headers,
         },
-        ...requestInit,
       })
     } catch (networkError) {
       throw new Error('Network error. Please check your connection.')

@@ -4,6 +4,13 @@ import { createServerClient } from '@supabase/ssr'
 const publicRoutes = ['/', '/login', '/signup', '/pricing', '/auth/callback']
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Skip middleware for API routes - they handle their own auth
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   const supabaseResponse = NextResponse.next({
     request,
   })
@@ -28,8 +35,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const pathname = request.nextUrl.pathname
 
   // Allow public routes
   if (publicRoutes.includes(pathname)) {
