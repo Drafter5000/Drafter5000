@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
-import { LogOut, Settings, CreditCard } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider";
+import { Button } from "@/components/ui/button";
+import { LogOut, Settings, CreditCard } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export function DashboardHeader() {
-  const { user, signOut } = useAuth()
-  const router = useRouter()
+  const { user, signOut } = useAuth();
+  const router = useRouter();
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/")
-  }
+    await signOut();
+    router.push("/");
+  };
 
   return (
     <header className="border-b border-border/50 bg-background/95 backdrop-blur-sm sticky top-0 z-50">
@@ -21,22 +21,37 @@ export function DashboardHeader() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">Welcome back, {user?.email?.split("@")[0]}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Welcome back, {user?.email?.split("@")[0]}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/dashboard/billing">
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-transparent"
+              >
                 <CreditCard className="h-4 w-4" />
                 Billing
               </Button>
             </Link>
             <Link href="/dashboard/settings">
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-transparent"
+              >
                 <Settings className="h-4 w-4" />
                 Settings
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="gap-2"
+            >
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
@@ -44,5 +59,5 @@ export function DashboardHeader() {
         </div>
       </div>
     </header>
-  )
+  );
 }
