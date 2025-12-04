@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { apiClient } from '@/lib/api-client';
-import { SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 import {
   CreditCard,
   Calendar,
@@ -21,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
+import type { SubscriptionPlanWithFeatures } from '@/lib/types';
 
 interface UsageData {
   plan: 'free' | 'pro' | 'enterprise';
@@ -39,10 +39,15 @@ interface SubscriptionData {
   canceled_at?: number;
 }
 
+interface PlansResponse {
+  plans: SubscriptionPlanWithFeatures[];
+}
+
 export default function BillingPage() {
   const { user } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlanWithFeatures[]>([]);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -52,12 +57,14 @@ export default function BillingPage() {
 
       try {
         setLoading(true);
-        const [usageData, subscriptionData] = await Promise.all([
+        const [usageData, subscriptionData, plansData] = await Promise.all([
           apiClient.get<UsageData>('/stripe/usage'),
           apiClient.get<SubscriptionData>('/stripe/subscription'),
+          apiClient.get<PlansResponse>('/stripe/plans'),
         ]);
         setUsage(usageData);
         setSubscription(subscriptionData);
+        setPlans(plansData.plans);
       } catch (error) {
         console.error('Billing data error:', error);
       } finally {
@@ -96,7 +103,15 @@ export default function BillingPage() {
     );
   }
 
-  const planDetails = usage ? SUBSCRIPTION_PLANS[usage.plan] : SUBSCRIPTION_PLANS.free;
+  const currentPlan = plans.find(p => p.id === usage?.plan) || plans.find(p => p.id === 'free');
+  const planDetails = currentPlan
+    ? {
+        name: currentPlan.name,
+        price: currentPlan.price_cents,
+        articles_per_month: currentPlan.articles_per_month,
+        features: currentPlan.features.map(f => f.feature_text),
+      }
+    : { name: 'Free', price: 0, articles_per_month: 2, features: [] };
   const statusColor =
     subscription?.status === 'active'
       ? 'bg-green-500/10 text-green-600 border-green-500/20'

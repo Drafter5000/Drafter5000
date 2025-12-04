@@ -11,6 +11,8 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "db:migrate": "bun run scripts/db-migrate.ts",
+    "db:bootstrap": "bun run scripts/bootstrap.ts",
+    "postinstall": "bun run scripts/bootstrap.ts || true",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:studio": "supabase studio",

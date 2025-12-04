@@ -1,4 +1,5 @@
 export type UserRole = 'free' | 'pro' | 'enterprise';
+export type OrgRole = 'super_admin' | 'admin' | 'member' | 'viewer';
 
 export interface UserProfile {
   id: string;
@@ -9,6 +10,48 @@ export interface UserProfile {
   subscription_status: 'active' | 'canceled' | 'past_due' | 'trial';
   subscription_plan: UserRole;
   stripe_customer_id: string | null;
+  current_organization_id: string | null;
+  is_super_admin: boolean;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  settings: Record<string, unknown>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: OrgRole;
+  invited_by: string | null;
+  invited_at: string | null;
+  joined_at: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationInvitation {
+  id: string;
+  organization_id: string;
+  email: string;
+  role: OrgRole;
+  token: string;
+  invited_by: string;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+}
+
+export interface OrganizationWithRole extends Organization {
+  role: OrgRole;
 }
 
 export interface OnboardingData {

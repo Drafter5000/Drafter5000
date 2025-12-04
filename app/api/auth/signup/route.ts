@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { setupSuperAdmin, setupNewUserOrganization } from '@/lib/organization-utils';
+
+const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,6 +50,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user' }, { status: 400 });
     }
 
+    // Check if this user should be super admin
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.toLowerCase();
+    const isSuperAdmin = superAdminEmail && email.toLowerCase() === superAdminEmail;
+
     // Create user profile using admin client to bypass RLS
     // This is necessary because auth.uid() is not available immediately after signup
     const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
@@ -55,6 +62,8 @@ export async function POST(request: NextRequest) {
       display_name: name,
       subscription_status: 'trial',
       subscription_plan: 'free',
+      current_organization_id: DEFAULT_ORG_ID,
+      is_super_admin: isSuperAdmin,
     });
 
     if (profileError) {
@@ -66,6 +75,14 @@ export async function POST(request: NextRequest) {
         );
       }
       throw profileError;
+    }
+
+    // Setup organization membership
+    if (isSuperAdmin) {
+      await setupSuperAdmin(authData.user.id);
+      console.log(`Super admin created: ${email}`);
+    } else {
+      await setupNewUserOrganization(authData.user.id);
     }
 
     return NextResponse.json({ success: true });

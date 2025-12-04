@@ -3,7 +3,10 @@
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getStripeClient } from '@/lib/stripe-client';
+import { setupSuperAdmin, setupNewUserOrganization } from '@/lib/organization-utils';
 import type { UserProfile } from '@/lib/types';
+
+const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 export async function signUpAction(email: string, password: string, displayName: string) {
   try {
@@ -30,6 +33,10 @@ export async function signUpAction(email: string, password: string, displayName:
       },
     });
 
+    // Check if this user should be super admin
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.toLowerCase();
+    const isSuperAdmin = superAdminEmail && email.toLowerCase() === superAdminEmail;
+
     // Create user profile in database using admin client to bypass RLS
     // This is necessary because auth.uid() is not available immediately after signup
     const supabaseAdmin = getSupabaseAdmin();
@@ -40,9 +47,19 @@ export async function signUpAction(email: string, password: string, displayName:
       stripe_customer_id: customer.id,
       subscription_status: 'trial',
       subscription_plan: 'free',
+      current_organization_id: DEFAULT_ORG_ID,
+      is_super_admin: isSuperAdmin,
     });
 
     if (profileError) throw profileError;
+
+    // Setup organization membership
+    if (isSuperAdmin) {
+      await setupSuperAdmin(authData.user.id);
+      console.log(`Super admin created: ${email}`);
+    } else {
+      await setupNewUserOrganization(authData.user.id);
+    }
 
     return {
       success: true,
