@@ -107,3 +107,111 @@ export interface PlanFeature {
 export interface SubscriptionPlanWithFeatures extends SubscriptionPlan {
   features: PlanFeature[];
 }
+
+// ===========================================
+// ADMIN DASHBOARD TYPES
+// ===========================================
+
+export type AdminAction =
+  | 'user.create'
+  | 'user.update_role'
+  | 'user.deactivate'
+  | 'user.reactivate'
+  | 'org.create'
+  | 'org.update'
+  | 'org.deactivate'
+  | 'org.reactivate';
+
+export interface AuditLogEntry {
+  id: string;
+  admin_id: string;
+  action: AdminAction;
+  target_type: 'user' | 'organization';
+  target_id: string | null;
+  details: Record<string, unknown>;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface AdminUserView {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role: OrgRole | null;
+  organization_id: string | null;
+  organization_name: string | null;
+  subscription_status: string;
+  subscription_plan: string;
+  is_active: boolean;
+  is_super_admin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminOrgView {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  member_count: number;
+  admin_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface CreateUserInput {
+  email: string;
+  display_name: string;
+  password: string;
+  role: OrgRole;
+  organization_id?: string;
+}
+
+export interface CreateOrgInput {
+  name: string;
+  slug: string;
+  logo_url?: string;
+  settings?: Record<string, unknown>;
+  initial_admin_id?: string;
+}
+
+export interface UpdateOrgInput {
+  name?: string;
+  slug?: string;
+  logo_url?: string;
+  settings?: Record<string, unknown>;
+  is_active?: boolean;
+}
+
+export interface AdminSession {
+  user_id: string;
+  email: string;
+  is_super_admin: boolean;
+  organization_id: string | null;
+  role: OrgRole | null;
+}
+
+export interface DashboardMetrics {
+  total_users: number;
+  total_organizations: number;
+  subscriptions_by_plan: Record<string, number>;
+  recent_registrations: UserProfile[];
+  active_users: number;
+}
