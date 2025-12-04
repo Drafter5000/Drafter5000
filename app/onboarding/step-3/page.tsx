@@ -27,6 +27,7 @@ import {
   Mail,
   Sparkles,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
 import { isStep3FormValid } from '@/lib/onboarding-validation';
 import {
@@ -80,13 +81,31 @@ export default function Step3Page() {
     const loadExistingData = async () => {
       if (!user) return;
       try {
-        // Pre-fill email from user
-        if (user.email) {
+        const data = await apiClient.get<{
+          delivery_days: string[];
+          preferred_language: string;
+          display_name: string | null;
+          email: string | null;
+        }>(`/onboarding/progress?user_id=${user.id}`);
+
+        // Pre-fill email: use saved email first, then fall back to user email
+        if (data.email) {
+          setEmail(data.email);
+        } else if (user.email) {
           setEmail(user.email);
         }
-        const data = await apiClient.get<{ delivery_days: string[]; preferred_language: string }>(
-          `/onboarding/progress?user_id=${user.id}`
-        );
+
+        // Pre-fill display_name by splitting into first and last name
+        if (data.display_name) {
+          const nameParts = data.display_name.trim().split(/\s+/);
+          if (nameParts.length >= 2) {
+            setFirstName(nameParts[0]);
+            setLastName(nameParts.slice(1).join(' '));
+          } else if (nameParts.length === 1) {
+            setFirstName(nameParts[0]);
+          }
+        }
+
         if (data.delivery_days?.length > 0) {
           setFrequency(data.delivery_days as DayCode[]);
         }
@@ -94,7 +113,10 @@ export default function Step3Page() {
           setLanguage(data.preferred_language);
         }
       } catch {
-        // No existing data
+        // No existing data, fall back to user email
+        if (user.email) {
+          setEmail(user.email);
+        }
       } finally {
         setInitialLoading(false);
       }
@@ -137,13 +159,58 @@ export default function Step3Page() {
   const isValid = isStep3FormValid(email, firstName, lastName, frequency);
   const selectedLanguage = LANGUAGES.find(l => l.code === language);
 
-  if (initialLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Skeleton loading component for cards
+  const SkeletonCard = ({ type }: { type: 'info' | 'days' | 'language' }) => (
+    <Card className="border-2 overflow-hidden pt-0 pb-6">
+      <CardHeader className="py-4 bg-gradient-to-r from-muted/30 to-transparent">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded" />
+          <Skeleton className="h-5 w-32" />
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {type === 'info' && (
+          <>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-12 w-full rounded-xl" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </div>
+            </div>
+          </>
+        )}
+        {type === 'days' && (
+          <>
+            <Skeleton className="h-14 w-full rounded-xl" />
+            <div className="grid grid-cols-2 gap-2">
+              {[...Array(7)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-xl" />
+              ))}
+            </div>
+          </>
+        )}
+        {type === 'language' && (
+          <>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-12 w-full rounded-xl" />
+            </div>
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-16 w-full rounded-xl" />
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -165,77 +232,87 @@ export default function Step3Page() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto">
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* User Information Card */}
-          <Card className="border-2 overflow-hidden">
-            <CardHeader className="pb-4 bg-gradient-to-r from-blue-500/10 to-transparent">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-blue-500" />
-                Your Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  Email Address
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="h-12 rounded-xl"
-                  disabled={loading}
-                />
-                <p className="text-xs text-muted-foreground">Articles will be sent here</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+      {/* Skeleton Loading State */}
+      {initialLoading ? (
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6">
+            <SkeletonCard type="info" />
+            <SkeletonCard type="days" />
+            <SkeletonCard type="language" />
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* User Information Card */}
+            <Card className="border-2 overflow-hidden pt-0 pb-6">
+              <CardHeader className="py-4 bg-gradient-to-r from-blue-500/10 to-transparent">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="h-5 w-5 text-blue-500" />
+                  Your Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-sm font-medium">
-                    First Name
+                  <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                    Email Address
                   </Label>
                   <Input
-                    id="firstName"
-                    placeholder="John"
-                    value={firstName}
-                    onChange={e => setFirstName(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
                     className="h-12 rounded-xl"
                     disabled={loading}
                   />
+                  <p className="text-xs text-muted-foreground">Articles will be sent here</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-sm font-medium">
-                    Last Name
-                  </Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    value={lastName}
-                    onChange={e => setLastName(e.target.value)}
-                    className="h-12 rounded-xl"
-                    disabled={loading}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName" className="text-sm font-medium">
+                      First Name
+                    </Label>
+                    <Input
+                      id="firstName"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={e => setFirstName(e.target.value)}
+                      className="h-12 rounded-xl"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName" className="text-sm font-medium">
+                      Last Name
+                    </Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={e => setLastName(e.target.value)}
+                      className="h-12 rounded-xl"
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Frequency Card */}
-          <Card className="border-2 overflow-hidden">
-            <CardHeader className="pb-4 bg-gradient-to-r from-purple-500/10 to-transparent">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-purple-500" />
-                Delivery Days
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Everyday Toggle */}
-              <div
-                onClick={handleToggleEveryday}
-                className={`
+            {/* Frequency Card */}
+            <Card className="border-2 overflow-hidden pt-0 pb-6">
+              <CardHeader className="py-4 bg-gradient-to-r from-purple-500/10 to-transparent">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-purple-500" />
+                  Delivery Days
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Everyday Toggle */}
+                <div
+                  onClick={handleToggleEveryday}
+                  className={`
                   w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer
                   ${
                     isEveryday
@@ -244,40 +321,40 @@ export default function Step3Page() {
                   }
                   ${loading ? 'opacity-50 pointer-events-none' : ''}
                 `}
-              >
-                <Checkbox
-                  checked={isEveryday}
-                  onCheckedChange={handleToggleEveryday}
-                  className="h-5 w-5"
-                  disabled={loading}
-                />
-                <span
-                  className={`font-semibold ${isEveryday ? 'text-purple-600 dark:text-purple-400' : ''}`}
                 >
-                  Every Day
-                </span>
-                {isEveryday && <Sparkles className="h-4 w-4 text-purple-500 ml-auto" />}
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border/50" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-card px-3 text-xs text-muted-foreground uppercase tracking-wider">
-                    Or select days
+                  <Checkbox
+                    checked={isEveryday}
+                    onCheckedChange={handleToggleEveryday}
+                    className="h-5 w-5"
+                    disabled={loading}
+                  />
+                  <span
+                    className={`font-semibold ${isEveryday ? 'text-purple-600 dark:text-purple-400' : ''}`}
+                  >
+                    Every Day
                   </span>
+                  {isEveryday && <Sparkles className="h-4 w-4 text-purple-500 ml-auto" />}
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                {DAYS.map(day => {
-                  const isSelected = frequency.includes(day.id);
-                  return (
-                    <div
-                      key={day.id}
-                      onClick={() => !loading && handleToggleDay(day.id)}
-                      className={`
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border/50" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-card px-3 text-xs text-muted-foreground uppercase tracking-wider">
+                      Or select days
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {DAYS.map(day => {
+                    const isSelected = frequency.includes(day.id);
+                    return (
+                      <div
+                        key={day.id}
+                        onClick={() => !loading && handleToggleDay(day.id)}
+                        className={`
                         flex items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer
                         ${
                           isSelected
@@ -286,89 +363,90 @@ export default function Step3Page() {
                         }
                         ${loading ? 'opacity-50 pointer-events-none' : ''}
                       `}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => handleToggleDay(day.id)}
-                        className="h-4 w-4"
-                        disabled={loading}
-                      />
-                      <span className="text-sm font-medium">{day.short}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {frequency.length > 0 && (
-                <div className="flex items-center gap-2 pt-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">
-                    <span className="font-semibold text-foreground">{frequency.length}</span> day
-                    {frequency.length !== 1 ? 's' : ''} selected
-                  </span>
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleToggleDay(day.id)}
+                          className="h-4 w-4"
+                          disabled={loading}
+                        />
+                        <span className="text-sm font-medium">{day.short}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Language Card */}
-          <Card className="border-2 overflow-hidden">
-            <CardHeader className="pb-4 bg-gradient-to-r from-amber-500/10 to-transparent">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Globe className="h-5 w-5 text-amber-500" />
-                Article Language
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Output language</Label>
-                <Select value={language} onValueChange={setLanguage} disabled={loading}>
-                  <SelectTrigger className="h-12 rounded-xl">
-                    <SelectValue>
-                      {selectedLanguage && (
-                        <span className="flex items-center gap-2">
-                          <span className="text-lg">{selectedLanguage.flag}</span>
-                          <span>{selectedLanguage.label}</span>
-                        </span>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map(lang => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        <span className="flex items-center gap-2">
-                          <span className="text-lg">{lang.flag}</span>
-                          <span>{lang.label}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                {frequency.length > 0 && (
+                  <div className="flex items-center gap-2 pt-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span className="text-muted-foreground">
+                      <span className="font-semibold text-foreground">{frequency.length}</span> day
+                      {frequency.length !== 1 ? 's' : ''} selected
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              {/* Selected Language Preview */}
-              <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20">
-                <div className="flex items-center gap-4">
-                  <span className="text-4xl">{selectedLanguage?.flag}</span>
-                  <div>
-                    <p className="font-semibold text-lg">{selectedLanguage?.label}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Articles in {selectedLanguage?.label}
-                    </p>
+            {/* Language Card */}
+            <Card className="border-2 overflow-hidden pt-0 pb-6">
+              <CardHeader className="py-4 bg-gradient-to-r from-amber-500/10 to-transparent">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-amber-500" />
+                  Article Language
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Output language</Label>
+                  <Select value={language} onValueChange={setLanguage} disabled={loading}>
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue>
+                        {selectedLanguage && (
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">{selectedLanguage.flag}</span>
+                            <span>{selectedLanguage.label}</span>
+                          </span>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map(lang => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">{lang.flag}</span>
+                            <span>{lang.label}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Selected Language Preview */}
+                <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20">
+                  <div className="flex items-center gap-4">
+                    <span className="text-4xl">{selectedLanguage?.flag}</span>
+                    <div>
+                      <p className="font-semibold text-lg">{selectedLanguage?.label}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Articles in {selectedLanguage?.label}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-primary">Note:</span> Your writing style is
-                  analyzed regardless of the output language
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium text-primary">Note:</span> Your writing style is
+                    analyzed regardless of the output language
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Footer */}
       <div className="flex justify-between items-center pt-8 border-t border-border/50 max-w-4xl mx-auto">

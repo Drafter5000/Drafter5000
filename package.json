@@ -11,6 +11,7 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "db:migrate": "bun run scripts/db-migrate.ts",
+    "db:migrate:multi-tenant": "bun run scripts/db-migrate.ts 04-multi-tenant-schema.sql",
     "db:bootstrap": "bun run scripts/bootstrap.ts",
     "postinstall": "bun run scripts/bootstrap.ts || true",
     "db:start": "supabase start",

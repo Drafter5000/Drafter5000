@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
 import {
   CreditCard,
@@ -21,6 +22,118 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { SubscriptionPlanWithFeatures } from '@/lib/types';
+
+function BillingPageSkeleton() {
+  return (
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+        <DashboardHeader />
+
+        <main className="pt-10 pb-20 px-6">
+          <div className="max-w-5xl mx-auto space-y-8">
+            {/* Header Skeleton */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Skeleton className="h-10 w-64 mb-2" />
+                <Skeleton className="h-6 w-80" />
+              </div>
+              <Skeleton className="h-10 w-44 rounded-md" />
+            </div>
+
+            {/* Current Plan Card Skeleton */}
+            <Card className="border-2">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Skeleton className="h-8 w-40 mb-2" />
+                    <Skeleton className="h-5 w-56" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-baseline gap-2">
+                  <Skeleton className="h-12 w-24" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Skeleton className="h-4 w-4 rounded" />
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                    <Skeleton className="h-5 w-36" />
+                  </div>
+                  <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Skeleton className="h-4 w-4 rounded" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-5 w-28" />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-32" />
+                  <div className="grid md:grid-cols-2 gap-2">
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4 rounded-full" />
+                        <Skeleton className="h-4 w-40" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Usage Card Skeleton */}
+            <Card className="border-2">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-6 w-40" />
+                </div>
+                <Skeleton className="h-5 w-56 mt-1" />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <Skeleton className="h-3 w-full rounded-full" />
+                  <Skeleton className="h-3 w-40 mt-2" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upgrade Options Skeleton */}
+            <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
+              <CardHeader>
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-5 w-64 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {[1, 2].map(i => (
+                    <div key={i} className="p-4 rounded-lg bg-background border-2 border-border">
+                      <Skeleton className="h-6 w-24 mb-2" />
+                      <Skeleton className="h-9 w-28 mb-3" />
+                      <Skeleton className="h-4 w-36 mb-4" />
+                      <Skeleton className="h-10 w-full rounded-md" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    </ProtectedRoute>
+  );
+}
 
 interface UsageData {
   plan: 'free' | 'pro' | 'enterprise';
@@ -87,20 +200,7 @@ export default function BillingPage() {
   };
 
   if (loading) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background">
-          <DashboardHeader />
-          <main className="pt-24 pb-20 px-6">
-            <div className="max-w-5xl mx-auto">
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            </div>
-          </main>
-        </div>
-      </ProtectedRoute>
-    );
+    return <BillingPageSkeleton />;
   }
 
   const currentPlan = plans.find(p => p.id === usage?.plan) || plans.find(p => p.id === 'free');

@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 CREATE TABLE IF NOT EXISTS onboarding_data (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID UNIQUE NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  email TEXT,
+  display_name TEXT,
   style_samples TEXT[] DEFAULT '{}',
   subjects TEXT[] DEFAULT '{}',
   preferred_language TEXT DEFAULT 'English',

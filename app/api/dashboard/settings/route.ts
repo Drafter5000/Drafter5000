@@ -1,6 +1,52 @@
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { type NextRequest, NextResponse } from 'next/server';
 
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('user_id');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
+    }
+
+    const supabase = await getServerSupabaseClient();
+
+    // Fetch from user_profiles
+    const { data: profileData, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('display_name, email')
+      .eq('id', userId)
+      .single();
+
+    if (profileError && profileError.code !== 'PGRST116') {
+      throw profileError;
+    }
+
+    // Fetch from onboarding_data for delivery preferences
+    const { data: onboardingData, error: onboardingError } = await supabase
+      .from('onboarding_data')
+      .select('preferred_language, delivery_days, display_name, email')
+      .eq('user_id', userId)
+      .single();
+
+    if (onboardingError && onboardingError.code !== 'PGRST116') {
+      throw onboardingError;
+    }
+
+    return NextResponse.json({
+      display_name: onboardingData?.display_name || profileData?.display_name || null,
+      email: onboardingData?.email || profileData?.email || null,
+      preferred_language: onboardingData?.preferred_language || 'en',
+      delivery_days: onboardingData?.delivery_days || [],
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch settings';
+    console.error('Settings fetch error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const { user_id, email, display_name, preferred_language, delivery_days } =

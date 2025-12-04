@@ -14,6 +14,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getServerSupabaseClient();
 
+    // Update user_profiles with display_name
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .update({
+        display_name,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user_id);
+
+    if (profileError) throw profileError;
+
     // Save complete onboarding data
     const { error: updateError } = await supabase.from('onboarding_data').upsert(
       {

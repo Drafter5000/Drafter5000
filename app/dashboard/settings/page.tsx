@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -16,8 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 
@@ -49,13 +49,42 @@ const LANGUAGES = [
 ];
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [language, setLanguage] = useState('en');
   const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [success, setSuccess] = useState(false);
+
+  // Load existing settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!user) return;
+      try {
+        const data = await apiClient.get<{
+          display_name: string | null;
+          preferred_language: string;
+          delivery_days: string[];
+        }>(`/dashboard/settings?user_id=${user.id}`);
+
+        if (data.display_name) {
+          setDisplayName(data.display_name);
+        }
+        if (data.preferred_language) {
+          setLanguage(data.preferred_language);
+        }
+        if (data.delivery_days?.length > 0) {
+          setDeliveryDays(data.delivery_days);
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    loadSettings();
+  }, [user]);
 
   const toggleDay = (dayId: string) => {
     setDeliveryDays(prev =>
@@ -110,91 +139,140 @@ export default function SettingsPage() {
               </div>
             )}
 
-            <Card className="border-2">
-              <CardHeader>
-                <CardTitle>Account Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={user?.email || ''}
-                    readOnly
-                    className="bg-muted cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    placeholder="John Doe"
-                    value={displayName}
-                    onChange={e => setDisplayName(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            {initialLoading ? (
+              <>
+                {/* Account Information Skeleton */}
+                <Card className="border-2">
+                  <CardHeader>
+                    <Skeleton className="h-6 w-44" />
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Card className="border-2">
-              <CardHeader>
-                <CardTitle>Delivery Preferences</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Select delivery days</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {DAYS.map(day => (
-                      <div key={day.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={day.id}
-                          checked={deliveryDays.includes(day.id)}
-                          onCheckedChange={() => toggleDay(day.id)}
-                          disabled={loading}
-                        />
-                        <Label htmlFor={day.id} className="font-normal cursor-pointer">
-                          {day.label}
-                        </Label>
+                {/* Delivery Preferences Skeleton */}
+                <Card className="border-2">
+                  <CardHeader>
+                    <Skeleton className="h-6 w-40" />
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <div className="grid grid-cols-2 gap-4">
+                        {[...Array(7)].map((_, i) => (
+                          <div key={i} className="flex items-center space-x-2">
+                            <Skeleton className="h-4 w-4" />
+                            <Skeleton className="h-4 w-20" />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="language">Article Language</Label>
-                  <Select value={language} onValueChange={setLanguage} disabled={loading}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LANGUAGES.map(lang => (
-                        <SelectItem key={lang.code} value={lang.code}>
-                          {lang.flag} {lang.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+                <Skeleton className="h-11 w-full" />
+              </>
+            ) : (
+              <>
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle>Account Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={user?.email || ''}
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="displayName">Display Name</Label>
+                      <Input
+                        id="displayName"
+                        placeholder="John Doe"
+                        value={displayName}
+                        onChange={e => setDisplayName(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Button
-              onClick={handleSave}
-              disabled={loading}
-              size="lg"
-              className="w-full gap-2 shadow-lg shadow-primary/20"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle>Delivery Preferences</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Select delivery days</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        {DAYS.map(day => (
+                          <div key={day.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={day.id}
+                              checked={deliveryDays.includes(day.id)}
+                              onCheckedChange={() => toggleDay(day.id)}
+                              disabled={loading}
+                            />
+                            <Label htmlFor={day.id} className="font-normal cursor-pointer">
+                              {day.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="language">Article Language</Label>
+                      <Select value={language} onValueChange={setLanguage} disabled={loading}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LANGUAGES.map(lang => (
+                            <SelectItem key={lang.code} value={lang.code}>
+                              {lang.flag} {lang.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button
+                  onClick={handleSave}
+                  disabled={loading}
+                  size="lg"
+                  className="w-full gap-2 shadow-lg shadow-primary/20"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </>
+            )}
           </div>
         </main>
       </div>

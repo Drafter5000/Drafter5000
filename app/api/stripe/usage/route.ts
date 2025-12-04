@@ -1,6 +1,12 @@
 import { getServerSupabaseSession, getServerSupabaseClient } from '@/lib/supabase-client';
-import { SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 import { type NextRequest, NextResponse } from 'next/server';
+
+// Default plan limits as fallback
+const DEFAULT_PLAN_LIMITS: Record<string, number> = {
+  free: 2,
+  pro: 30,
+  enterprise: 100,
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +25,15 @@ export async function GET(request: NextRequest) {
       .single();
 
     const plan = profile?.subscription_plan || 'free';
-    const planDetails = SUBSCRIPTION_PLANS[plan as keyof typeof SUBSCRIPTION_PLANS];
+
+    // Try to get plan details from database
+    const { data: planDetails } = await supabase
+      .from('subscription_plans')
+      .select('articles_per_month')
+      .eq('name', plan)
+      .single();
+
+    const articlesLimit = planDetails?.articles_per_month ?? DEFAULT_PLAN_LIMITS[plan] ?? 2;
 
     // Get current month's article count
     const startOfMonth = new Date();
@@ -35,9 +49,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       plan,
       articles_used: articlesUsed || 0,
-      articles_limit: planDetails.articles_per_month,
-      percentage_used: Math.round(((articlesUsed || 0) / planDetails.articles_per_month) * 100),
-      can_generate: (articlesUsed || 0) < planDetails.articles_per_month,
+      articles_limit: articlesLimit,
+      percentage_used: Math.round(((articlesUsed || 0) / articlesLimit) * 100),
+      can_generate: (articlesUsed || 0) < articlesLimit,
     });
   } catch (error: any) {
     console.error('Usage fetch error:', error);
