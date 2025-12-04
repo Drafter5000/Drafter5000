@@ -36,9 +36,31 @@ export interface Article {
 }
 
 export interface SubscriptionPlan {
-  id: 'free' | 'pro' | 'enterprise';
+  id: string;
   name: string;
-  price: number;
+  description: string | null;
+  price_cents: number;
+  currency: string;
   articles_per_month: number;
-  features: string[];
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
+  is_active: boolean;
+  is_highlighted: boolean;
+  sort_order: number;
+  cta_text: string | null;
+  cta_type: 'checkout' | 'email' | 'signup';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanFeature {
+  id: string;
+  plan_id: string;
+  feature_text: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface SubscriptionPlanWithFeatures extends SubscriptionPlan {
+  features: PlanFeature[];
 }

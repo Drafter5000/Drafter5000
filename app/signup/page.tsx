@@ -17,6 +17,7 @@ import Link from 'next/link';
 export default function SignupPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,8 +35,12 @@ export default function SignupPage() {
   }, [user, authLoading, router]);
 
   const validateForm = () => {
-    if (!email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       setError('Please fill in all fields');
+      return false;
+    }
+    if (name.trim().length < 2) {
+      setError('Name must be at least 2 characters');
       return false;
     }
     if (password.length < 8) {
@@ -57,7 +62,7 @@ export default function SignupPage() {
     setError(null);
 
     try {
-      await apiClient.post('/auth/signup', { email, password });
+      await apiClient.post('/auth/signup', { name: name.trim(), email, password });
       setSuccess(true);
       setTimeout(() => router.push('/login'), 2000);
     } catch (err: any) {
@@ -120,6 +125,22 @@ export default function SignupPage() {
                   <p>{error}</p>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Full Name
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="h-12"
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">

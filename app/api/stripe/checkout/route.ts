@@ -1,6 +1,7 @@
 import { getServerSupabaseClient } from '@/lib/supabase-client';
-import { getStripeClient, SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
+import { getStripeClient } from '@/lib/stripe-client';
 import { getServerSupabaseSession } from '@/lib/supabase-client';
+import { getPlanById } from '@/lib/plan-utils';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -10,11 +11,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { plan_id } = await request.json();
-    const plan = SUBSCRIPTION_PLANS[plan_id as keyof typeof SUBSCRIPTION_PLANS];
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const { plan_id } = body;
+
+    if (!plan_id) {
+      return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
+    }
+
+    // Fetch plan from database
+    const plan = await getPlanById(plan_id);
 
     if (!plan) {
-      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 });
+    }
+
+    // Free plans don't need checkout
+    if (plan.price_cents === 0) {
+      return NextResponse.json({ error: 'Free plan does not require checkout' }, { status: 400 });
+    }
+
+    // Ensure stripe_price_id is configured
+    if (!plan.stripe_price_id) {
+      return NextResponse.json({ error: 'Plan not configured for checkout' }, { status: 400 });
     }
 
     const stripe = getStripeClient();
@@ -42,22 +66,14 @@ export async function POST(request: NextRequest) {
         .eq('id', session.user.id);
     }
 
-    // Get price ID for the plan
-    const priceId =
-      plan_id === 'pro' ? process.env.STRIPE_PRICE_PRO_ID : process.env.STRIPE_PRICE_ENTERPRISE_ID;
-
-    if (!priceId) {
-      return NextResponse.json({ error: 'Price ID not configured' }, { status: 500 });
-    }
-
-    // Create checkout session
+    // Create checkout session using database price ID
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
         {
-          price: priceId,
+          price: plan.stripe_price_id,
           quantity: 1,
         },
       ],
@@ -79,11 +95,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ sessionUrl: checkoutSession.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Checkout error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to create checkout' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : 'Failed to create checkout';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

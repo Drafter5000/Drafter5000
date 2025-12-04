@@ -1,10 +1,22 @@
 import { getStripeClient } from '@/lib/stripe-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getPlanByPriceIdAdmin } from '@/lib/plan-utils';
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
 const stripe = getStripeClient();
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+/**
+ * Maps a Stripe price ID to a plan ID using database lookup.
+ * Falls back to 'free' if no matching plan is found.
+ */
+async function mapPriceIdToPlan(priceId: string | undefined): Promise<string> {
+  if (!priceId) return 'free';
+
+  const plan = await getPlanByPriceIdAdmin(priceId);
+  return plan?.id ?? 'free';
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -15,8 +27,9 @@ export async function POST(request: NextRequest) {
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Webhook signature verification failed:', message);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
@@ -32,21 +45,16 @@ export async function POST(request: NextRequest) {
 
         if (!subscriptionId) break;
 
-        // Get subscription details - the subscription object is directly in event.data.object for subscription events
-        // For checkout.session.completed, we get it from the session
+        // Get subscription details
         const subscription = event.data.object.subscription
           ? event.data.object
           : await stripe.subscriptions.retrieve(subscriptionId as string);
 
-        // For checkout sessions, subscription details might be in the session itself
-        // Let's use the subscription from webhook event if available
         const subData = subscription as any;
 
-        // Determine plan from price
-        let plan = 'free';
+        // Determine plan from price using database lookup
         const priceId = subData.items?.data?.[0]?.price?.id || subData.plan?.id;
-        if (priceId === process.env.STRIPE_PRICE_PRO_ID) plan = 'pro';
-        if (priceId === process.env.STRIPE_PRICE_ENTERPRISE_ID) plan = 'enterprise';
+        const plan = await mapPriceIdToPlan(priceId);
 
         // Update user profile
         await supabase
@@ -90,11 +98,9 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as any;
         const customerId = subscription.customer;
 
-        // Determine plan from price
-        let plan = 'free';
+        // Determine plan from price using database lookup
         const priceId = subscription.items?.data?.[0]?.price?.id;
-        if (priceId === process.env.STRIPE_PRICE_PRO_ID) plan = 'pro';
-        if (priceId === process.env.STRIPE_PRICE_ENTERPRISE_ID) plan = 'enterprise';
+        const plan = await mapPriceIdToPlan(priceId);
 
         await supabase
           .from('user_profiles')
@@ -181,7 +187,6 @@ export async function POST(request: NextRequest) {
           })
           .eq('stripe_customer_id', customerId as string);
 
-        console.log('Payment succeeded for:', customerId);
         break;
       }
 
@@ -198,18 +203,15 @@ export async function POST(request: NextRequest) {
           })
           .eq('stripe_customer_id', customerId as string);
 
-        console.log('Payment failed for:', customerId);
         break;
       }
 
       case 'customer.subscription.trial_will_end': {
-        const subscription = event.data.object;
         // Send email notification about trial ending
-        console.log('Trial ending soon for subscription:', subscription.id);
         break;
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Webhook processing error:', error);
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 });
   }

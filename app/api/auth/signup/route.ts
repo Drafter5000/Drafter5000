@@ -4,10 +4,26 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { name, email, password } = await request.json();
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: 'Name, email and password required' }, { status: 400 });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Check if email already exists in user_profiles
+    const { data: existingProfile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingProfile) {
+      return NextResponse.json(
+        { error: 'An account with this email already exists' },
+        { status: 409 }
+      );
     }
 
     const supabase = await getServerSupabaseClient();
@@ -33,19 +49,37 @@ export async function POST(request: NextRequest) {
 
     // Create user profile using admin client to bypass RLS
     // This is necessary because auth.uid() is not available immediately after signup
-    const supabaseAdmin = getSupabaseAdmin();
     const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
       id: authData.user.id,
       email,
+      display_name: name,
       subscription_status: 'trial',
       subscription_plan: 'free',
     });
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      // Handle duplicate key constraint error as a fallback
+      if (profileError.code === '23505') {
+        return NextResponse.json(
+          { error: 'An account with this email already exists' },
+          { status: 409 }
+        );
+      }
+      throw profileError;
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Signup error:', error);
+
+    // Handle Supabase Auth error for existing user
+    if (error.message?.includes('User already registered')) {
+      return NextResponse.json(
+        { error: 'An account with this email already exists' },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to create account' },
       { status: 500 }

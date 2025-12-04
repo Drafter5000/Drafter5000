@@ -51,7 +51,6 @@ const LANGUAGES = [
 export default function SettingsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [language, setLanguage] = useState('en');
   const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
@@ -71,7 +70,6 @@ export default function SettingsPage() {
     try {
       await apiClient.put('/dashboard/settings', {
         user_id: user.id,
-        email,
         display_name: displayName,
         preferred_language: language,
         delivery_days: deliveryDays,
@@ -122,10 +120,9 @@ export default function SettingsPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    disabled={loading}
+                    value={user?.email || ''}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
