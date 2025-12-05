@@ -44,15 +44,6 @@ export async function GET(request: NextRequest) {
 
     if (profileError) throw profileError;
 
-    // Fetch onboarding data (includes preferred_language)
-    const { data: onboardingData, error: onboardingError } = await supabase
-      .from('onboarding_data')
-      .select('style_samples, subjects, delivery_days, preferred_language')
-      .eq('user_id', userId)
-      .single();
-
-    if (onboardingError && onboardingError.code !== 'PGRST116') throw onboardingError;
-
     // Calculate date ranges for current and previous month
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -113,12 +104,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       profile: profileData || {},
-      onboarding: onboardingData || {
-        style_samples: [],
-        subjects: [],
-        delivery_days: [],
-        preferred_language: 'English',
-      },
       metrics,
       recentArticles,
     });

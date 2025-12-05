@@ -87,21 +87,61 @@ export default function DashboardPage() {
           <DashboardHeader />
           <main className="pt-10 pb-20 px-6">
             <div className="max-w-7xl mx-auto space-y-8">
+              {/* Welcome Section Skeleton */}
               <div>
                 <Skeleton className="h-10 w-80 mb-2" />
                 <Skeleton className="h-6 w-96" />
               </div>
+
+              {/* Metrics Grid Skeleton */}
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[...Array(4)].map((_, i) => (
                   <Card key={i} className="border-2">
                     <CardContent className="pt-6">
-                      <Skeleton className="h-4 w-32 mb-4" />
+                      <div className="flex items-center justify-between mb-4">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                      </div>
                       <Skeleton className="h-8 w-16 mb-2" />
                       <Skeleton className="h-4 w-28" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
+
+              {/* Article Styles Section Skeleton */}
+              <Card className="border-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-6 w-48" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-9 w-24" />
+                      <Skeleton className="h-9 w-28" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[...Array(3)].map((_, i) => (
+                      <Card key={i} className="border">
+                        <CardContent className="pt-6">
+                          <div className="flex items-start gap-4">
+                            <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <Skeleton className="h-5 w-32 mb-2" />
+                              <Skeleton className="h-4 w-24 mb-3" />
+                              <div className="flex gap-1">
+                                <Skeleton className="h-5 w-16 rounded-full" />
+                                <Skeleton className="h-5 w-20 rounded-full" />
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </main>
         </div>
