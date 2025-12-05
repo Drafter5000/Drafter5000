@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import {
   AlertCircle,
   LogOut,
   PenLine,
+  PartyPopper,
+  ArrowRight,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
@@ -33,6 +35,7 @@ interface SubscriptionPlan {
 
 export default function SubscribePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading, signOut } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,6 +43,13 @@ export default function SubscribePage() {
   const [error, setError] = useState<string | null>(null);
   const [trialDays, setTrialDays] = useState(7);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
+
+  // Check for success parameter from Stripe redirect
+  const sessionId = searchParams.get('session_id');
+  const successParam = searchParams.get('success');
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -52,6 +62,97 @@ export default function SubscribePage() {
     }
   };
 
+  // Verify payment success when session_id is present
+  const verifyPaymentSuccess = useCallback(async () => {
+    if (!sessionId || !user) return;
+
+    setVerifyingPayment(true);
+    try {
+      // First, try to verify and update subscription via our API
+      // This handles the case where webhook hasn't processed yet
+      const verifyResult = await apiClient.post<{
+        success: boolean;
+        status: string;
+        plan?: string;
+      }>('/stripe/verify-session', { session_id: sessionId });
+
+      if (
+        verifyResult.success &&
+        (verifyResult.status === 'active' || verifyResult.status === 'trialing')
+      ) {
+        setPaymentSuccess(true);
+        return;
+      }
+
+      // Fallback: Poll profile status a few times
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      const checkStatus = async (): Promise<boolean> => {
+        const profile = await apiClient.get<{
+          subscription_status: string;
+          subscription_plan: string;
+        }>(`/auth/profile`);
+
+        if (
+          profile.subscription_status === 'active' ||
+          profile.subscription_status === 'trialing'
+        ) {
+          return true;
+        }
+        return false;
+      };
+
+      let isActive = await checkStatus();
+
+      while (!isActive && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        isActive = await checkStatus();
+        attempts++;
+      }
+
+      // Show success regardless - Stripe confirmed the redirect
+      setPaymentSuccess(true);
+    } catch (err) {
+      console.error('Failed to verify payment:', err);
+      // If we have a session_id, assume success (Stripe redirected us)
+      setPaymentSuccess(true);
+    } finally {
+      setVerifyingPayment(false);
+    }
+  }, [sessionId, user]);
+
+  // Handle payment verification on mount
+  useEffect(() => {
+    if (sessionId && user && !paymentSuccess && !verifyingPayment) {
+      verifyPaymentSuccess();
+    }
+  }, [sessionId, user, paymentSuccess, verifyingPayment, verifyPaymentSuccess]);
+
+  // Countdown and redirect after payment success
+  useEffect(() => {
+    if (!paymentSuccess) return;
+
+    const timer = setInterval(() => {
+      setRedirectCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [paymentSuccess]);
+
+  // Handle redirect when countdown reaches 0
+  useEffect(() => {
+    if (paymentSuccess && redirectCountdown === 0) {
+      router.push('/onboarding/step-1');
+    }
+  }, [paymentSuccess, redirectCountdown, router]);
+
   // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
@@ -63,6 +164,12 @@ export default function SubscribePage() {
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
+
+      // Skip fetching plan data if we're verifying payment or showing success
+      if (sessionId) {
+        setLoading(false);
+        return;
+      }
 
       try {
         // Check current subscription status
@@ -110,7 +217,7 @@ export default function SubscribePage() {
     };
 
     fetchData();
-  }, [user, router]);
+  }, [user, router, sessionId]);
 
   const handleSubscribe = async () => {
     if (!plan) return;
@@ -122,7 +229,7 @@ export default function SubscribePage() {
       const response = await apiClient.post<{ sessionUrl: string }>('/stripe/checkout', {
         plan_id: plan.id,
         trial_days: trialDays,
-        success_url: `${window.location.origin}/onboarding/step-1`,
+        success_url: `${window.location.origin}/subscribe?session_id={CHECKOUT_SESSION_ID}&success=true`,
         cancel_url: `${window.location.origin}/subscribe`,
       });
 
@@ -133,6 +240,10 @@ export default function SubscribePage() {
       setError(err.message || 'Failed to start checkout');
       setCheckoutLoading(false);
     }
+  };
+
+  const handleGoToDashboard = () => {
+    router.push('/onboarding/step-1');
   };
 
   if (authLoading || !user) {
@@ -238,6 +349,122 @@ export default function SubscribePage() {
       </main>
     </div>
   );
+
+  // Payment verification loading state
+  if (sessionId && verifyingPayment) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+        <SubscribeHeader />
+        <main className="pt-32 pb-20 px-4 sm:px-6 relative overflow-hidden">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-40 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-40 right-20 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
+          </div>
+
+          <div className="max-w-lg mx-auto text-center">
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-primary/10 mb-6">
+              <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-3">Verifying Payment...</h1>
+            <p className="text-muted-foreground">Please wait while we confirm your subscription.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Payment success screen
+  if (paymentSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-500/5 via-background to-primary/5">
+        <SubscribeHeader />
+        <main className="pt-24 sm:pt-32 pb-20 px-4 sm:px-6 relative overflow-hidden">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-40 left-10 sm:left-20 w-48 sm:w-72 h-48 sm:h-72 bg-green-500/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-40 right-10 sm:right-20 w-64 sm:w-96 h-64 sm:h-96 bg-primary/10 rounded-full blur-3xl" />
+          </div>
+
+          <div className="max-w-lg mx-auto">
+            <Card className="border-2 border-green-500/20 shadow-2xl shadow-green-500/10">
+              <CardContent className="pt-8 sm:pt-10 pb-8 sm:pb-10 px-6 sm:px-8">
+                {/* Success Icon */}
+                <div className="text-center mb-6 sm:mb-8">
+                  <div className="relative inline-flex">
+                    <div className="absolute inset-0 animate-ping rounded-full bg-green-500/20" />
+                    <div className="relative inline-flex items-center justify-center h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-green-500/10 border-2 border-green-500/30">
+                      <CheckCircle2 className="h-10 w-10 sm:h-12 sm:w-12 text-green-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Success Message */}
+                <div className="text-center space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+                  <div className="flex items-center justify-center gap-2">
+                    <PartyPopper className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
+                    <h1 className="text-2xl sm:text-3xl font-bold text-green-600">
+                      Payment Successful!
+                    </h1>
+                    <PartyPopper className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500 scale-x-[-1]" />
+                  </div>
+                  <p className="text-muted-foreground text-sm sm:text-base">
+                    Welcome to Drafter Pro! Your subscription is now active.
+                  </p>
+                </div>
+
+                {/* What's Next */}
+                <div className="bg-muted/50 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
+                  <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">What's next?</h3>
+                  <ul className="space-y-2 sm:space-y-3">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs sm:text-sm">
+                        Set up your writing style preferences
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs sm:text-sm">Configure your content topics</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs sm:text-sm">Start creating amazing content</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* CTA Button */}
+                <Button
+                  onClick={handleGoToDashboard}
+                  className="w-full h-11 sm:h-12 text-sm sm:text-base shadow-lg shadow-primary/20 gap-2"
+                >
+                  Continue to Setup
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+
+                {/* Auto-redirect notice */}
+                <p className="text-xs sm:text-sm text-center text-muted-foreground mt-4">
+                  Redirecting automatically in {redirectCountdown} second
+                  {redirectCountdown !== 1 ? 's' : ''}...
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Trust badges */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mt-6 sm:mt-8 text-xs sm:text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                <span>Secure payment processed</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Cancel anytime</span>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (loading) {
     return <SubscribeSkeleton />;

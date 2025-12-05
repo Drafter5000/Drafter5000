@@ -42,54 +42,79 @@ export async function POST(request: NextRequest) {
         const session = event.data.object;
         const customerId = session.customer;
         const subscriptionId = session.subscription;
+        const userId = session.metadata?.user_id;
+        const planIdFromMetadata = session.metadata?.plan_id;
 
         if (!subscriptionId) break;
 
-        // Get subscription details
-        const subscription = event.data.object.subscription
-          ? event.data.object
-          : await stripe.subscriptions.retrieve(subscriptionId as string);
-
-        const subData = subscription as any;
+        // Retrieve the full subscription object from Stripe
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId as string);
 
         // Determine plan from price using database lookup
-        const priceId = subData.items?.data?.[0]?.price?.id || subData.plan?.id;
-        const plan = await mapPriceIdToPlan(priceId);
+        const priceId = subscription.items?.data?.[0]?.price?.id;
+        const plan = planIdFromMetadata || (await mapPriceIdToPlan(priceId));
 
-        // Update user profile
-        await supabase
-          .from('user_profiles')
-          .update({
-            subscription_status: subData.status || 'active',
-            subscription_plan: plan,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_customer_id', customerId as string);
+        // Determine subscription status - for trials, status will be 'trialing'
+        const subscriptionStatus = subscription.status || 'active';
 
-        // Create or update subscription record
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('stripe_customer_id', customerId as string)
-          .single();
+        // Update user profile - try by user_id first (from metadata), then by stripe_customer_id
+        if (userId) {
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update({
+              subscription_status: subscriptionStatus,
+              subscription_plan: plan,
+              stripe_customer_id: customerId as string,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', userId);
 
-        if (profile) {
-          const periodStart = subData.current_period_start || Math.floor(Date.now() / 1000);
+          if (updateError) {
+            console.error('Failed to update profile by user_id:', updateError);
+          }
+        } else {
+          // Fallback to customer_id lookup
+          await supabase
+            .from('user_profiles')
+            .update({
+              subscription_status: subscriptionStatus,
+              subscription_plan: plan,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('stripe_customer_id', customerId as string);
+        }
+
+        // Get profile for subscription record
+        let profileId = userId;
+        if (!profileId) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('stripe_customer_id', customerId as string)
+            .single();
+          profileId = profile?.id;
+        }
+
+        if (profileId) {
+          const periodStart = subscription.current_period_start || Math.floor(Date.now() / 1000);
           const periodEnd =
-            subData.current_period_end || Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+            subscription.current_period_end || Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
 
           await supabase.from('subscriptions').upsert({
-            user_id: profile.id,
+            user_id: profileId,
             stripe_subscription_id: subscriptionId as string,
             stripe_price_id: priceId || '',
             plan,
-            status: subData.status || 'active',
+            status: subscriptionStatus,
             current_period_start: new Date(periodStart * 1000).toISOString(),
             current_period_end: new Date(periodEnd * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           });
         }
 
+        console.log(
+          `Checkout completed: user=${userId}, status=${subscriptionStatus}, plan=${plan}`
+        );
         break;
       }
 

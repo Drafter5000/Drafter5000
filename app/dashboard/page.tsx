@@ -23,6 +23,11 @@ import { FileText, Sparkles, Calendar, Mail, Plus, ArrowRight, AlertCircle } fro
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
+interface TrendData {
+  value: number;
+  isPositive: boolean;
+}
+
 interface DashboardData {
   profile: {
     display_name: string | null;
@@ -38,6 +43,11 @@ interface DashboardData {
     articles_generated: number;
     articles_sent: number;
     draft_articles: number;
+    trends: {
+      articles_generated: TrendData | null;
+      articles_sent: TrendData | null;
+      draft_articles: TrendData | null;
+    };
   };
   recentArticles: Array<{
     id: string;
@@ -243,21 +253,21 @@ export default function DashboardPage() {
                 value={data.metrics.articles_generated}
                 description="Total articles created"
                 icon={FileText}
-                trend={{ value: 12, isPositive: true }}
+                trend={data.metrics.trends.articles_generated ?? undefined}
               />
               <MetricCard
                 title="Articles Sent"
                 value={data.metrics.articles_sent}
                 description="Delivered to your email"
                 icon={Mail}
-                trend={{ value: 8, isPositive: true }}
+                trend={data.metrics.trends.articles_sent ?? undefined}
               />
               <MetricCard
                 title="In Draft"
                 value={data.metrics.draft_articles}
                 description="Waiting for review"
                 icon={Sparkles}
-                trend={{ value: 3, isPositive: false }}
+                trend={data.metrics.trends.draft_articles ?? undefined}
               />
               <MetricCard
                 title="Topics Queue"
@@ -310,7 +320,11 @@ export default function DashboardPage() {
                           Delivery Days ({data.onboarding.delivery_days.length}/7)
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {deliveryDaysResult.type === 'everyday' ? (
+                          {data.onboarding.delivery_days.length === 0 ? (
+                            <span className="text-sm text-muted-foreground italic">
+                              No schedule set
+                            </span>
+                          ) : deliveryDaysResult.type === 'everyday' ? (
                             <Badge>Everyday</Badge>
                           ) : (
                             data.onboarding.delivery_days.map(day => (

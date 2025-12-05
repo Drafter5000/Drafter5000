@@ -58,28 +58,53 @@ export async function PUT(request: NextRequest) {
 
     const supabase = await getServerSupabaseClient();
 
-    const { error } = await supabase
+    // Update user_profiles (only display_name, email is read-only)
+    const { error: profileError } = await supabase
       .from('user_profiles')
       .update({
-        email,
         display_name,
         updated_at: new Date().toISOString(),
       })
       .eq('id', user_id);
 
-    if (error) throw error;
+    if (profileError) throw profileError;
 
-    // Update onboarding data with new delivery preferences
-    await supabase
+    // Check if onboarding_data exists
+    const { data: existingData } = await supabase
       .from('onboarding_data')
-      .update({
+      .select('user_id')
+      .eq('user_id', user_id)
+      .single();
+
+    if (existingData) {
+      // Update existing onboarding data
+      const { error: updateError } = await supabase
+        .from('onboarding_data')
+        .update({
+          display_name,
+          preferred_language,
+          delivery_days,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user_id);
+
+      if (updateError) throw updateError;
+    } else {
+      // Insert new onboarding data if it doesn't exist
+      const { error: insertError } = await supabase.from('onboarding_data').insert({
+        user_id,
         email,
         display_name,
         preferred_language,
         delivery_days,
+        style_samples: [],
+        subjects: [],
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user_id);
+      });
+
+      if (insertError) throw insertError;
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
