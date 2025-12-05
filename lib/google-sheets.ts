@@ -60,7 +60,7 @@ export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRo
   // Customer Sheet Created, Article 1-3 Example
   // Wrap sheet name in quotes if it contains spaces
   const sheetRef = MAIN_SHEET_NAME.includes(' ') ? `'${MAIN_SHEET_NAME}'` : MAIN_SHEET_NAME;
-  const range = `${sheetRef}!A:P`;
+  const range = `${sheetRef}!A1`;
 
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
