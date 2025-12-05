@@ -77,7 +77,7 @@ export default function Home() {
                   transition={{ duration: 0.6, delay: 0.7 }}
                   className="flex flex-wrap gap-4 pt-4"
                 >
-                  <Link href="/onboarding/step-1">
+                  <Link href="/articles/generate/step-1">
                     <Button
                       size="lg"
                       className="gap-2 shadow-2xl shadow-primary/30 text-lg px-8 h-14 rounded-2xl"

@@ -149,7 +149,7 @@ export default function SubscribePage() {
   // Handle redirect when countdown reaches 0
   useEffect(() => {
     if (paymentSuccess && redirectCountdown === 0) {
-      router.push('/onboarding/step-1');
+      router.push('/dashboard');
     }
   }, [paymentSuccess, redirectCountdown, router]);
 
@@ -183,7 +183,7 @@ export default function SubscribePage() {
           profile.subscription_status === 'active' ||
           profile.subscription_status === 'trialing'
         ) {
-          router.push('/onboarding/step-1');
+          router.push('/dashboard');
           return;
         }
 
@@ -243,7 +243,7 @@ export default function SubscribePage() {
   };
 
   const handleGoToDashboard = () => {
-    router.push('/onboarding/step-1');
+    router.push('/dashboard');
   };
 
   if (authLoading || !user) {

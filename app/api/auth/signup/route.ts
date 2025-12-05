@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Use admin API to create user - this ensures user exists in auth.users immediately
-    // We auto-confirm email since we have a subscription paywall that gates access anyway
+    // Email verification is required - user will receive a confirmation email
     const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm - subscription paywall provides access control
+      email_confirm: false, // Require email verification
       user_metadata: {
         display_name: name,
       },
@@ -47,8 +47,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user' }, { status: 400 });
     }
 
-    // Email is auto-confirmed since we have subscription paywall for access control
-    // User can log in immediately after signup and will be redirected to /subscribe
+    // Send verification email - user must verify email before logging in
+    const { error: emailError } = await supabaseAdmin.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      },
+    });
+
+    if (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail signup if email fails - user can request resend later
+    }
 
     // Check if this user should be super admin
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.toLowerCase();

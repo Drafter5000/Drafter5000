@@ -48,14 +48,24 @@ export interface CustomersSheetRowData {
   client: string;
 }
 
+// Main Sheet name - can be configured via env var or defaults to "Main Sheet"
+const MAIN_SHEET_NAME = process.env.GOOGLE_SHEETS_MAIN_SHEET_NAME || 'Sheet1';
+
 // Append to Main Sheet (customer config - 16 columns)
 export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRowData) {
   const sheets = await getGoogleSheetsClient();
 
+  // Use A:Q range (17 columns based on your column list)
+  // Columns: Sheet Name, Customer Name, Customer Email, Language,
+  // Email Monday-Sunday (7), Paywall Status, End of membership,
+  // Customer Sheet Created, Article 1-3 Example
+  const range = `${MAIN_SHEET_NAME}!A:Q`;
+
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: "'Main Sheet'!A:P",
+    range,
     valueInputOption: 'RAW',
+    insertDataOption: 'INSERT_ROWS',
     requestBody: {
       values: [
         [

@@ -1,0 +1,187 @@
+# Implementation Plan
+
+- [x] 1. Set up database schema and types
+  - [x] 1.1 Create migration script for article_styles table
+    - Add new `article_styles` table with all required columns
+    - Add `style_id` column to existing `articles` table
+    - Create necessary indexes
+    - _Requirements: 1.4, 3.6_
+  - [x] 1.2 Add TypeScript types for ArticleStyle
+    - Define `ArticleStyle`, `CreateArticleStyleInput`, `UpdateArticleStyleInput` interfaces in `/lib/types.ts`
+    - Define `ArticleWithStyle` interface
+    - _Requirements: 1.4, 5.2_
+  - [ ]\* 1.3 Write property test for article style creation persistence
+    - **Property 1: Article Style Creation Persistence**
+    - **Validates: Requirements 1.4**
+
+- [x] 2. Create article styles service layer
+  - [x] 2.1 Create article styles service
+    - Create `/lib/services/article-styles.ts` with CRUD operations
+    - Implement `list`, `get`, `create`, `update`, `delete` methods
+    - Use existing Supabase client from `/lib/supabase-client.ts`
+    - _Requirements: 1.4, 3.2, 3.3, 3.4, 4.2_
+  - [x] 2.2 Create Google Sheets sync service
+    - Create `/lib/services/article-styles-sync.ts` for sheets synchronization
+    - Implement `syncToSheets` and `deleteFromSheets` methods
+    - Handle sync errors gracefully with logging
+    - _Requirements: 1.5, 3.5, 4.3_
+  - [ ]\* 2.3 Write property test for update persistence
+    - **Property 4: Update Persistence**
+    - **Validates: Requirements 3.2, 3.3, 3.4, 3.6**
+  - [ ]\* 2.4 Write property test for deletion
+    - **Property 5: Deletion Removes Record**
+    - **Validates: Requirements 4.2**
+
+- [x] 3. Create API routes for article styles
+  - [x] 3.1 Create main article styles API route
+    - Create `/app/api/article-styles/route.ts` with GET (list) and POST (create) handlers
+    - Implement proper validation and error handling
+    - _Requirements: 1.4, 2.1_
+  - [x] 3.2 Create single article style API route
+    - Create `/app/api/article-styles/[id]/route.ts` with GET, PUT, DELETE handlers
+    - Implement authorization checks (user owns the style)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.2_
+  - [x] 3.3 Create step-based API routes
+    - Create `/app/api/article-styles/step-1/route.ts` for style samples
+    - Create `/app/api/article-styles/step-2/route.ts` for subjects
+    - Create `/app/api/article-styles/step-3/route.ts` for delivery settings and completion
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [ ] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Create reusable UI components
+  - [x] 5.1 Create style card component
+    - Create `/components/articles/style-card.tsx` displaying style info
+    - Show name, language, delivery days count, creation date
+    - Include edit and delete action buttons
+    - _Requirements: 2.2_
+  - [x] 5.2 Create style list component
+    - Create `/components/articles/style-list.tsx` with grid layout
+    - Handle loading and empty states
+    - _Requirements: 2.1, 2.3_
+  - [x] 5.3 Create article card component
+    - Create `/components/articles/article-card.tsx` displaying article info
+    - Show subject, status, generation date, style name
+    - _Requirements: 5.2_
+  - [x] 5.4 Create article list component
+    - Create `/components/articles/article-list.tsx` with grid layout
+    - Handle loading and empty states
+    - _Requirements: 5.1, 5.3_
+  - [x] 5.5 Create empty state component
+    - Create `/components/articles/empty-state.tsx` reusable component
+    - Accept icon, title, description, and action button props
+    - _Requirements: 2.3, 5.3_
+  - [x] 5.6 Create delete confirmation dialog
+    - Create `/components/articles/delete-dialog.tsx` using shadcn AlertDialog
+    - Handle confirmation and cancellation
+    - _Requirements: 4.1_
+  - [ ]\* 5.7 Write property test for article style display completeness
+    - **Property 2: Article Style Display Completeness**
+    - **Validates: Requirements 2.2**
+  - [ ]\* 5.8 Write property test for article display completeness
+    - **Property 6: Article Display Completeness**
+    - **Validates: Requirements 5.2**
+
+- [x] 6. Create step form components
+  - [x] 6.1 Create step-1 form component
+    - Create `/components/articles/style-form-step1.tsx` for style samples
+    - Reuse validation logic from existing onboarding
+    - Support both create and edit modes
+    - _Requirements: 1.1, 3.1, 3.2_
+  - [x] 6.2 Create step-2 form component
+    - Create `/components/articles/style-form-step2.tsx` for subjects
+    - Include AI suggestions feature
+    - Support both create and edit modes
+    - _Requirements: 1.2, 3.1, 3.3_
+  - [x] 6.3 Create step-3 form component
+    - Create `/components/articles/style-form-step3.tsx` for delivery settings
+    - Include email, name, frequency, language fields
+    - Support both create and edit modes
+    - _Requirements: 1.3, 3.1, 3.4_
+  - [ ]\* 6.4 Write property test for edit form pre-population
+    - **Property 3: Edit Form Pre-population**
+    - **Validates: Requirements 3.1**
+
+- [x] 7. Create article generation pages
+  - [x] 7.1 Create step-1 page
+    - Create `/app/articles/generate/step-1/page.tsx`
+    - Use StyleFormStep1 component
+    - Handle navigation to step-2
+    - _Requirements: 1.1_
+  - [x] 7.2 Create step-2 page
+    - Create `/app/articles/generate/step-2/page.tsx`
+    - Use StyleFormStep2 component
+    - Handle navigation between steps
+    - _Requirements: 1.2_
+  - [x] 7.3 Create step-3 page
+    - Create `/app/articles/generate/step-3/page.tsx`
+    - Use StyleFormStep3 component
+    - Handle completion and redirect to dashboard
+    - _Requirements: 1.3, 1.4_
+  - [x] 7.4 Create generation layout
+    - Create `/app/articles/generate/layout.tsx` with progress indicator
+    - Show current step and navigation
+    - _Requirements: 1.1, 1.2, 1.3_
+
+- [x] 8. Create article styles management pages
+  - [x] 8.1 Create styles list page
+    - Create `/app/articles/styles/page.tsx`
+    - Display all user's article styles
+    - Include create new style button
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [x] 8.2 Create style detail page
+    - Create `/app/articles/styles/[id]/page.tsx`
+    - Display full style information
+    - Include edit and delete actions
+    - _Requirements: 2.4_
+  - [x] 8.3 Create style edit page
+    - Create `/app/articles/styles/[id]/edit/page.tsx`
+    - Use step form components in edit mode
+    - Handle update and navigation
+    - _Requirements: 3.1, 3.2, 3.3, 3.4_
+
+- [x] 9. Update dashboard page
+  - [x] 9.1 Remove old cards from dashboard
+    - Remove "Your Writing Style" card
+    - Remove "Topics Queue" card
+    - Clean up related imports and state
+    - _Requirements: 6.3, 6.4_
+  - [x] 9.2 Add Recent Article Styles section
+    - Add StyleList component to dashboard
+    - Fetch and display recent styles
+    - Include "View All" and "Create New" actions
+    - _Requirements: 2.1, 2.2_
+  - [x] 9.3 Add My Articles section
+    - Add ArticleList component to dashboard
+    - Fetch and display user's articles
+    - Include "View All" action
+    - _Requirements: 5.1, 5.2_
+
+- [ ] 10. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 11. Clean up old onboarding code
+  - [x] 11.1 Remove onboarding pages
+    - Delete `/app/onboarding/` directory and all contents
+    - _Requirements: 6.1_
+  - [x] 11.2 Remove onboarding API routes
+    - Delete `/app/api/onboarding/` directory and all contents
+    - _Requirements: 6.2_
+  - [x] 11.3 Update navigation and redirects
+    - Update any links pointing to old onboarding routes
+    - Update post-signup redirect to new flow
+    - _Requirements: 6.1, 6.2_
+
+- [x] 12. Create data migration
+  - [x] 12.1 Create migration script for existing data
+    - Create script to migrate onboarding_data to article_styles
+    - Preserve all existing user data
+    - Generate default style names
+    - _Requirements: 6.5_
+  - [ ]\* 12.2 Write property test for data migration preservation
+    - **Property 7: Data Migration Preservation**
+    - **Validates: Requirements 6.5**
+
+- [ ] 13. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

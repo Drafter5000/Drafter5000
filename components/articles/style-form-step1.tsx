@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -19,37 +17,23 @@ import {
   Info,
   Circle,
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
 import { countWords, isStyleSampleValid } from '@/lib/onboarding-validation';
 
-export default function Step1Page() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const [articles, setArticles] = useState(['', '', '']);
-  const [activeTab, setActiveTab] = useState('1');
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface StyleFormStep1Props {
+  initialArticles?: string[];
+  onSubmit: (articles: string[]) => Promise<void>;
+  loading?: boolean;
+  error?: string | null;
+}
 
-  useEffect(() => {
-    const loadExistingData = async () => {
-      if (!user) return;
-      try {
-        const data = await apiClient.get<{ style_samples: string[] }>(
-          `/onboarding/progress?user_id=${user.id}`
-        );
-        if (data.style_samples?.length > 0) {
-          const padded = [...data.style_samples, '', '', ''].slice(0, 3);
-          setArticles(padded);
-        }
-      } catch {
-        // No existing data
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    loadExistingData();
-  }, [user]);
+export function StyleFormStep1({
+  initialArticles = ['', '', ''],
+  onSubmit,
+  loading = false,
+  error = null,
+}: StyleFormStep1Props) {
+  const [articles, setArticles] = useState([...initialArticles, '', '', ''].slice(0, 3));
+  const [activeTab, setActiveTab] = useState('1');
 
   const updateArticle = (index: number, value: string) => {
     const updated = [...articles];
@@ -61,55 +45,18 @@ export default function Step1Page() {
   const filledCount = articles.filter(a => a.trim().length > 0).length;
   const progressValue = (filledCount / 3) * 100;
 
-  const handleNext = async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      await apiClient.post('/onboarding/step-1', {
-        user_id: user.id,
-        style_samples: articles.filter(a => a.trim()),
-      });
-      router.push('/onboarding/step-2');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save articles';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (initialLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   const getArticleStatus = (index: number) => {
     const hasContent = articles[index].trim().length > 0;
     const wordCount = countWords(articles[index]);
     return { hasContent, wordCount };
   };
 
-  return (
-    <div className="space-y-8 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10">
-          <FileText className="h-8 w-8 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Define Your Writing Style</h1>
-          <p className="text-muted-foreground mt-2">
-            Share up to 3 articles so our AI can learn your unique voice
-          </p>
-        </div>
-      </div>
+  const handleSubmit = () => {
+    onSubmit(articles.filter(a => a.trim()));
+  };
 
-      {/* Progress Section */}
+  return (
+    <div className="space-y-6">
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-3">
@@ -142,7 +89,6 @@ export default function Step1Page() {
         </CardContent>
       </Card>
 
-      {/* Info Alert */}
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
@@ -151,7 +97,6 @@ export default function Step1Page() {
         </AlertDescription>
       </Alert>
 
-      {/* Error Alert */}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -159,7 +104,6 @@ export default function Step1Page() {
         </Alert>
       )}
 
-      {/* Article Tabs */}
       <Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="px-6 pt-4">
@@ -176,7 +120,6 @@ export default function Step1Page() {
                       </span>
                     )}
                     <span className="hidden sm:inline">Article {num}</span>
-                    <span className="sm:hidden">{num}</span>
                     {hasContent && (
                       <Badge variant="outline" className="text-xs hidden md:inline-flex">
                         {wordCount}w
@@ -197,9 +140,7 @@ export default function Step1Page() {
                     <div>
                       <h3 className="font-semibold">Article {num}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {num === 1
-                          ? 'This article is required to continue'
-                          : 'Optional - add more samples for better results'}
+                        {num === 1 ? 'Required to continue' : 'Optional - improves results'}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -209,10 +150,11 @@ export default function Step1Page() {
                   </div>
 
                   <Textarea
-                    placeholder={`Paste your ${num === 1 ? 'first' : num === 2 ? 'second' : 'third'} article here...\n\nThis could be a blog post, newsletter, essay, or any written content that represents your writing style.`}
-                    className="min-h-[320px] resize-none text-base leading-relaxed"
+                    placeholder={`Paste your article here...\n\nThis could be a blog post, newsletter, essay, or any written content.`}
+                    className="min-h-[280px] resize-none text-base leading-relaxed"
                     value={articles[index]}
                     onChange={e => updateArticle(index, e.target.value)}
+                    disabled={loading}
                   />
 
                   <div className="flex items-center justify-between text-sm">
@@ -226,29 +168,6 @@ export default function Step1Page() {
                         <span>Good length</span>
                       </div>
                     )}
-                    {wordCount > 0 && wordCount < 50 && (
-                      <span className="text-amber-600 text-xs">Consider adding more content</span>
-                    )}
-                  </div>
-
-                  {/* Navigation between tabs */}
-                  <div className="flex justify-between pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={num === 1}
-                      onClick={() => setActiveTab(String(num - 1))}
-                    >
-                      Previous Article
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={num === 3}
-                      onClick={() => setActiveTab(String(num + 1))}
-                    >
-                      Next Article
-                    </Button>
                   </div>
                 </CardContent>
               </TabsContent>
@@ -257,7 +176,6 @@ export default function Step1Page() {
         </Tabs>
       </Card>
 
-      {/* Footer */}
       <div className="flex items-center justify-between pt-4">
         <div className="text-sm text-muted-foreground">
           {hasAtLeastOneArticle ? (
@@ -270,7 +188,7 @@ export default function Step1Page() {
           )}
         </div>
 
-        <Button onClick={handleNext} disabled={!hasAtLeastOneArticle || loading} size="lg">
+        <Button onClick={handleSubmit} disabled={!hasAtLeastOneArticle || loading} size="lg">
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />

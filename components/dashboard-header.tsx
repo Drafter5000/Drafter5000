@@ -2,18 +2,21 @@
 
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
-import { LogOut, Settings, CreditCard } from 'lucide-react';
+import { LogOut, Settings, CreditCard, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export function DashboardHeader() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleSignOut = async () => {
     await signOut();
     router.push('/');
   };
+
+  const isOnDashboard = pathname === '/dashboard';
 
   return (
     <header className="border-b border-border/50 bg-background/95 backdrop-blur-sm sticky top-0 z-50">
@@ -26,6 +29,14 @@ export function DashboardHeader() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {!isOnDashboard && (
+              <Link href="/dashboard">
+                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+            )}
             <Link href="/dashboard/billing">
               <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                 <CreditCard className="h-4 w-4" />

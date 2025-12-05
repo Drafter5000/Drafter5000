@@ -252,11 +252,16 @@ See `docs/STRIPE_INTEGRATION.md` for complete setup guide.
 - `POST /api/auth/login` - Sign in
 - `POST /api/auth/logout` - Sign out
 
-### Onboarding
+### Article Styles
 
-- `POST /api/onboarding/step-1` - Save style samples
-- `POST /api/onboarding/step-2` - Save subjects
-- `POST /api/onboarding/step-3` - Complete onboarding (provisions Sheets)
+- `GET /api/article-styles` - List all article styles
+- `POST /api/article-styles` - Create new article style
+- `GET /api/article-styles/[id]` - Get single style
+- `PUT /api/article-styles/[id]` - Update style
+- `DELETE /api/article-styles/[id]` - Delete style
+- `POST /api/article-styles/step-1` - Save style samples (wizard)
+- `POST /api/article-styles/step-2` - Save subjects (wizard)
+- `POST /api/article-styles/step-3` - Complete style creation (wizard)
 
 ### Dashboard
 

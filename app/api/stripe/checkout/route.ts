@@ -167,8 +167,7 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_APP_URL ||
       process.env.NEXT_PUBLIC_VERCEL_URL ||
       'http://localhost:3000';
-    const finalSuccessUrl =
-      success_url || `${baseUrl}/onboarding/step-1?session_id={CHECKOUT_SESSION_ID}`;
+    const finalSuccessUrl = success_url || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
     const finalCancelUrl = cancel_url || `${baseUrl}/subscribe`;
 
     // Create checkout session using the resolved price ID

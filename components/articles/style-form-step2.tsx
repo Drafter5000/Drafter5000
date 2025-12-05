@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +16,6 @@ import {
   ArrowRight,
   ArrowLeft,
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
 import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation';
 
 const AI_SUGGESTIONS = [
@@ -32,36 +29,26 @@ const AI_SUGGESTIONS = [
   'The Power of Habit Formation',
 ];
 
-export default function Step2Page() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const [subjects, setSubjects] = useState<string[]>([]);
+interface StyleFormStep2Props {
+  initialSubjects?: string[];
+  onSubmit: (subjects: string[]) => Promise<void>;
+  onBack?: () => void;
+  loading?: boolean;
+  error?: string | null;
+}
+
+export function StyleFormStep2({
+  initialSubjects = [],
+  onSubmit,
+  onBack,
+  loading = false,
+  error = null,
+}: StyleFormStep2Props) {
+  const [subjects, setSubjects] = useState<string[]>(initialSubjects);
   const [inputValue, setInputValue] = useState('');
   const [aiActive, setAiActive] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadExistingData = async () => {
-      if (!user) return;
-      try {
-        const data = await apiClient.get<{ subjects: string[] }>(
-          `/onboarding/progress?user_id=${user.id}`
-        );
-        if (data.subjects?.length > 0) {
-          setSubjects(data.subjects);
-        }
-      } catch {
-        // No existing data
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    loadExistingData();
-  }, [user]);
 
   const addSubject = (subject: string) => {
     if (isSubjectValid(subject, subjects)) {
@@ -90,49 +77,14 @@ export default function Step2Page() {
     }
   };
 
-  const handleNext = async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      await apiClient.post('/onboarding/step-2', {
-        user_id: user.id,
-        subjects,
-      });
-      router.push('/onboarding/step-3');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save subjects';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = () => {
+    onSubmit(subjects);
   };
 
-  if (initialLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      <div className="text-center space-y-4">
-        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-amber-500/10">
-          <Lightbulb className="h-8 w-8 text-amber-500" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Choose Your Topics</h1>
-          <p className="text-muted-foreground mt-2 max-w-lg mx-auto">
-            Add subjects you want to write about. Each topic becomes one article in your queue.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {error && (
-        <Alert variant="destructive" className="max-w-2xl mx-auto">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -162,22 +114,23 @@ export default function Step2Page() {
                     addSubject(inputValue);
                   }
                 }}
+                disabled={loading}
               />
-              <Button onClick={() => addSubject(inputValue)} disabled={!inputValue.trim()}>
+              <Button
+                onClick={() => addSubject(inputValue)}
+                disabled={!inputValue.trim() || loading}
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
 
-            <div className="min-h-[280px] max-h-[320px] overflow-y-auto space-y-2">
+            <div className="min-h-[240px] max-h-[280px] overflow-y-auto space-y-2">
               {subjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="flex flex-col items-center justify-center py-10 text-center">
                   <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
                     <Lightbulb className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">No topics added yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Add your first topic above or use AI suggestions
-                  </p>
                 </div>
               ) : (
                 subjects.map((subject, index) => (
@@ -196,6 +149,7 @@ export default function Step2Page() {
                       size="sm"
                       onClick={() => removeSubject(index)}
                       className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      disabled={loading}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -214,7 +168,7 @@ export default function Step2Page() {
                 AI Suggestions
               </CardTitle>
               {!aiActive && (
-                <Button onClick={activateAI} size="sm" disabled={aiLoading}>
+                <Button onClick={activateAI} size="sm" disabled={aiLoading || loading}>
                   {aiLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -232,19 +186,16 @@ export default function Step2Page() {
           </CardHeader>
           <CardContent>
             {!aiActive ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="flex flex-col items-center justify-center py-10 text-center">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <p className="text-sm text-muted-foreground">Need inspiration?</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Click Generate Ideas to get suggestions
-                </p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[320px] overflow-y-auto">
+              <div className="space-y-2 max-h-[280px] overflow-y-auto">
                 {aiSuggestions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Sparkles className="h-6 w-6 text-primary mb-3" />
                     <p className="text-sm font-medium text-primary">All suggestions added!</p>
                   </div>
@@ -253,7 +204,8 @@ export default function Step2Page() {
                     <button
                       key={index}
                       onClick={() => addFromAI(suggestion)}
-                      className="w-full text-left p-3 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/30 transition-colors text-sm flex items-center gap-3"
+                      disabled={loading}
+                      className="w-full text-left p-3 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/30 transition-colors text-sm flex items-center gap-3 disabled:opacity-50"
                     >
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                         <Plus className="h-4 w-4 text-primary" />
@@ -268,11 +220,14 @@ export default function Step2Page() {
         </Card>
       </div>
 
-      <div className="flex items-center justify-between pt-6 border-t">
-        <Button variant="outline" onClick={() => router.push('/onboarding/step-1')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+      <div className="flex items-center justify-between pt-4 border-t">
+        {onBack && (
+          <Button variant="outline" onClick={onBack} disabled={loading}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        )}
+        {!onBack && <div />}
 
         <div className="flex items-center gap-4">
           {subjects.length > 0 && (
@@ -281,7 +236,7 @@ export default function Step2Page() {
             </span>
           )}
           <Button
-            onClick={handleNext}
+            onClick={handleSubmit}
             disabled={!isSubjectListValid(subjects) || loading}
             size="lg"
           >

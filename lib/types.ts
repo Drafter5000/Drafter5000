@@ -215,3 +215,80 @@ export interface DashboardMetrics {
   recent_registrations: UserProfile[];
   active_users: number;
 }
+
+// ===========================================
+// ARTICLE STYLES TYPES
+// ===========================================
+
+export interface ArticleStyle {
+  id: string;
+  user_id: string;
+  name: string;
+  style_samples: string[];
+  subjects: string[];
+  email: string | null;
+  display_name: string | null;
+  preferred_language: string;
+  delivery_days: string[];
+  sheets_config_id: string | null;
+  sheets_row_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateArticleStyleInput {
+  user_id: string;
+  name: string;
+  style_samples: string[];
+  subjects: string[];
+  email?: string;
+  display_name?: string;
+  preferred_language?: string;
+  delivery_days?: string[];
+}
+
+export interface UpdateArticleStyleInput {
+  name?: string;
+  style_samples?: string[];
+  subjects?: string[];
+  email?: string;
+  display_name?: string;
+  preferred_language?: string;
+  delivery_days?: string[];
+  is_active?: boolean;
+}
+
+export interface ArticleWithStyle extends Article {
+  style_id: string | null;
+  style_name: string | null;
+}
+
+// Step-based creation types for wizard flow
+export interface ArticleStyleStep1Data {
+  style_samples: string[];
+}
+
+export interface ArticleStyleStep2Data {
+  subjects: string[];
+}
+
+export interface ArticleStyleStep3Data {
+  name: string;
+  email: string;
+  display_name: string;
+  preferred_language: string;
+  delivery_days: string[];
+}
+
+export interface ArticleStyleDraft {
+  id?: string;
+  user_id: string;
+  style_samples?: string[];
+  subjects?: string[];
+  name?: string;
+  email?: string;
+  display_name?: string;
+  preferred_language?: string;
+  delivery_days?: string[];
+}

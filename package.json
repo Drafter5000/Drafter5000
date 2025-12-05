@@ -18,7 +18,8 @@
     "db:stop": "supabase stop",
     "db:studio": "supabase studio",
     "db:types": "supabase gen types typescript --local > lib/database.types.ts",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "db:reset:full": "bun run scripts/db-reset-full.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

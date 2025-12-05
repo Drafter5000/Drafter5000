@@ -55,7 +55,7 @@ export function CTASection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Link href="/onboarding/step-1">
+            <Link href="/articles/generate/step-1">
               <Button
                 size="lg"
                 className="gap-2 shadow-2xl shadow-primary/30 text-lg px-10 h-14 rounded-2xl"
