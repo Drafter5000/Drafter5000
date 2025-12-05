@@ -1,6 +1,5 @@
 import { getServerSupabaseClient } from '@/lib/supabase-client';
-import { appendCustomerToSheet, createCustomerSheet } from '@/lib/google-sheets';
-import { serializeToRow, OnboardingRowData } from '@/lib/onboarding-serializer';
+import { appendToMainSheet, createCustomerSheet } from '@/lib/google-sheets';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -55,38 +54,32 @@ export async function POST(request: NextRequest) {
     // Provision customer in Google Sheets
     try {
       const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID!;
-      const sheetName = 'Customers';
 
-      // Prepare complete row data for serialization
-      const rowData: OnboardingRowData = {
-        email,
-        display_name,
-        created_at: new Date().toISOString(),
-        preferred_language,
-        delivery_days,
-        status: 'active',
-        style_samples: onboardingData?.style_samples || [],
-        subjects: onboardingData?.subjects || [],
-      };
+      // Create individual sheet name for customer's articles
+      const customerSheetName = `${display_name.replace(/\s/g, '_')}_${Date.now()}`;
 
-      // Serialize to row format and append to Google Sheets
-      const serializedRow = serializeToRow(rowData);
-
-      // Use the existing appendCustomerToSheet for backward compatibility
-      // but also log the full serialized row for debugging
-      console.log('Serialized onboarding row:', serializedRow);
-
-      await appendCustomerToSheet(spreadsheetId, sheetName, {
-        email,
-        display_name,
-        created_at: rowData.created_at,
-        preferred_language,
-        delivery_days: delivery_days.join(','),
-        status: 'active',
+      // Append customer config to Main Sheet
+      await appendToMainSheet(spreadsheetId, {
+        sheetName: customerSheetName,
+        customerName: display_name,
+        customerEmail: email,
+        language: preferred_language,
+        emailMonday: delivery_days.includes('monday'),
+        emailTuesday: delivery_days.includes('tuesday'),
+        emailWednesday: delivery_days.includes('wednesday'),
+        emailThursday: delivery_days.includes('thursday'),
+        emailFriday: delivery_days.includes('friday'),
+        emailSaturday: delivery_days.includes('saturday'),
+        emailSunday: delivery_days.includes('sunday'),
+        paywallStatus: 'active',
+        endOfMembership: '',
+        customerSheetCreated: new Date().toISOString(),
+        article1Example: '',
+        article2Example: '',
+        article3Example: '',
       });
 
       // Create individual sheet for customer's articles
-      const customerSheetName = `${display_name.replace(/\s/g, '_')}_${Date.now()}`;
       const headerRow = ['Subject', 'Status', 'Generated', 'Sent', 'Content', 'Notes'];
 
       const sheetId = await createCustomerSheet(

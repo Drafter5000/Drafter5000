@@ -17,37 +17,84 @@ export async function getGoogleSheetsClient() {
   return sheetsClient;
 }
 
-export interface SheetRowData {
-  email: string;
-  display_name: string;
-  created_at: string;
-  preferred_language: string;
-  delivery_days: string;
-  status: 'active' | 'paused';
+// Main Sheet columns (16 columns: A-P)
+export interface MainSheetRowData {
+  sheetName: string;
+  customerName: string;
+  customerEmail: string;
+  language: string;
+  emailMonday: boolean;
+  emailTuesday: boolean;
+  emailWednesday: boolean;
+  emailThursday: boolean;
+  emailFriday: boolean;
+  emailSaturday: boolean;
+  emailSunday: boolean;
+  paywallStatus: string;
+  endOfMembership: string;
+  customerSheetCreated: string;
+  article1Example: string;
+  article2Example: string;
+  article3Example: string;
 }
 
-export async function appendCustomerToSheet(
-  spreadsheetId: string,
-  sheetName: string,
-  data: SheetRowData
-) {
+// Customers sheet columns (6 columns: A-F)
+export interface CustomersSheetRowData {
+  question: string;
+  status: string;
+  subject: string;
+  article: string;
+  lastUpdate: string;
+  client: string;
+}
+
+// Append to Main Sheet (customer config - 16 columns)
+export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRowData) {
   const sheets = await getGoogleSheetsClient();
 
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: `${sheetName}!A:G`,
+    range: "'Main Sheet'!A:P",
     valueInputOption: 'RAW',
     requestBody: {
       values: [
         [
-          data.email,
-          data.display_name,
-          data.created_at,
-          data.preferred_language,
-          data.delivery_days,
-          data.status,
-          '', // placeholder for generated articles
+          data.sheetName,
+          data.customerName,
+          data.customerEmail,
+          data.language,
+          data.emailMonday ? 'Yes' : 'No',
+          data.emailTuesday ? 'Yes' : 'No',
+          data.emailWednesday ? 'Yes' : 'No',
+          data.emailThursday ? 'Yes' : 'No',
+          data.emailFriday ? 'Yes' : 'No',
+          data.emailSaturday ? 'Yes' : 'No',
+          data.emailSunday ? 'Yes' : 'No',
+          data.paywallStatus,
+          data.endOfMembership,
+          data.customerSheetCreated,
+          data.article1Example,
+          data.article2Example,
+          data.article3Example,
         ],
+      ],
+    },
+  });
+
+  return result;
+}
+
+// Append to Customers sheet (6 columns)
+export async function appendToCustomersSheet(spreadsheetId: string, data: CustomersSheetRowData) {
+  const sheets = await getGoogleSheetsClient();
+
+  const result = await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: 'Customers!A:F',
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [
+        [data.question, data.status, data.subject, data.article, data.lastUpdate, data.client],
       ],
     },
   });
