@@ -10,16 +10,18 @@ export interface SyncResult {
 
 export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult> {
   try {
-    const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
+    // Use GOOGLE_SHEETS_ARTICLES_ID for article styles
+    const spreadsheetId = process.env.GOOGLE_SHEETS_ARTICLES_ID;
+    // const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID; // Commented out - use ARTICLES_ID instead
 
     if (!spreadsheetId) {
-      console.warn('Google Sheets ID not configured, skipping sync');
+      console.warn('GOOGLE_SHEETS_ARTICLES_ID not configured, skipping sync');
       return { success: true };
     }
 
     const customerSheetName = `${(style.display_name || style.name).replace(/\s/g, '_')}_${style.id.slice(0, 8)}`;
 
-    // Append to Main Sheet only
+    // Append to Main Sheet
     await appendToMainSheet(spreadsheetId, {
       sheetName: customerSheetName,
       customerName: style.display_name || style.name,
