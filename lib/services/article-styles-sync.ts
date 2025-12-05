@@ -1,4 +1,4 @@
-import { appendToMainSheet, createCustomerSheet } from '@/lib/google-sheets';
+import { appendToMainSheet } from '@/lib/google-sheets';
 import type { ArticleStyle } from '@/lib/types';
 
 export interface SyncResult {
@@ -11,16 +11,15 @@ export interface SyncResult {
 export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult> {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
-    const articlesSpreadsheetId = process.env.GOOGLE_SHEETS_ARTICLES_ID;
 
-    if (!spreadsheetId || !articlesSpreadsheetId) {
-      console.warn('Google Sheets IDs not configured, skipping sync');
+    if (!spreadsheetId) {
+      console.warn('Google Sheets ID not configured, skipping sync');
       return { success: true };
     }
 
     const customerSheetName = `${(style.display_name || style.name).replace(/\s/g, '_')}_${style.id.slice(0, 8)}`;
 
-    // Append to Main Sheet
+    // Append to Main Sheet only
     await appendToMainSheet(spreadsheetId, {
       sheetName: customerSheetName,
       customerName: style.display_name || style.name,
@@ -41,14 +40,9 @@ export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult
       article3Example: style.style_samples[2] || '',
     });
 
-    // Create individual sheet for articles
-    const headerRow = ['Subject', 'Status', 'Generated', 'Sent', 'Content', 'Notes'];
-    const sheetId = await createCustomerSheet(articlesSpreadsheetId, customerSheetName, headerRow);
-
     return {
       success: true,
       sheetsConfigId: spreadsheetId,
-      sheetsRowId: sheetId?.toString(),
     };
   } catch (error) {
     console.error('Failed to sync style to Google Sheets:', error);
