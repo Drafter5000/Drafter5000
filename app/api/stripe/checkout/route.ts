@@ -2,10 +2,102 @@ import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { getStripeClient } from '@/lib/stripe-client';
 import { getServerSupabaseSession } from '@/lib/supabase-client';
 import { getPlanById } from '@/lib/plan-utils';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type NextRequest, NextResponse } from 'next/server';
 
 // Default trial period in days
 const DEFAULT_TRIAL_DAYS = 7;
+
+/**
+ * Ensures a Stripe product and price exist for the given plan.
+ * Creates them if they don't exist and updates the database.
+ */
+async function ensureStripeProductAndPrice(plan: {
+  id: string;
+  name: string;
+  description: string | null;
+  price_cents: number;
+  currency: string;
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
+}): Promise<{ productId: string; priceId: string }> {
+  const stripe = getStripeClient();
+  const supabaseAdmin = getSupabaseAdmin();
+
+  let productId = plan.stripe_product_id;
+  let priceId = plan.stripe_price_id;
+
+  // Create or retrieve Stripe product
+  if (!productId) {
+    // Check if product already exists in Stripe by metadata
+    const existingProducts = await stripe.products.search({
+      query: `metadata['plan_id']:'${plan.id}'`,
+    });
+
+    if (existingProducts.data.length > 0) {
+      productId = existingProducts.data[0].id;
+    } else {
+      // Create new product
+      const product = await stripe.products.create({
+        name: plan.name,
+        description: plan.description || undefined,
+        metadata: {
+          plan_id: plan.id,
+        },
+      });
+      productId = product.id;
+    }
+
+    // Update database with product ID
+    await supabaseAdmin
+      .from('subscription_plans')
+      .update({ stripe_product_id: productId })
+      .eq('id', plan.id);
+  }
+
+  // Create or retrieve Stripe price
+  if (!priceId) {
+    // Check if price already exists for this product
+    const existingPrices = await stripe.prices.list({
+      product: productId,
+      active: true,
+      type: 'recurring',
+    });
+
+    // Find a matching price (same amount and currency)
+    const matchingPrice = existingPrices.data.find(
+      p =>
+        p.unit_amount === plan.price_cents &&
+        p.currency.toLowerCase() === plan.currency.toLowerCase()
+    );
+
+    if (matchingPrice) {
+      priceId = matchingPrice.id;
+    } else {
+      // Create new price
+      const price = await stripe.prices.create({
+        product: productId,
+        unit_amount: plan.price_cents,
+        currency: plan.currency.toLowerCase(),
+        recurring: {
+          interval: 'month',
+        },
+        metadata: {
+          plan_id: plan.id,
+        },
+      });
+      priceId = price.id;
+    }
+
+    // Update database with price ID
+    await supabaseAdmin
+      .from('subscription_plans')
+      .update({ stripe_price_id: priceId })
+      .eq('id', plan.id);
+  }
+
+  return { productId, priceId };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,12 +131,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Free plan does not require checkout' }, { status: 400 });
     }
 
-    // Ensure stripe_price_id is configured
-    if (!plan.stripe_price_id) {
-      return NextResponse.json({ error: 'Plan not configured for checkout' }, { status: 400 });
-    }
-
     const stripe = getStripeClient();
+
+    // Ensure Stripe product and price exist (auto-create if needed)
+    const { priceId } = await ensureStripeProductAndPrice(plan);
     const supabase = await getServerSupabaseClient();
 
     // Get or create Stripe customer
@@ -81,14 +171,14 @@ export async function POST(request: NextRequest) {
       success_url || `${baseUrl}/onboarding/step-1?session_id={CHECKOUT_SESSION_ID}`;
     const finalCancelUrl = cancel_url || `${baseUrl}/subscribe`;
 
-    // Create checkout session using database price ID
+    // Create checkout session using the resolved price ID
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
         {
-          price: plan.stripe_price_id,
+          price: priceId,
           quantity: 1,
         },
       ],

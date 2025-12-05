@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { setupSuperAdmin, setupNewUserOrganization } from '@/lib/organization-utils';
 
@@ -29,16 +28,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await getServerSupabaseClient();
-
-    // Sign up with Supabase Auth
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+    // Use admin API to create user - this ensures user exists in auth.users immediately
+    // We auto-confirm email since we have a subscription paywall that gates access anyway
+    const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-          `${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/auth/callback`,
+      email_confirm: true, // Auto-confirm - subscription paywall provides access control
+      user_metadata: {
+        display_name: name,
       },
     });
 
@@ -49,6 +46,9 @@ export async function POST(request: NextRequest) {
     if (!authData.user) {
       return NextResponse.json({ error: 'Failed to create user' }, { status: 400 });
     }
+
+    // Email is auto-confirmed since we have subscription paywall for access control
+    // User can log in immediately after signup and will be redirected to /subscribe
 
     // Check if this user should be super admin
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.toLowerCase();
