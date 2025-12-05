@@ -22,9 +22,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirect if already logged in
+  // Redirect if already logged in - middleware will handle subscription check
   useEffect(() => {
     if (!authLoading && user) {
+      // Middleware will redirect to /subscribe if no active subscription
       router.push('/dashboard');
     }
   }, [user, authLoading, router]);
@@ -62,6 +63,7 @@ export default function LoginPage() {
       if (error) throw error;
 
       // Auth state change will trigger redirect via useEffect
+      // Middleware will handle subscription check and redirect appropriately
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {

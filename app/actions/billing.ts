@@ -36,7 +36,7 @@ export async function createCheckoutSession(userId: string, planId: 'pro' | 'ent
         },
       ],
       subscription_data: {
-        trial_period_days: planId === 'pro' ? 7 : 0,
+        trial_period_days: 7, // Default 7-day trial for all paid plans
         metadata: {
           user_id: userId,
           plan_id: planId,

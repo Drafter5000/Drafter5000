@@ -64,3 +64,6 @@ docs/
 **/public/worker-*.js
 **/public/sw.js.map
 **/public/workbox-*.js.map
+
+# Credentials
+credentials/

@@ -100,7 +100,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   return {
     user_id: profile.id,
     email: profile.email,
-    is_super_admin: profile.is_super_admin ?? false,
+    is_super_admin: Boolean(profile.is_super_admin),
     organization_id: profile.current_organization_id,
     role,
   };
@@ -125,7 +125,7 @@ export async function canPerformAdminAction(
     .eq('id', adminId)
     .single();
 
-  if (profile?.is_super_admin) {
+  if (profile?.is_super_admin === true) {
     return true;
   }
 
@@ -156,7 +156,7 @@ export async function canPerformAdminAction(
       .in('organization_id', orgIds)
       .limit(1);
 
-    return targetMembership && targetMembership.length > 0;
+    return !!(targetMembership && targetMembership.length > 0);
   }
 
   if (targetType === 'organization') {

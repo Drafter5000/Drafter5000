@@ -11,7 +11,7 @@ const _geistMono = Geist_Mono({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Drafter - AI-Powered Article Writing',
   description: 'Generate personalized articles in your unique writing style with AI',
-  generator: 'v0.app',
+  generator: 'drafter-mvp.vercel.app',
 };
 
 export default function RootLayout({

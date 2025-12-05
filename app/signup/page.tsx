@@ -114,7 +114,7 @@ export default function SignupPage() {
           <CardHeader className="text-center pb-2 pt-8">
             <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
             <CardDescription className="text-base">
-              Join thousands generating AI articles
+              Start with a 7-day free trial, no credit card required to sign up
             </CardDescription>
           </CardHeader>
           <CardContent className="px-8 pb-8">

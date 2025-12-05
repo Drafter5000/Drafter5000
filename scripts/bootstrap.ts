@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Bootstrap Script
- * Ensures default organization and required data exists
+ * Ensures drafter organization and required data exists
  * Run this on deployment or first setup
  */
 
@@ -25,7 +25,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 });
 
 async function ensureDefaultOrganization() {
-  console.log('🏢 Checking default organization...');
+  console.log('🏢 Checking drafter organization...');
 
   const { data: existingOrg, error: fetchError } = await supabase
     .from('organizations')
@@ -40,25 +40,25 @@ async function ensureDefaultOrganization() {
   }
 
   if (existingOrg) {
-    console.log('   ✅ Default organization exists');
+    console.log('   ✅ Drafter organization exists');
     return true;
   }
 
-  // Create default organization
+  // Create drafter organization
   const { error: insertError } = await supabase.from('organizations').insert({
     id: DEFAULT_ORG_ID,
-    name: 'Default Organization',
-    slug: 'default',
+    name: 'Drafter',
+    slug: 'drafter',
     settings: { is_default: true, allow_signups: true },
     is_active: true,
   });
 
   if (insertError) {
-    console.error('Error creating default organization:', insertError);
+    console.error('Error creating drafter organization:', insertError);
     return false;
   }
 
-  console.log('   ✅ Default organization created');
+  console.log('   ✅ Drafter organization created');
   return true;
 }
 

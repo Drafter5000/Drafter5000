@@ -49,7 +49,7 @@ export function OrgForm({ users, onSubmit, loading, error }: OrgFormProps) {
       name,
       slug,
       logo_url: logoUrl || undefined,
-      initial_admin_id: initialAdminId || undefined,
+      initial_admin_id: initialAdminId && initialAdminId !== 'none' ? initialAdminId : undefined,
     });
   };
 
@@ -114,7 +114,7 @@ export function OrgForm({ users, onSubmit, loading, error }: OrgFormProps) {
                 <SelectValue placeholder="Select initial admin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No initial admin</SelectItem>
+                <SelectItem value="none">No initial admin</SelectItem>
                 {users?.map(user => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.display_name || user.email}

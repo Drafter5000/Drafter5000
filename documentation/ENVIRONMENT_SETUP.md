@@ -348,13 +348,13 @@ WHERE id = 'enterprise';
 
 ## 5. Multi-Tenant & Super Admin Setup
 
-The application is designed with multi-tenant architecture for future expansion. For MVP, it uses a single default organization with one super admin.
+The application is designed with multi-tenant architecture for future expansion. For MVP, it uses a single drafter organization with one super admin.
 
 ### How It Works
 
-1. **Default Organization**: Created automatically on first deployment
+1. **Drafter Organization**: Created automatically on first deployment
 2. **Super Admin**: First user who signs up with `SUPER_ADMIN_EMAIL` becomes super admin
-3. **Regular Users**: All other users join the default organization as members
+3. **Regular Users**: All other users join the drafter organization as members
 
 ### Step 1: Set Super Admin Email
 
@@ -375,7 +375,7 @@ bun run db:bootstrap
 
 This will:
 
-- Create the default organization (if not exists)
+- Create the drafter organization (if not exists)
 - Check super admin configuration
 - Verify subscription plans exist
 

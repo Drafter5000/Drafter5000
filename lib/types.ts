@@ -7,7 +7,7 @@ export interface UserProfile {
   display_name: string;
   created_at: string;
   updated_at: string;
-  subscription_status: 'active' | 'canceled' | 'past_due' | 'trial';
+  subscription_status: 'active' | 'canceled' | 'past_due' | 'trial' | 'trialing' | 'incomplete';
   subscription_plan: UserRole;
   stripe_customer_id: string | null;
   current_organization_id: string | null;

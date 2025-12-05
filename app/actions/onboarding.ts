@@ -95,14 +95,9 @@ export async function completeOnboarding(userId: string, onboardingData: Partial
       }
     }
 
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'active',
-      })
-      .eq('id', userId);
-
-    if (profileError) throw profileError;
+    // Note: subscription_status is now managed by Stripe webhooks
+    // We don't update it here anymore - it should already be 'active' or 'trialing'
+    // from the Stripe checkout completion
 
     return { success: true };
   } catch (error) {

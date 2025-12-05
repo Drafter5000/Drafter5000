@@ -4,7 +4,7 @@ import type { Organization, OrganizationMember, OrganizationWithRole, OrgRole } 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 /**
- * Get the default organization
+ * Get the drafter organization
  */
 export async function getDefaultOrganization(): Promise<Organization | null> {
   const supabase = getSupabaseAdmin();
@@ -16,7 +16,7 @@ export async function getDefaultOrganization(): Promise<Organization | null> {
     .single();
 
   if (error) {
-    console.error('Error fetching default organization:', error);
+    console.error('Error fetching drafter organization:', error);
     return null;
   }
 
@@ -160,14 +160,14 @@ export async function setupSuperAdmin(userId: string): Promise<boolean> {
     return false;
   }
 
-  // Add to default organization as super_admin
+  // Add to drafter organization as super_admin
   const member = await addUserToOrganization(userId, DEFAULT_ORG_ID, 'super_admin');
 
   return member !== null;
 }
 
 /**
- * Setup new user with default organization
+ * Setup new user with drafter organization
  */
 export async function setupNewUserOrganization(userId: string): Promise<boolean> {
   const supabase = getSupabaseAdmin();
@@ -185,7 +185,7 @@ export async function setupNewUserOrganization(userId: string): Promise<boolean>
     return false;
   }
 
-  // Add to default organization as member
+  // Add to drafter organization as member
   const member = await addUserToOrganization(userId, DEFAULT_ORG_ID, 'member');
 
   return member !== null;

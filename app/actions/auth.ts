@@ -39,13 +39,14 @@ export async function signUpAction(email: string, password: string, displayName:
 
     // Create user profile in database using admin client to bypass RLS
     // This is necessary because auth.uid() is not available immediately after signup
+    // Set subscription_status to 'incomplete' - user must complete Stripe checkout before accessing the app
     const supabaseAdmin = getSupabaseAdmin();
     const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
       id: authData.user.id,
       email,
       display_name: displayName,
       stripe_customer_id: customer.id,
-      subscription_status: 'trial',
+      subscription_status: 'incomplete',
       subscription_plan: 'free',
       current_organization_id: DEFAULT_ORG_ID,
       is_super_admin: isSuperAdmin,

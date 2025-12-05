@@ -4,6 +4,9 @@ import { getServerSupabaseSession } from '@/lib/supabase-client';
 import { getPlanById } from '@/lib/plan-utils';
 import { type NextRequest, NextResponse } from 'next/server';
 
+// Default trial period in days
+const DEFAULT_TRIAL_DAYS = 7;
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSupabaseSession();
@@ -18,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { plan_id } = body;
+    const { plan_id, trial_days, success_url, cancel_url } = body;
 
     if (!plan_id) {
       return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
@@ -66,6 +69,18 @@ export async function POST(request: NextRequest) {
         .eq('id', session.user.id);
     }
 
+    // Determine trial period - use provided trial_days or default
+    const trialPeriodDays = typeof trial_days === 'number' ? trial_days : DEFAULT_TRIAL_DAYS;
+
+    // Determine URLs - use provided URLs or defaults
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_VERCEL_URL ||
+      'http://localhost:3000';
+    const finalSuccessUrl =
+      success_url || `${baseUrl}/onboarding/step-1?session_id={CHECKOUT_SESSION_ID}`;
+    const finalCancelUrl = cancel_url || `${baseUrl}/subscribe`;
+
     // Create checkout session using database price ID
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -78,7 +93,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       subscription_data: {
-        trial_period_days: plan_id === 'pro' ? 7 : 0, // 7-day trial for Pro
+        trial_period_days: trialPeriodDays,
         metadata: {
           user_id: session.user.id,
           plan_id,
@@ -86,8 +101,8 @@ export async function POST(request: NextRequest) {
       },
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      success_url: `${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/dashboard/billing?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/pricing`,
+      success_url: finalSuccessUrl,
+      cancel_url: finalCancelUrl,
       metadata: {
         user_id: session.user.id,
         plan_id,
