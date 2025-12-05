@@ -48,18 +48,34 @@ export interface CustomersSheetRowData {
   client: string;
 }
 
-// Main Sheet name - can be configured via env var or defaults to "Main Sheet"
-const MAIN_SHEET_NAME = process.env.GOOGLE_SHEETS_MAIN_SHEET_NAME || 'Sheet1';
+// Main Sheet name - can be configured via env var
+const MAIN_SHEET_NAME = process.env.GOOGLE_SHEETS_MAIN_SHEET_NAME;
 
-// Append to Main Sheet (customer config - 16 columns: A-P)
+// Get the first sheet name from the spreadsheet
+async function getFirstSheetName(spreadsheetId: string): Promise<string> {
+  const sheets = await getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets.properties.title',
+  });
+
+  const firstSheet = response.data.sheets?.[0]?.properties?.title;
+  if (!firstSheet) {
+    throw new Error('No sheets found in spreadsheet');
+  }
+  return firstSheet;
+}
+
+// Append to Main Sheet (customer config - 17 columns: A-Q)
 export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRowData) {
   const sheets = await getGoogleSheetsClient();
 
-  // 16 columns (A-P): Sheet Name, Customer Name, Customer Email, Language,
-  // Email Monday-Sunday (7), Paywall Status, End of membership,
-  // Customer Sheet Created, Article 1-3 Example
+  // Get sheet name from env or auto-detect first sheet
+  const sheetName = MAIN_SHEET_NAME || (await getFirstSheetName(spreadsheetId));
+  console.log('Using sheet name:', sheetName);
+
   // Wrap sheet name in quotes if it contains spaces
-  const sheetRef = MAIN_SHEET_NAME.includes(' ') ? `'${MAIN_SHEET_NAME}'` : MAIN_SHEET_NAME;
+  const sheetRef = sheetName.includes(' ') ? `'${sheetName}'` : sheetName;
   const range = `${sheetRef}!A1`;
 
   const result = await sheets.spreadsheets.values.append({
