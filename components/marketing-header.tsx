@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { PenLine, Sparkles, Menu, X } from 'lucide-react';
@@ -16,9 +17,13 @@ const navLinks = [
 
 export function MarketingHeader() {
   const { user, loading } = useAuth();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isLoginPage = pathname === '/login';
+  const isSignupPage = pathname === '/signup';
 
   useEffect(() => {
     setMounted(true);
@@ -79,16 +84,23 @@ export function MarketingHeader() {
                   </Link>
                 ) : (
                   <div className="hidden sm:flex items-center gap-3">
-                    <Link href="/login">
-                      <Button variant="ghost" className="rounded-xl">
-                        Login
-                      </Button>
-                    </Link>
-                    <Link href="/signup">
-                      <Button className="shadow-lg shadow-primary/20 rounded-xl">
-                        Get Started Free
-                      </Button>
-                    </Link>
+                    {!isLoginPage && (
+                      <Link href="/login">
+                        <Button
+                          variant="ghost"
+                          className="rounded-xl font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all duration-200"
+                        >
+                          Login
+                        </Button>
+                      </Link>
+                    )}
+                    {!isSignupPage && (
+                      <Link href="/signup">
+                        <Button className="rounded-xl font-semibold bg-gradient-to-r from-primary to-chart-2 hover:from-primary/90 hover:to-chart-2/90 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02]">
+                          Get Started Free
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 )}
               </>
@@ -129,17 +141,24 @@ export function MarketingHeader() {
                   </Link>
                 ))}
                 {!user && (
-                  <div className="pt-4 border-t border-border space-y-2">
-                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full rounded-xl">
-                        Login
-                      </Button>
-                    </Link>
-                    <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
-                      <Button className="w-full rounded-xl shadow-lg shadow-primary/20">
-                        Get Started Free
-                      </Button>
-                    </Link>
+                  <div className="pt-4 border-t border-border space-y-3">
+                    {!isLoginPage && (
+                      <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-xl font-medium border-2 hover:bg-secondary/80 transition-all duration-200"
+                        >
+                          Login
+                        </Button>
+                      </Link>
+                    )}
+                    {!isSignupPage && (
+                      <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                        <Button className="w-full rounded-xl font-semibold bg-gradient-to-r from-primary to-chart-2 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200">
+                          Get Started Free
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 )}
               </nav>

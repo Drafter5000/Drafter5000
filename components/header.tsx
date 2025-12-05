@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { PenLine, Sparkles } from 'lucide-react';
@@ -8,7 +9,11 @@ import { useState, useEffect } from 'react';
 
 export function Header() {
   const { user, loading } = useAuth();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+
+  const isLoginPage = pathname === '/login';
+  const isSignupPage = pathname === '/signup';
 
   useEffect(() => {
     setMounted(true);
@@ -48,17 +53,28 @@ export function Header() {
                   </Button>
                 </Link>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Link href="/login">
-                    <Button variant="outline" size="sm" className="border-2 bg-transparent">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/signup">
-                    <Button size="sm" className="shadow-lg shadow-primary/20">
-                      Sign Up
-                    </Button>
-                  </Link>
+                <div className="flex items-center gap-3">
+                  {!isLoginPage && (
+                    <Link href="/login">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 rounded-lg transition-all duration-200"
+                      >
+                        Login
+                      </Button>
+                    </Link>
+                  )}
+                  {!isSignupPage && (
+                    <Link href="/signup">
+                      <Button
+                        size="sm"
+                        className="font-semibold rounded-lg bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 hover:-translate-y-0.5"
+                      >
+                        Sign Up
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               )}
             </>
