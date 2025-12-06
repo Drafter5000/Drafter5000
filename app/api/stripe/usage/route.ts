@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 // Default plan limits as fallback
 const DEFAULT_PLAN_LIMITS: Record<string, number> = {
   free: 2,
-  pro: 30,
+  pro: 20,
   enterprise: 100,
 };
 
@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
 
     const plan = profile?.subscription_plan || 'free';
 
-    // Try to get plan details from database
+    // Try to get plan details from database by ID
     const { data: planDetails } = await supabase
       .from('subscription_plans')
       .select('articles_per_month')
-      .eq('name', plan)
+      .eq('id', plan)
       .single();
 
     const articlesLimit = planDetails?.articles_per_month ?? DEFAULT_PLAN_LIMITS[plan] ?? 2;
