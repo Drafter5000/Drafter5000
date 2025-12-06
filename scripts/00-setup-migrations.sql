@@ -2,11 +2,15 @@
 -- This function allows running arbitrary SQL from the application
 -- Run this ONCE manually in Supabase SQL Editor before using db:migrate
 
+-- Enable required extensions (in extensions schema for Supabase)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
+
 CREATE OR REPLACE FUNCTION exec_sql(sql_query TEXT)
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   result JSON;

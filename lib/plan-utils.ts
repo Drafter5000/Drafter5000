@@ -3,19 +3,26 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import type { SubscriptionPlan, PlanFeature, SubscriptionPlanWithFeatures } from '@/lib/types';
 
 /**
- * Fetches all active subscription plans with their features from the database.
+ * Fetches all active and visible subscription plans with their features from the database.
  * Plans are sorted by sort_order ascending.
  * Features within each plan are sorted by sort_order ascending.
+ * @param includeHidden - If true, includes plans with is_visible=false (for admin use)
  */
-export async function getActivePlans(): Promise<SubscriptionPlanWithFeatures[]> {
+export async function getActivePlans(
+  includeHidden: boolean = false
+): Promise<SubscriptionPlanWithFeatures[]> {
   const supabase = await getServerSupabaseClient();
 
-  // Fetch active plans ordered by sort_order
-  const { data: plans, error: plansError } = await supabase
-    .from('subscription_plans')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
+  // Build query for active plans
+  let query = supabase.from('subscription_plans').select('*').eq('is_active', true);
+
+  // Filter by visibility unless includeHidden is true
+  if (!includeHidden) {
+    query = query.eq('is_visible', true);
+  }
+
+  // Fetch plans ordered by sort_order
+  const { data: plans, error: plansError } = await query.order('sort_order', { ascending: true });
 
   if (plansError) {
     console.error('Error fetching plans:', plansError);

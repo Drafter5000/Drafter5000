@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
   stripe_product_id TEXT,
   stripe_price_id TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_visible BOOLEAN NOT NULL DEFAULT true, -- Controls display on pricing page
   is_highlighted BOOLEAN NOT NULL DEFAULT false,
   sort_order INTEGER NOT NULL DEFAULT 0,
   cta_text TEXT,
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS plan_features (
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_subscription_plans_is_active ON subscription_plans(is_active);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_is_visible ON subscription_plans(is_visible);
 CREATE INDEX IF NOT EXISTS idx_subscription_plans_sort_order ON subscription_plans(sort_order);
 CREATE INDEX IF NOT EXISTS idx_subscription_plans_stripe_price_id ON subscription_plans(stripe_price_id);
 CREATE INDEX IF NOT EXISTS idx_plan_features_plan_id ON plan_features(plan_id);
@@ -38,6 +40,10 @@ ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plan_features ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies - Plans are publicly readable (for pricing page)
+-- Drop existing policies first to allow re-running this script
+DROP POLICY IF EXISTS "Anyone can view active subscription plans" ON subscription_plans;
+DROP POLICY IF EXISTS "Anyone can view plan features" ON plan_features;
+
 CREATE POLICY "Anyone can view active subscription plans" 
   ON subscription_plans FOR SELECT 
   USING (is_active = true);

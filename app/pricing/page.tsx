@@ -124,12 +124,14 @@ export default function PricingPage() {
           )}
 
           <div
-            className={`grid gap-6 max-w-6xl mx-auto ${
+            className={`grid gap-6 mx-auto ${
               !loading && plans.length === 1
-                ? 'grid-cols-1 max-w-sm'
+                ? 'grid-cols-1 max-w-sm justify-center'
                 : !loading && plans.length === 2
                   ? 'grid-cols-1 md:grid-cols-2 max-w-3xl'
-                  : 'grid-cols-1 md:grid-cols-3'
+                  : !loading && plans.length === 4
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
+                    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'
             }`}
           >
             {loading ? (

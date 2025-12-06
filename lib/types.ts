@@ -88,6 +88,7 @@ export interface SubscriptionPlan {
   stripe_product_id: string | null;
   stripe_price_id: string | null;
   is_active: boolean;
+  is_visible: boolean; // Controls display on pricing page
   is_highlighted: boolean;
   sort_order: number;
   cta_text: string | null;

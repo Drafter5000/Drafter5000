@@ -177,6 +177,38 @@ export async function canPerformAdminAction(
 }
 
 /**
+ * Requires super admin access for the current request.
+ * Throws an error if the user is not a super admin.
+ */
+export async function requireSuperAdmin(): Promise<AdminSession> {
+  const session = await getAdminSession();
+
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!session.is_super_admin) {
+    throw new Error('Unauthorized');
+  }
+
+  return session;
+}
+
+/**
+ * Requires admin access (super admin or org admin) for the current request.
+ * Throws an error if the user is not an admin.
+ */
+export async function requireAdmin(): Promise<AdminSession> {
+  const session = await getAdminSession();
+
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+
+  return session;
+}
+
+/**
  * Authenticates admin login and returns session info
  */
 export async function authenticateAdmin(email: string, password: string): Promise<AdminAuthResult> {

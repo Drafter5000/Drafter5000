@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Save, Settings, Bell, Shield, Database } from 'lucide-react';
+import { PasswordResetForm } from '@/components/admin/password-reset-form';
 
 interface AppSettings {
   siteName: string;
@@ -212,6 +213,9 @@ export default function AdminSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Password Reset */}
+        <PasswordResetForm />
       </div>
     </div>
   );

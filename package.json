@@ -19,7 +19,12 @@
     "db:studio": "supabase studio",
     "db:types": "supabase gen types typescript --local > lib/database.types.ts",
     "db:reset": "supabase db reset",
-    "db:reset:full": "bun run scripts/db-reset-full.ts"
+    "db:reset:full": "bun run scripts/db-reset-full.ts",
+    "db:init": "bun run scripts/db-init.ts",
+    "db:init:stripe": "bun run scripts/db-init.ts --with-stripe",
+    "db:init:force": "bun run scripts/db-init.ts --force",
+    "stripe:sync": "bun run scripts/sync-stripe-plans.ts",
+    "stripe:sync:dry": "bun run scripts/sync-stripe-plans.ts --dry-run"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
