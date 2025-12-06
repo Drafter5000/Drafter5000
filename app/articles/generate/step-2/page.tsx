@@ -99,6 +99,7 @@ export default function GenerateStep2Page() {
         onBack={handleBack}
         loading={loading}
         error={error}
+        userId={user?.id}
       />
     </div>
   );

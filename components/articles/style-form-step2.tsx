@@ -15,19 +15,10 @@ import {
   AlertCircle,
   ArrowRight,
   ArrowLeft,
+  RefreshCw,
 } from 'lucide-react';
 import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation';
-
-const AI_SUGGESTIONS = [
-  'The Future of Remote Work in 2025',
-  'Building a Personal Brand Online',
-  'Productivity Hacks That Actually Work',
-  'The Art of Effective Communication',
-  'Sustainable Living Tips for Beginners',
-  'Mental Health in the Digital Age',
-  'Investing Strategies for Millennials',
-  'The Power of Habit Formation',
-];
+import { apiClient } from '@/lib/api-client';
 
 interface StyleFormStep2Props {
   initialSubjects?: string[];
@@ -35,6 +26,7 @@ interface StyleFormStep2Props {
   onBack?: () => void;
   loading?: boolean;
   error?: string | null;
+  userId?: string;
 }
 
 export function StyleFormStep2({
@@ -43,12 +35,14 @@ export function StyleFormStep2({
   onBack,
   loading = false,
   error = null,
+  userId,
 }: StyleFormStep2Props) {
   const [subjects, setSubjects] = useState<string[]>(initialSubjects);
   const [inputValue, setInputValue] = useState('');
   const [aiActive, setAiActive] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const addSubject = (subject: string) => {
     if (isSubjectValid(subject, subjects)) {
@@ -61,13 +55,33 @@ export function StyleFormStep2({
     setSubjects(subjects.filter((_, i) => i !== index));
   };
 
-  const activateAI = () => {
+  const generateAISuggestions = async () => {
+    if (!userId) {
+      setAiError('User not authenticated');
+      return;
+    }
+
     setAiLoading(true);
-    setTimeout(() => {
+    setAiError(null);
+
+    try {
+      const response = await apiClient.post<{ suggestions: string[] }>('/ai/suggestions', {
+        user_id: userId,
+        existing_topics: subjects,
+      });
+
       setAiActive(true);
-      setAiSuggestions(AI_SUGGESTIONS.filter(s => !subjects.includes(s)));
+      setAiSuggestions(response.suggestions || []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to generate suggestions';
+      setAiError(message);
+    } finally {
       setAiLoading(false);
-    }, 800);
+    }
+  };
+
+  const refreshSuggestions = () => {
+    generateAISuggestions();
   };
 
   const addFromAI = (suggestion: string) => {
@@ -167,37 +181,78 @@ export function StyleFormStep2({
                 <Sparkles className="h-5 w-5 text-primary" />
                 AI Suggestions
               </CardTitle>
-              {!aiActive && (
-                <Button onClick={activateAI} size="sm" disabled={aiLoading || loading}>
-                  {aiLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Loading...
-                    </>
-                  ) : (
-                    'Generate Ideas'
-                  )}
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {aiActive && (
+                  <Button
+                    onClick={refreshSuggestions}
+                    size="sm"
+                    variant="outline"
+                    disabled={aiLoading || loading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                )}
+                {!aiActive && (
+                  <Button onClick={generateAISuggestions} size="sm" disabled={aiLoading || loading}>
+                    {aiLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      'Generate Ideas'
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
             <CardDescription>
-              {aiActive ? 'Click a suggestion to add it' : 'Get AI-powered topic ideas'}
+              {aiActive
+                ? 'Click a suggestion to add it'
+                : 'Get AI-powered topic ideas based on your writing style'}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {aiError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{aiError}</AlertDescription>
+              </Alert>
+            )}
             {!aiActive ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
-                <p className="text-sm text-muted-foreground">Need inspiration?</p>
+                <p className="text-sm text-muted-foreground">
+                  {aiLoading ? 'Analyzing your writing style...' : 'Need inspiration?'}
+                </p>
+                {aiLoading && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Our AI is reading your articles to suggest relevant topics
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                {aiSuggestions.length === 0 ? (
+                {aiLoading ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                    <p className="text-sm text-muted-foreground">Generating new ideas...</p>
+                  </div>
+                ) : aiSuggestions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Sparkles className="h-6 w-6 text-primary mb-3" />
                     <p className="text-sm font-medium text-primary">All suggestions added!</p>
+                    <Button
+                      onClick={refreshSuggestions}
+                      size="sm"
+                      variant="outline"
+                      className="mt-3"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Get More Ideas
+                    </Button>
                   </div>
                 ) : (
                   aiSuggestions.map((suggestion, index) => (
