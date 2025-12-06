@@ -11,6 +11,29 @@ export interface SyncResult {
 }
 
 /**
+ * Language code to full name mapping
+ */
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+  nl: 'Dutch',
+  ja: 'Japanese',
+  zh: 'Chinese',
+  ko: 'Korean',
+};
+
+/**
+ * Get the full language name from a language code
+ */
+function getLanguageName(code: string): string {
+  return LANGUAGE_NAMES[code] || code.toUpperCase();
+}
+
+/**
  * Format date as YYYY-MM-DD
  */
 function formatDate(date: Date): string {
@@ -94,7 +117,7 @@ export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult
       sheetName: customerSheetName,
       customerName: style.display_name || style.name || style.user_id,
       customerEmail: style.email || '',
-      language: style.preferred_language,
+      language: getLanguageName(style.preferred_language),
       emailMonday: style.delivery_days.includes('mon'),
       emailTuesday: style.delivery_days.includes('tue'),
       emailWednesday: style.delivery_days.includes('wed'),
