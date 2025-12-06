@@ -26,13 +26,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       try {
         const res = await fetch('/api/admin/auth/session');
         if (!res.ok) {
-          router.push('/admin/login');
+          router.replace('/admin/login');
           return;
         }
         const data = await res.json();
-        setSession(data.session);
+        if (data.session) {
+          setSession(data.session);
+        } else {
+          router.replace('/admin/login');
+        }
       } catch {
-        router.push('/admin/login');
+        router.replace('/admin/login');
       } finally {
         setLoading(false);
       }
@@ -63,22 +67,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // Show access denied if no session
+  // Redirect to login if no session (don't show Access Denied)
   if (!session) {
+    // Show loading while redirecting
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-medium mb-2">Access Denied</p>
-          <p className="text-muted-foreground mb-4">
-            You don't have permission to access this area.
-          </p>
-          <button
-            onClick={() => router.push('/admin/login')}
-            className="text-primary hover:underline"
-          >
-            Go to login
-          </button>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }

@@ -83,7 +83,9 @@ export function StyleFormStep3({
   loading = false,
   error = null,
 }: StyleFormStep3Props) {
-  const [name, setName] = useState(initialData.name || '');
+  const [name, setName] = useState(
+    initialData.name === 'Untitled Style' ? '' : initialData.name || ''
+  );
   const [email, setEmail] = useState(initialData.email || userEmail);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -149,14 +151,20 @@ export function StyleFormStep3({
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Give this style a name</Label>
+              <Label htmlFor="name">
+                Give this style a name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="name"
-                placeholder="e.g., Tech Blog Style, Newsletter Voice"
+                placeholder="Untitled Style"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 disabled={loading}
+                required
               />
+              {name.trim().length === 0 && (
+                <p className="text-xs text-muted-foreground">Style name is required</p>
+              )}
             </div>
           </CardContent>
         </Card>

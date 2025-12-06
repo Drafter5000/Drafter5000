@@ -125,7 +125,7 @@ export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult
       emailFriday: style.delivery_days.includes('fri'),
       emailSaturday: style.delivery_days.includes('sat'),
       emailSunday: style.delivery_days.includes('sun'),
-      paywallStatus: 'paid',
+      paywallStatus: 'Paid',
       endOfMembership,
       customerSheetCreated: 'Yes',
       article1Example: style.style_samples[0] || '',
