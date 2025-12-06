@@ -15,15 +15,21 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Pencil, Eye, EyeOff, Loader2 } from 'lucide-react';
 import type { SubscriptionPlanWithFeatures } from '@/lib/types';
+import { PlanTableSkeleton } from './table-skeleton';
 
 interface PlanTableProps {
   plans: SubscriptionPlanWithFeatures[];
   onToggleActive: (planId: string, isActive: boolean) => Promise<void>;
   onToggleVisible: (planId: string, isVisible: boolean) => Promise<void>;
+  loading?: boolean;
 }
 
-export function PlanTable({ plans, onToggleActive, onToggleVisible }: PlanTableProps) {
+export function PlanTable({ plans, onToggleActive, onToggleVisible, loading }: PlanTableProps) {
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+
+  if (loading) {
+    return <PlanTableSkeleton />;
+  }
 
   const formatPrice = (priceCents: number, currency: string) => {
     if (priceCents === 0) return 'Free';

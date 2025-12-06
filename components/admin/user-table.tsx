@@ -21,6 +21,7 @@ import {
 import { Search, MoreHorizontal, UserCog, Ban, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { AdminUserView, OrgRole, PaginatedResult } from '@/lib/types';
 import Link from 'next/link';
+import { UserTableSkeleton } from './table-skeleton';
 
 interface UserTableProps {
   data: PaginatedResult<AdminUserView>;
@@ -45,6 +46,10 @@ export function UserTable({
     e.preventDefault();
     onSearch(searchQuery);
   };
+
+  if (loading) {
+    return <UserTableSkeleton />;
+  }
 
   const getRoleBadgeVariant = (role: OrgRole | null) => {
     switch (role) {
@@ -92,13 +97,7 @@ export function UserTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : data.data.length === 0 ? (
+            {data.data.length === 0 && !loading ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No users found

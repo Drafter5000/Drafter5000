@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import type { AdminOrgView, PaginatedResult } from '@/lib/types';
 import Link from 'next/link';
+import { OrgTableSkeleton } from './table-skeleton';
 
 interface OrgTableProps {
   data: PaginatedResult<AdminOrgView>;
@@ -53,6 +54,10 @@ export function OrgTable({
     e.preventDefault();
     onSearch(searchQuery);
   };
+
+  if (loading) {
+    return <OrgTableSkeleton />;
+  }
 
   return (
     <div className="space-y-4">
@@ -87,13 +92,7 @@ export function OrgTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : data.data.length === 0 ? (
+            {data.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No organizations found
