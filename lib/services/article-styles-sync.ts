@@ -1,5 +1,7 @@
 import { appendToMainSheet } from '@/lib/google-sheets';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { ArticleStyle } from '@/lib/types';
+import Stripe from 'stripe';
 
 export interface SyncResult {
   success: boolean;
@@ -8,16 +10,87 @@ export interface SyncResult {
   error?: string;
 }
 
+/**
+ * Format date as YYYY-MM-DD
+ */
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get the subscription end date for a user
+ */
+async function getSubscriptionEndDate(userId: string): Promise<string> {
+  try {
+    const supabase = await getServerSupabaseClient();
+
+    // Get user's Stripe customer ID and subscription status
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('stripe_customer_id, subscription_status, subscription_plan')
+      .eq('id', userId)
+      .single();
+
+    if (!profile?.stripe_customer_id) {
+      // No Stripe customer, return empty
+      return '';
+    }
+
+    // If user is on free plan, no end date
+    if (profile.subscription_plan === 'free') {
+      return '';
+    }
+
+    // Get subscription details from Stripe
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      console.warn('STRIPE_SECRET_KEY not configured');
+      return '';
+    }
+
+    const stripe = new Stripe(stripeSecretKey);
+
+    // List active subscriptions for this customer
+    const subscriptions = await stripe.subscriptions.list({
+      customer: profile.stripe_customer_id,
+      status: 'all',
+      limit: 1,
+    });
+
+    if (subscriptions.data.length === 0) {
+      return '';
+    }
+
+    const subscription = subscriptions.data[0];
+
+    // Get the current period end date
+    if (subscription.current_period_end) {
+      const endDate = new Date(subscription.current_period_end * 1000);
+      return formatDate(endDate);
+    }
+
+    return '';
+  } catch (error) {
+    console.error('Failed to get subscription end date:', error);
+    return '';
+  }
+}
+
 export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult> {
   try {
     // Use GOOGLE_SHEETS_ARTICLES_ID for article styles
     const spreadsheetId = process.env.GOOGLE_SHEETS_ARTICLES_ID;
-    // const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID; // Commented out - use ARTICLES_ID instead
 
     if (!spreadsheetId) {
       console.warn('GOOGLE_SHEETS_ARTICLES_ID not configured, skipping sync');
       return { success: true };
     }
+
+    // Get subscription end date for the user
+    const endOfMembership = await getSubscriptionEndDate(style.user_id);
 
     const customerSheetName = `${(style.display_name || style.name).replace(/\s/g, '_')}_${style.id.slice(0, 8)}`;
 
@@ -34,9 +107,9 @@ export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult
       emailFriday: style.delivery_days.includes('fri'),
       emailSaturday: style.delivery_days.includes('sat'),
       emailSunday: style.delivery_days.includes('sun'),
-      paywallStatus: 'active',
-      endOfMembership: '',
-      customerSheetCreated: new Date().toISOString(),
+      paywallStatus: 'paid',
+      endOfMembership,
+      customerSheetCreated: 'Yes',
       article1Example: style.style_samples[0] || '',
       article2Example: style.style_samples[1] || '',
       article3Example: style.style_samples[2] || '',
