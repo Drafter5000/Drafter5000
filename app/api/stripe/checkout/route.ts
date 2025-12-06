@@ -4,9 +4,11 @@ import { getServerSupabaseSession } from '@/lib/supabase-client';
 import { getPlanById } from '@/lib/plan-utils';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 
-// Default trial period in days
-const DEFAULT_TRIAL_DAYS = 7;
+// Trial is disabled by default - controlled via admin settings
+const DEFAULT_TRIAL_ENABLED = false;
+const DEFAULT_TRIAL_DAYS = 0;
 
 /**
  * Ensures a Stripe product and price exist for the given plan.
@@ -159,8 +161,34 @@ export async function POST(request: NextRequest) {
         .eq('id', session.user.id);
     }
 
-    // Determine trial period - use provided trial_days or default
-    const trialPeriodDays = typeof trial_days === 'number' ? trial_days : DEFAULT_TRIAL_DAYS;
+    // Fetch trial settings from database
+    let trialEnabled = DEFAULT_TRIAL_ENABLED;
+    let configuredTrialDays = DEFAULT_TRIAL_DAYS;
+
+    try {
+      const { data: configs } = await supabase
+        .from('app_config')
+        .select('key, value')
+        .in('key', ['trial_enabled', 'paywall_trial_days']);
+
+      if (configs) {
+        for (const config of configs) {
+          if (config.key === 'trial_enabled') {
+            trialEnabled = config.value === 'true';
+          } else if (config.key === 'paywall_trial_days') {
+            const parsedDays = parseInt(config.value, 10);
+            if (!isNaN(parsedDays) && parsedDays >= 0) {
+              configuredTrialDays = parsedDays;
+            }
+          }
+        }
+      }
+    } catch {
+      // Use defaults if config fetch fails
+    }
+
+    // Determine trial period - only apply if trial is enabled
+    const trialPeriodDays = trialEnabled ? configuredTrialDays : 0;
 
     // Determine URLs - use provided URLs or defaults
     const baseUrl =
@@ -171,6 +199,18 @@ export async function POST(request: NextRequest) {
     const finalCancelUrl = cancel_url || `${baseUrl}/subscribe`;
 
     // Create checkout session using the resolved price ID
+    // Only include trial_period_days if trial is enabled and days > 0
+    const subscriptionData: Stripe.Checkout.SessionCreateParams['subscription_data'] = {
+      metadata: {
+        user_id: session.user.id,
+        plan_id,
+      },
+    };
+
+    if (trialPeriodDays > 0) {
+      subscriptionData.trial_period_days = trialPeriodDays;
+    }
+
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -181,13 +221,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      subscription_data: {
-        trial_period_days: trialPeriodDays,
-        metadata: {
-          user_id: session.user.id,
-          plan_id,
-        },
-      },
+      subscription_data: subscriptionData,
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
       success_url: finalSuccessUrl,

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Settings, Bell, Shield, Database } from 'lucide-react';
+import { Loader2, Save, Settings, Shield, Database, CreditCard } from 'lucide-react';
 import { PasswordResetForm } from '@/components/admin/password-reset-form';
 
 interface AppSettings {
@@ -16,6 +16,8 @@ interface AppSettings {
   allowRegistration: boolean;
   requireEmailVerification: boolean;
   maxUsersPerOrg: number;
+  trialEnabled: boolean;
+  trialDays: number;
 }
 
 const defaultSettings: AppSettings = {
@@ -25,6 +27,8 @@ const defaultSettings: AppSettings = {
   allowRegistration: true,
   requireEmailVerification: true,
   maxUsersPerOrg: 50,
+  trialEnabled: false,
+  trialDays: 7,
 };
 
 export default function AdminSettingsPage() {
@@ -211,6 +215,50 @@ export default function AdminSettingsPage() {
                 className="w-32"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Subscription Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Subscription Settings
+            </CardTitle>
+            <CardDescription>Configure trial and subscription options</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Enable Free Trial</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow new subscribers to start with a free trial period
+                </p>
+              </div>
+              <Switch
+                checked={settings.trialEnabled}
+                onCheckedChange={checked => setSettings({ ...settings, trialEnabled: checked })}
+              />
+            </div>
+            {settings.trialEnabled && (
+              <div className="grid gap-2">
+                <Label htmlFor="trialDays">Trial Period (Days)</Label>
+                <Input
+                  id="trialDays"
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={settings.trialDays}
+                  onChange={e =>
+                    setSettings({ ...settings, trialDays: parseInt(e.target.value) || 7 })
+                  }
+                  className="w-32"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Number of days for the free trial (1-30 days)
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

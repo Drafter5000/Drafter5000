@@ -21,18 +21,12 @@ export async function listOrganizations(
   const offset = (page - 1) * pageSize;
 
   let query = supabase.from('organizations').select('*', { count: 'exact' });
-
-  // Apply search filter
   if (params.search) {
     query = query.or(`name.ilike.%${params.search}%,slug.ilike.%${params.search}%`);
   }
-
-  // Apply sorting
   const sortBy = params.sort_by || 'created_at';
   const sortOrder = params.sort_order === 'asc' ? true : false;
   query = query.order(sortBy, { ascending: sortOrder });
-
-  // Apply pagination
   query = query.range(offset, offset + pageSize - 1);
 
   const { data, count, error } = await query;
@@ -48,7 +42,6 @@ export async function listOrganizations(
     };
   }
 
-  // Enrich with member counts
   const enrichedOrgs: AdminOrgView[] = await Promise.all(
     (data || []).map(async org => {
       const { count: memberCount } = await supabase

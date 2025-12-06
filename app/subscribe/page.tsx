@@ -148,7 +148,8 @@ function SubscribeContent() {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trialDays, setTrialDays] = useState(7);
+  const [trialEnabled, setTrialEnabled] = useState(false);
+  const [trialDays, setTrialDays] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
@@ -289,12 +290,16 @@ function SubscribeContent() {
         }
 
         try {
-          const config = await apiClient.get<{ trial_days: number }>('/config/paywall');
-          if (config.trial_days) {
-            setTrialDays(config.trial_days);
-          }
+          const config = await apiClient.get<{
+            trial_enabled: boolean;
+            trial_days: number;
+          }>('/config/paywall');
+          setTrialEnabled(config.trial_enabled || false);
+          setTrialDays(config.trial_enabled ? config.trial_days : 0);
         } catch {
-          // Use default 7 days
+          // Use defaults (no trial)
+          setTrialEnabled(false);
+          setTrialDays(0);
         }
       } catch (err) {
         console.error('Failed to fetch plan:', err);
@@ -484,12 +489,14 @@ function SubscribeContent() {
 
           <Card className="border-2 border-primary/20 shadow-2xl shadow-primary/10">
             <CardHeader className="text-center pb-4">
-              <div className="flex justify-center mb-2">
-                <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {trialDays}-Day Free Trial
-                </Badge>
-              </div>
+              {trialEnabled && trialDays > 0 && (
+                <div className="flex justify-center mb-2">
+                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {trialDays}-Day Free Trial
+                  </Badge>
+                </div>
+              )}
               <CardTitle className="text-2xl">{plan?.name || 'Pro Plan'}</CardTitle>
               <CardDescription>{plan?.description}</CardDescription>
               <div className="pt-4">
@@ -498,7 +505,13 @@ function SubscribeContent() {
                 </span>
                 <span className="text-muted-foreground">/month</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">after {trialDays}-day free trial</p>
+              {trialEnabled && trialDays > 0 ? (
+                <p className="text-sm text-muted-foreground mt-1">
+                  after {trialDays}-day free trial
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">billed monthly</p>
+              )}
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -524,7 +537,9 @@ function SubscribeContent() {
                 ) : (
                   <>
                     <CreditCard className="h-4 w-4" />
-                    Start {trialDays}-Day Free Trial
+                    {trialEnabled && trialDays > 0
+                      ? `Start ${trialDays}-Day Free Trial`
+                      : 'Subscribe Now'}
                   </>
                 )}
               </Button>
@@ -541,7 +556,9 @@ function SubscribeContent() {
               </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                You won't be charged until your trial ends. Cancel anytime before then.
+                {trialEnabled && trialDays > 0
+                  ? "You won't be charged until your trial ends. Cancel anytime before then."
+                  : 'Your subscription will start immediately. Cancel anytime.'}
               </p>
             </CardContent>
           </Card>

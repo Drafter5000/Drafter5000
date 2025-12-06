@@ -81,23 +81,18 @@ async function getSubscriptionEndDate(userId: string): Promise<string> {
 
 export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult> {
   try {
-    // Use GOOGLE_SHEETS_ARTICLES_ID for article styles
     const spreadsheetId = process.env.GOOGLE_SHEETS_ARTICLES_ID;
-
     if (!spreadsheetId) {
       console.warn('GOOGLE_SHEETS_ARTICLES_ID not configured, skipping sync');
       return { success: true };
     }
 
-    // Get subscription end date for the user
     const endOfMembership = await getSubscriptionEndDate(style.user_id);
+    const customerSheetName = `${style.display_name || style.name || style.user_id}`;
 
-    const customerSheetName = `${(style.display_name || style.name).replace(/\s/g, '_')}_${style.id.slice(0, 8)}`;
-
-    // Append to Main Sheet
     await appendToMainSheet(spreadsheetId, {
       sheetName: customerSheetName,
-      customerName: style.display_name || style.name,
+      customerName: style.display_name || style.name || style.user_id,
       customerEmail: style.email || '',
       language: style.preferred_language,
       emailMonday: style.delivery_days.includes('mon'),

@@ -24,7 +24,9 @@
     "db:init:stripe": "bun run scripts/db-init.ts --with-stripe",
     "db:init:force": "bun run scripts/db-init.ts --force",
     "stripe:sync": "bun run scripts/sync-stripe-plans.ts",
-    "stripe:sync:dry": "bun run scripts/sync-stripe-plans.ts --dry-run"
+    "stripe:sync:dry": "bun run scripts/sync-stripe-plans.ts --dry-run",
+    "stripe:sync:subscription": "bun run scripts/sync-stripe-subscription.ts",
+    "stripe:sync:subscription:dry": "bun run scripts/sync-stripe-subscription.ts --dry-run"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
