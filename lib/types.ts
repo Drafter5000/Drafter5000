@@ -1,13 +1,35 @@
 export type UserRole = 'free' | 'pro' | 'enterprise';
 export type OrgRole = 'super_admin' | 'admin' | 'member' | 'viewer';
 
+// ===========================================
+// USER ROLE TYPE ENUM (Simplified 3-role system)
+// ===========================================
+
+export enum UserRoleType {
+  CUSTOMER = 'customer',
+  CUSTOMER_ADMIN = 'customer_admin',
+  SUPER_ADMIN = 'super_admin',
+}
+
+export type BackofficeScope = 'none' | 'organization' | 'platform';
+
+export interface RoleConfig {
+  value: UserRoleType;
+  label: string;
+  description: string;
+  dbOrgRole: OrgRole;
+  isSuperAdmin: boolean;
+  canAccessBackoffice: boolean;
+  backofficeScope: BackofficeScope;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
   display_name: string;
   created_at: string;
   updated_at: string;
-  subscription_status: 'active' | 'canceled' | 'past_due' | 'trial' | 'trialing' | 'incomplete';
+  subscription_status: 'active' | 'canceled' | 'past_due' | 'incomplete';
   subscription_plan: UserRole;
   stripe_customer_id: string | null;
   current_organization_id: string | null;
@@ -139,6 +161,7 @@ export interface AdminUserView {
   email: string;
   display_name: string | null;
   role: OrgRole | null;
+  userRoleType: UserRoleType | null;
   organization_id: string | null;
   organization_name: string | null;
   subscription_status: string;
@@ -183,6 +206,7 @@ export interface CreateUserInput {
   password: string;
   role: OrgRole;
   organization_id?: string;
+  is_super_admin?: boolean;
 }
 
 export interface CreateOrgInput {

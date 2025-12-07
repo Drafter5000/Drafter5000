@@ -11,14 +11,34 @@ import {
   LogOut,
   Shield,
   CreditCard,
+  BarChart3,
+  Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { AdminSession } from '@/lib/types';
+import { UserRoleType } from '@/lib/types';
+import { mapToUserRole, hasPlatformAccess } from '@/lib/role-config';
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** If true, only Super Admins can see this item */
+  superAdminOnly?: boolean;
+}
+
+// Navigation items with access control
+const navItems: NavItem[] = [
   {
     title: 'Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
+  },
+  {
+    title: 'Organizations',
+    href: '/admin/organizations',
+    icon: Building2,
+    superAdminOnly: true,
   },
   {
     title: 'Users',
@@ -26,28 +46,51 @@ const navItems = [
     icon: Users,
   },
   {
-    title: 'Organizations',
-    href: '/admin/organizations',
-    icon: Building2,
+    title: 'Billing',
+    href: '/admin/billing',
+    icon: Receipt,
+  },
+  {
+    title: 'Usage',
+    href: '/admin/usage',
+    icon: BarChart3,
   },
   {
     title: 'Plans',
     href: '/admin/plans',
     icon: CreditCard,
+    superAdminOnly: true,
   },
   {
     title: 'Settings',
     href: '/admin/settings',
     icon: Settings,
+    superAdminOnly: true,
   },
 ];
 
 interface AdminSidebarProps {
+  session?: AdminSession | null;
   onLogout?: () => void;
 }
 
-export function AdminSidebar({ onLogout }: AdminSidebarProps) {
+export function AdminSidebar({ session, onLogout }: AdminSidebarProps) {
   const pathname = usePathname();
+
+  // Determine user's role type
+  const userRoleType = session
+    ? mapToUserRole(session.role, session.is_super_admin)
+    : UserRoleType.CUSTOMER;
+
+  const isPlatformAdmin = hasPlatformAccess(userRoleType);
+
+  // Filter navigation items based on role
+  const visibleNavItems = navItems.filter(item => {
+    if (item.superAdminOnly && !isPlatformAdmin) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-card">
@@ -58,9 +101,18 @@ export function AdminSidebar({ onLogout }: AdminSidebarProps) {
           <span className="text-lg font-bold">Admin Panel</span>
         </div>
 
+        {/* Role indicator */}
+        {session && (
+          <div className="px-6 py-3 border-b">
+            <p className="text-xs text-muted-foreground">Logged in as</p>
+            <p className="text-sm font-medium truncate">{session.email}</p>
+            <p className="text-xs text-primary capitalize">{userRoleType.replace('_', ' ')}</p>
+          </div>
+        )}
+
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-4">
-          {navItems.map(item => {
+          {visibleNavItems.map(item => {
             const isActive =
               pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
 

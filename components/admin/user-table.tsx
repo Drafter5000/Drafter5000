@@ -19,7 +19,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Search, MoreHorizontal, UserCog, Ban, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { AdminUserView, OrgRole, PaginatedResult } from '@/lib/types';
+import type { AdminUserView, PaginatedResult } from '@/lib/types';
+import { UserRoleType } from '@/lib/types';
+import { getRoleLabel } from '@/lib/role-config';
 import Link from 'next/link';
 import { UserTableSkeleton } from './table-skeleton';
 
@@ -27,7 +29,7 @@ interface UserTableProps {
   data: PaginatedResult<AdminUserView>;
   onSearch: (query: string) => void;
   onPageChange: (page: number) => void;
-  onRoleChange?: (userId: string, role: OrgRole) => void;
+  onRoleChange?: (userId: string, role: UserRoleType) => void;
   onDeactivate?: (userId: string) => void;
   loading?: boolean;
 }
@@ -51,13 +53,13 @@ export function UserTable({
     return <UserTableSkeleton />;
   }
 
-  const getRoleBadgeVariant = (role: OrgRole | null) => {
-    switch (role) {
-      case 'super_admin':
+  const getRoleBadgeVariant = (userRoleType: UserRoleType | null) => {
+    switch (userRoleType) {
+      case UserRoleType.SUPER_ADMIN:
         return 'destructive';
-      case 'admin':
+      case UserRoleType.CUSTOMER_ADMIN:
         return 'default';
-      case 'member':
+      case UserRoleType.CUSTOMER:
         return 'secondary';
       default:
         return 'outline';
@@ -113,8 +115,8 @@ export function UserTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {user.is_super_admin ? 'Super Admin' : user.role || 'No role'}
+                    <Badge variant={getRoleBadgeVariant(user.userRoleType)}>
+                      {user.userRoleType ? getRoleLabel(user.userRoleType) : 'No role'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -145,7 +147,9 @@ export function UserTable({
                             View Details
                           </DropdownMenuItem>
                         </Link>
-                        <DropdownMenuItem onClick={() => onRoleChange?.(user.id, 'admin')}>
+                        <DropdownMenuItem
+                          onClick={() => onRoleChange?.(user.id, UserRoleType.CUSTOMER_ADMIN)}
+                        >
                           <UserCog className="mr-2 h-4 w-4" />
                           Change Role
                         </DropdownMenuItem>

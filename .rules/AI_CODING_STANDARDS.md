@@ -123,6 +123,20 @@ Before starting any task:
 - Show loading states during async operations
 - Clear error states when user retries an action
 
+#### Form Validation Rules
+
+- **ALWAYS use field-level validation** for form inputs (inline error messages below each field)
+- **DO NOT use toast/alert messages** for form validation errors
+- Toast messages should ONLY be used for:
+  - Backend API errors (server errors, network failures)
+  - Success confirmations after form submission
+- Field-level validation pattern:
+  - Display error message directly below the invalid field
+  - Add `border-destructive` class to highlight invalid fields
+  - Clear field error when user starts typing/selecting
+  - Use `text-xs text-destructive` for error message styling
+- Mark required fields with `<span className="text-destructive">*</span>` after the label
+
 ### Naming Conventions
 
 - Components: PascalCase (`UserProfile.tsx`)

@@ -231,10 +231,7 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      case 'customer.subscription.trial_will_end': {
-        // Send email notification about trial ending
-        break;
-      }
+      // Trial events are not handled - trials are disabled
     }
   } catch (error: unknown) {
     console.error('Webhook processing error:', error);

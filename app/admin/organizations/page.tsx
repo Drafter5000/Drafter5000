@@ -4,12 +4,16 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { OrgTable } from '@/components/admin/org-table';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
-import type { AdminOrgView, PaginatedResult } from '@/lib/types';
+import type { AdminOrgView, PaginatedResult, AdminSession } from '@/lib/types';
+import { UserRoleType } from '@/lib/types';
+import { hasPlatformAccess, mapToUserRole } from '@/lib/role-config';
 
 export default function AdminOrganizationsPage() {
   const router = useRouter();
+  const [session, setSession] = useState<AdminSession | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [data, setData] = useState<PaginatedResult<AdminOrgView>>({
     data: [],
     total: 0,
@@ -40,9 +44,29 @@ export default function AdminOrganizationsPage() {
     }
   }, []);
 
+  // Check session and access
   useEffect(() => {
-    fetchOrganizations(1, '');
-  }, [fetchOrganizations]);
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/admin/auth/session');
+        if (res.ok) {
+          const data = await res.json();
+          setSession(data.session);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      } finally {
+        setSessionLoading(false);
+      }
+    };
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      fetchOrganizations(1, '');
+    }
+  }, [fetchOrganizations, session]);
 
   const handleSearch = (query: string) => {
     setSearch(query);
@@ -73,6 +97,33 @@ export default function AdminOrganizationsPage() {
       console.error('Error deactivating organization:', error);
     }
   };
+
+  // Check if user has platform access (Super Admin only)
+  const userRoleType = session
+    ? mapToUserRole(session.role, session.is_super_admin)
+    : UserRoleType.CUSTOMER;
+  const isPlatformAdmin = hasPlatformAccess(userRoleType);
+
+  // Show loading while checking session
+  if (sessionLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show access denied for non-Super Admins
+  if (!isPlatformAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <ShieldAlert className="h-12 w-12 text-destructive" />
+        <h2 className="text-xl font-semibold">Access Denied</h2>
+        <p className="text-muted-foreground">Only Super Admins can view all organizations.</p>
+        <Button onClick={() => router.push('/admin')}>Go to Dashboard</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

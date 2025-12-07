@@ -89,7 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminSidebar onLogout={handleLogout} />
+      <AdminSidebar session={session} onLogout={handleLogout} />
       <div className="pl-64">
         <AdminHeader session={session} title={getPageTitle()} />
         <main className="p-6">{children}</main>

@@ -1,8 +1,13 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { setupSuperAdmin, setupNewUserOrganization } from '@/lib/organization-utils';
+import { UserRoleType } from '@/lib/types';
+import { mapToDbFields } from '@/lib/role-config';
 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
+
+// Get Customer role database fields
+const CUSTOMER_DB_FIELDS = mapToDbFields(UserRoleType.CUSTOMER);
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,13 +66,14 @@ export async function POST(request: NextRequest) {
       // Don't fail signup if email fails - user can request resend later
     }
 
-    // Check if this user should be super admin
+    // Check if this user should be super admin (based on env config)
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.toLowerCase();
     const isSuperAdmin = superAdminEmail && email.toLowerCase() === superAdminEmail;
 
     // Create user profile using admin client to bypass RLS
     // This is necessary because auth.uid() is not available immediately after signup
     // Set subscription_status to 'incomplete' - user must complete Stripe checkout before accessing the app
+    // Regular signups always get Customer role (is_super_admin = false)
     const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
       id: authData.user.id,
       email,
@@ -75,7 +81,8 @@ export async function POST(request: NextRequest) {
       subscription_status: 'incomplete',
       subscription_plan: 'free',
       current_organization_id: DEFAULT_ORG_ID,
-      is_super_admin: isSuperAdmin,
+      // Use Customer role fields unless this is the designated super admin email
+      is_super_admin: isSuperAdmin ? true : CUSTOMER_DB_FIELDS.isSuperAdmin,
     });
 
     if (profileError) {

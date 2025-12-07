@@ -6,9 +6,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// Trial is disabled by default - controlled via admin settings
-const DEFAULT_TRIAL_ENABLED = false;
-const DEFAULT_TRIAL_DAYS = 0;
+// Trial is permanently disabled - payment required immediately
+const TRIAL_ENABLED = false;
 
 /**
  * Ensures a Stripe product and price exist for the given plan.
@@ -115,7 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { plan_id, trial_days, success_url, cancel_url } = body;
+    const { plan_id, success_url, cancel_url } = body;
 
     if (!plan_id) {
       return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
@@ -161,34 +160,7 @@ export async function POST(request: NextRequest) {
         .eq('id', session.user.id);
     }
 
-    // Fetch trial settings from database
-    let trialEnabled = DEFAULT_TRIAL_ENABLED;
-    let configuredTrialDays = DEFAULT_TRIAL_DAYS;
-
-    try {
-      const { data: configs } = await supabase
-        .from('app_config')
-        .select('key, value')
-        .in('key', ['trial_enabled', 'paywall_trial_days']);
-
-      if (configs) {
-        for (const config of configs) {
-          if (config.key === 'trial_enabled') {
-            trialEnabled = config.value === 'true';
-          } else if (config.key === 'paywall_trial_days') {
-            const parsedDays = parseInt(config.value, 10);
-            if (!isNaN(parsedDays) && parsedDays >= 0) {
-              configuredTrialDays = parsedDays;
-            }
-          }
-        }
-      }
-    } catch {
-      // Use defaults if config fetch fails
-    }
-
-    // Determine trial period - only apply if trial is enabled
-    const trialPeriodDays = trialEnabled ? configuredTrialDays : 0;
+    // No trial period - payment required immediately
 
     // Determine URLs - use provided URLs or defaults
     const baseUrl =
@@ -198,19 +170,7 @@ export async function POST(request: NextRequest) {
     const finalSuccessUrl = success_url || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
     const finalCancelUrl = cancel_url || `${baseUrl}/subscribe`;
 
-    // Create checkout session using the resolved price ID
-    // Only include trial_period_days if trial is enabled and days > 0
-    const subscriptionData: Stripe.Checkout.SessionCreateParams['subscription_data'] = {
-      metadata: {
-        user_id: session.user.id,
-        plan_id,
-      },
-    };
-
-    if (trialPeriodDays > 0) {
-      subscriptionData.trial_period_days = trialPeriodDays;
-    }
-
+    // Create checkout session - no trial, payment required immediately
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -221,7 +181,14 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      subscription_data: subscriptionData,
+      subscription_data: {
+        metadata: {
+          user_id: session.user.id,
+          plan_id,
+        },
+      },
+      // Require payment method upfront - no trial
+      payment_method_collection: 'always',
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
       success_url: finalSuccessUrl,

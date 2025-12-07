@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/admin-auth';
-import { listOrganizations, createOrganization } from '@/lib/services/admin-organizations';
+import {
+  listOrganizations,
+  createOrganization,
+  getOrganizationById,
+} from '@/lib/services/admin-organizations';
 import type { ListParams } from '@/lib/types';
+import { canAccessBackoffice, hasPlatformAccess } from '@/lib/role-config';
+import { createOrgScopeContext } from '@/lib/services/org-scope';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,6 +15,14 @@ export async function GET(request: NextRequest) {
     const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Create scope context
+    const scopeContext = await createOrgScopeContext(session);
+
+    // Check if user can access backoffice
+    if (!canAccessBackoffice(scopeContext.userRoleType)) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -20,12 +34,37 @@ export async function GET(request: NextRequest) {
       sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || undefined,
     };
 
-    const result = await listOrganizations(params);
+    // Super Admins see all organizations
+    // Customer Admins see only their organization
+    if (hasPlatformAccess(scopeContext.userRoleType)) {
+      const result = await listOrganizations(params);
+      return NextResponse.json({
+        success: true,
+        ...result,
+      });
+    } else {
+      // Customer Admin - return only their organization
+      if (!scopeContext.currentOrgId) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          total: 0,
+          page: 1,
+          page_size: params.page_size || 10,
+          total_pages: 0,
+        });
+      }
 
-    return NextResponse.json({
-      success: true,
-      ...result,
-    });
+      const org = await getOrganizationById(scopeContext.currentOrgId);
+      return NextResponse.json({
+        success: true,
+        data: org ? [org] : [],
+        total: org ? 1 : 0,
+        page: 1,
+        page_size: params.page_size || 10,
+        total_pages: org ? 1 : 0,
+      });
+    }
   } catch (error) {
     console.error('Admin organizations list error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -40,10 +79,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only super admins can create organizations
-    if (!session.is_super_admin) {
+    // Create scope context
+    const scopeContext = await createOrgScopeContext(session);
+
+    // Only Super Admins can create organizations
+    if (!hasPlatformAccess(scopeContext.userRoleType)) {
       return NextResponse.json(
-        { error: 'Only super admins can create organizations' },
+        { error: 'Only Super Admins can create organizations' },
         { status: 403 }
       );
     }

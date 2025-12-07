@@ -7,18 +7,40 @@ import type {
   OrgRole,
   PaginatedResult,
 } from '../types';
+import { mapToUserRole } from '../role-config';
+import type { OrgScopeContext } from './org-scope';
+
+export interface ScopedListParams extends ListParams {
+  organization_id?: string; // Filter by specific org (for Super Admins)
+}
 
 /**
- * Lists users with pagination and search
+ * Lists users with pagination, search, and organization scoping
+ * @param params - List parameters including pagination and search
+ * @param scopeContext - Organization scope context for access control
  */
 export async function listUsers(
-  params: ListParams = {},
-  adminId?: string
+  params: ScopedListParams = {},
+  scopeContext?: OrgScopeContext
 ): Promise<PaginatedResult<AdminUserView>> {
   const supabase = getSupabaseAdmin();
   const page = params.page || 1;
   const pageSize = params.page_size || 10;
   const offset = (page - 1) * pageSize;
+
+  // Determine organization filter based on scope
+  let orgFilter: string | null = null;
+
+  if (scopeContext) {
+    // Customer Admins can only see users in their organization
+    if (!scopeContext.isSuperAdmin && scopeContext.currentOrgId) {
+      orgFilter = scopeContext.currentOrgId;
+    }
+    // Super Admins can optionally filter by organization
+    else if (scopeContext.isSuperAdmin && params.organization_id) {
+      orgFilter = params.organization_id;
+    }
+  }
 
   let query = supabase.from('user_profiles').select(
     `
@@ -34,6 +56,11 @@ export async function listUsers(
     `,
     { count: 'exact' }
   );
+
+  // Apply organization scope filter
+  if (orgFilter) {
+    query = query.eq('current_organization_id', orgFilter);
+  }
 
   // Apply search filter
   if (params.search) {
@@ -85,11 +112,15 @@ export async function listUsers(
         role = membership?.role || null;
       }
 
+      // Map to UserRoleType for display
+      const userRoleType = mapToUserRole(role, user.is_super_admin);
+
       return {
         id: user.id,
         email: user.email,
         display_name: user.display_name,
         role,
+        userRoleType,
         organization_id: user.current_organization_id,
         organization_name: orgName,
         subscription_status: user.subscription_status,
@@ -148,11 +179,15 @@ export async function getUserById(userId: string): Promise<AdminUserView | null>
     role = membership?.role || null;
   }
 
+  // Map to UserRoleType for display
+  const userRoleType = mapToUserRole(role, user.is_super_admin);
+
   return {
     id: user.id,
     email: user.email,
     display_name: user.display_name,
     role,
+    userRoleType,
     organization_id: user.current_organization_id,
     organization_name: orgName,
     subscription_status: user.subscription_status,
@@ -196,13 +231,16 @@ export async function createUser(
   }
 
   // Create user profile
+  // Use is_super_admin from input if provided, otherwise derive from role
+  const isSuperAdmin = input.is_super_admin ?? input.role === 'super_admin';
+
   const { error: profileError } = await supabase.from('user_profiles').insert({
     id: authData.user.id,
     email: input.email,
     display_name: input.display_name,
-    subscription_status: 'trial',
+    subscription_status: 'incomplete',
     subscription_plan: 'free',
-    is_super_admin: input.role === 'super_admin',
+    is_super_admin: isSuperAdmin,
     current_organization_id: input.organization_id || null,
   });
 

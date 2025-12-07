@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 
 const publicRoutes = ['/', '/login', '/signup', '/pricing', '/auth/callback', '/admin/login'];
 
-// Routes that require subscription (active or trialing)
+// Routes that require active subscription (no trial)
 const subscriptionRequiredRoutes = ['/dashboard', '/articles'];
 
 // Routes accessible without subscription (but require auth)
@@ -53,8 +53,8 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single();
 
-      const hasActiveSubscription =
-        profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
+      // Only active subscription grants access (no trial)
+      const hasActiveSubscription = profile?.subscription_status === 'active';
 
       if (hasActiveSubscription) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -82,8 +82,8 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    const hasActiveSubscription =
-      profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
+    // Only active subscription grants access (no trial)
+    const hasActiveSubscription = profile?.subscription_status === 'active';
 
     // If on subscribe page but already has subscription, redirect to dashboard
     if (isSubscribePage && hasActiveSubscription) {

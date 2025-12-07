@@ -13,7 +13,16 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import type { OrgRole, AdminOrgView } from '@/lib/types';
+import type { AdminOrgView } from '@/lib/types';
+import { UserRoleType } from '@/lib/types';
+import { getRoleOptions } from '@/lib/role-config';
+
+interface FieldErrors {
+  email?: string;
+  displayName?: string;
+  password?: string;
+  organizationId?: string;
+}
 
 interface UserFormProps {
   organizations?: AdminOrgView[];
@@ -21,28 +30,71 @@ interface UserFormProps {
     email: string;
     display_name: string;
     password: string;
-    role: OrgRole;
+    userRoleType: UserRoleType;
     organization_id?: string;
   }) => Promise<void>;
   loading?: boolean;
   error?: string | null;
+  /** If true, hides organization selector (for Customer Admin creating users in their org) */
+  hideOrgSelector?: boolean;
+  /** Default organization ID when org selector is hidden */
+  defaultOrgId?: string;
 }
 
-export function UserForm({ organizations, onSubmit, loading, error }: UserFormProps) {
+export function UserForm({
+  organizations,
+  onSubmit,
+  loading,
+  error,
+  hideOrgSelector = false,
+  defaultOrgId,
+}: UserFormProps) {
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<OrgRole>('member');
-  const [organizationId, setOrganizationId] = useState<string>('');
+  const [userRoleType, setUserRoleType] = useState<UserRoleType>(UserRoleType.CUSTOMER);
+  const [organizationId, setOrganizationId] = useState<string>(defaultOrgId || '');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const roleOptions = getRoleOptions();
+
+  const validateForm = (): boolean => {
+    const errors: FieldErrors = {};
+
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!displayName.trim()) {
+      errors.displayName = 'Display name is required';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required';
+    } else if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+
+    if (!hideOrgSelector && !organizationId) {
+      errors.organizationId = 'Organization is required';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     await onSubmit({
       email,
       display_name: displayName,
       password,
-      role,
-      organization_id: organizationId || undefined,
+      userRoleType,
+      organization_id: hideOrgSelector ? defaultOrgId : organizationId,
     });
   };
 
@@ -62,77 +114,122 @@ export function UserForm({ organizations, onSubmit, loading, error }: UserFormPr
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">
+                Email <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="user@example.com"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
+                onChange={e => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
+                }}
                 disabled={loading}
+                className={fieldErrors.email ? 'border-destructive' : ''}
               />
+              {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label htmlFor="displayName">
+                Display Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="displayName"
                 placeholder="John Doe"
                 value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                required
+                onChange={e => {
+                  setDisplayName(e.target.value);
+                  if (fieldErrors.displayName)
+                    setFieldErrors(prev => ({ ...prev, displayName: undefined }));
+                }}
                 disabled={loading}
+                className={fieldErrors.displayName ? 'border-destructive' : ''}
               />
+              {fieldErrors.displayName && (
+                <p className="text-xs text-destructive">{fieldErrors.displayName}</p>
+              )}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">
+              Password <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="password"
               type="password"
               placeholder="••••••••"
               value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
+              onChange={e => {
+                setPassword(e.target.value);
+                if (fieldErrors.password)
+                  setFieldErrors(prev => ({ ...prev, password: undefined }));
+              }}
               disabled={loading}
-              minLength={8}
+              className={fieldErrors.password ? 'border-destructive' : ''}
             />
+            {fieldErrors.password && (
+              <p className="text-xs text-destructive">{fieldErrors.password}</p>
+            )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className={`grid gap-4 ${hideOrgSelector ? '' : 'md:grid-cols-2'}`}>
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select value={role} onValueChange={v => setRole(v as OrgRole)} disabled={loading}>
+              <Select
+                value={userRoleType}
+                onValueChange={v => setUserRoleType(v as UserRoleType)}
+                disabled={loading}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="organization">Organization (Optional)</Label>
-              <Select value={organizationId} onValueChange={setOrganizationId} disabled={loading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No organization</SelectItem>
-                  {organizations?.map(org => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
+                  {roleOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {roleOptions.find(r => r.value === userRoleType)?.description}
+              </p>
             </div>
+
+            {!hideOrgSelector && (
+              <div className="space-y-2">
+                <Label htmlFor="organization">
+                  Organization <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={organizationId || 'placeholder'}
+                  onValueChange={v => {
+                    setOrganizationId(v === 'placeholder' ? '' : v);
+                    if (fieldErrors.organizationId)
+                      setFieldErrors(prev => ({ ...prev, organizationId: undefined }));
+                  }}
+                  disabled={loading}
+                >
+                  <SelectTrigger className={fieldErrors.organizationId ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select organization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations?.map(org => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldErrors.organizationId && (
+                  <p className="text-xs text-destructive">{fieldErrors.organizationId}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
