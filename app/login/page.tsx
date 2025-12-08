@@ -270,7 +270,7 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            {/* <div className="mt-4 pt-4 border-t border-gray-100">
               <Link href="/admin/login">
                 <Button
                   variant="ghost"
@@ -281,7 +281,7 @@ export default function LoginPage() {
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </main>

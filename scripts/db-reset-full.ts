@@ -18,6 +18,10 @@ import { join } from 'path';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123';
+
+const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing environment variables:');
@@ -74,8 +78,8 @@ async function dropAllTables() {
     -- Clear migrations history
     TRUNCATE TABLE _migrations;
 
-    -- Delete all users from auth.users
-    DELETE FROM auth.users;
+    -- Delete all users from auth.users (use WHERE true to satisfy Supabase RLS)
+    DELETE FROM auth.users WHERE true;
   `;
 
   const result = await executeSql(dropStatements);
@@ -127,6 +131,75 @@ async function runAllMigrations() {
   return true;
 }
 
+async function createSuperAdmin(): Promise<boolean> {
+  if (!SUPER_ADMIN_EMAIL) {
+    console.log('\n⚠️  SUPER_ADMIN_EMAIL not set, skipping admin creation');
+    console.log('   💡 Set SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD in .env.local');
+    return true;
+  }
+
+  console.log('\n👤 Creating super admin user...');
+
+  // Create auth user
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email: SUPER_ADMIN_EMAIL,
+    password: SUPER_ADMIN_PASSWORD,
+    email_confirm: true,
+    user_metadata: { display_name: 'Super Admin' },
+  });
+
+  if (authError) {
+    console.error('   ❌ Failed to create auth user:', authError.message);
+    return false;
+  }
+
+  if (!authData.user) {
+    console.error('   ❌ No user returned from auth creation');
+    return false;
+  }
+
+  const userId = authData.user.id;
+  console.log('   ✅ Auth user created');
+
+  // Create user profile
+  const { error: profileError } = await supabase.from('user_profiles').insert({
+    id: userId,
+    email: SUPER_ADMIN_EMAIL.toLowerCase(),
+    display_name: 'Super Admin',
+    is_super_admin: true,
+    current_organization_id: DEFAULT_ORG_ID,
+    subscription_status: 'active',
+    subscription_plan: 'enterprise',
+  });
+
+  if (profileError) {
+    console.error('   ❌ Failed to create user profile:', profileError.message);
+    return false;
+  }
+  console.log('   ✅ User profile created');
+
+  // Add to organization
+  const { error: memberError } = await supabase.from('organization_members').insert({
+    user_id: userId,
+    organization_id: DEFAULT_ORG_ID,
+    role: 'super_admin',
+    is_active: true,
+    joined_at: new Date().toISOString(),
+  });
+
+  if (memberError) {
+    console.error('   ❌ Failed to add to organization:', memberError.message);
+    return false;
+  }
+  console.log('   ✅ Added to organization as super_admin');
+
+  console.log('\n📋 Super Admin credentials:');
+  console.log(`   Email:    ${SUPER_ADMIN_EMAIL}`);
+  console.log(`   Password: ${SUPER_ADMIN_PASSWORD}`);
+
+  return true;
+}
+
 async function main() {
   console.log('🔄 Starting full database reset...\n');
 
@@ -147,6 +220,13 @@ async function main() {
   // Run all migrations
   const migrated = await runAllMigrations();
   if (!migrated) {
+    process.exit(1);
+  }
+
+  // Create super admin
+  const adminCreated = await createSuperAdmin();
+  if (!adminCreated) {
+    console.error('⚠️  Database reset complete but admin creation failed');
     process.exit(1);
   }
 
