@@ -1,5 +1,5 @@
 import { getServerSupabaseClient } from './supabase-client';
-import { SUBSCRIPTION_PLANS } from './stripe-client';
+import { getArticlesLimitForPlan } from './plan-utils';
 
 export async function checkUsageLimit(userId: string): Promise<{
   canGenerate: boolean;
@@ -29,7 +29,8 @@ export async function checkUsageLimit(userId: string): Promise<{
     };
   }
 
-  const planDetails = SUBSCRIPTION_PLANS[plan as keyof typeof SUBSCRIPTION_PLANS];
+  // Get articles limit from database
+  const limit = await getArticlesLimitForPlan(plan);
 
   // Get current month's article count
   const startOfMonth = new Date();
@@ -43,7 +44,6 @@ export async function checkUsageLimit(userId: string): Promise<{
     .gte('created_at', startOfMonth.toISOString());
 
   const used = articlesUsed || 0;
-  const limit = planDetails.articles_per_month;
 
   return {
     canGenerate: used < limit,

@@ -111,20 +111,20 @@ export async function getPlanByPriceId(priceId: string): Promise<SubscriptionPla
  * Fetches a subscription plan by its Stripe price ID using admin client.
  * Used for webhook handling where there's no authenticated user context.
  */
-export function getPlanByPriceIdAdmin(priceId: string): Promise<SubscriptionPlan | null> {
+export async function getPlanByPriceIdAdmin(priceId: string): Promise<SubscriptionPlan | null> {
   const supabase = getSupabaseAdmin();
 
-  return supabase
+  const { data, error } = await supabase
     .from('subscription_plans')
     .select('*')
     .eq('stripe_price_id', priceId)
-    .single()
-    .then(({ data, error }) => {
-      if (error || !data) {
-        return null;
-      }
-      return data as SubscriptionPlan;
-    });
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as SubscriptionPlan;
 }
 
 /**
