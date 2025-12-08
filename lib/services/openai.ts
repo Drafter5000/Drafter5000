@@ -88,8 +88,14 @@ Return only a JSON array of ${count} topic strings.`,
   const content = data.choices[0]?.message?.content || '[]';
 
   try {
+    // Clean up markdown code block formatting if present
+    let cleanedContent = content.trim();
+
+    // Remove markdown code block wrapper (```json ... ``` or ``` ... ```)
+    cleanedContent = cleanedContent.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+
     // Parse the JSON array from the response
-    const suggestions = JSON.parse(content.trim());
+    const suggestions = JSON.parse(cleanedContent.trim());
     if (Array.isArray(suggestions)) {
       return suggestions.filter(
         (s): s is string =>
@@ -98,9 +104,18 @@ Return only a JSON array of ${count} topic strings.`,
     }
   } catch {
     // If JSON parsing fails, try to extract topics from text
-    const lines = content.split('\n').filter(line => line.trim().length > 0);
+    const lines = content
+      .split('\n')
+      .filter(line => line.trim().length > 0)
+      // Filter out JSON artifacts and markdown formatting
+      .filter(line => !line.match(/^```|^\[|^\]|^".*",?$/));
     return lines
-      .map(line => line.replace(/^[\d\-\.\*]+\s*/, '').trim())
+      .map(line =>
+        line
+          .replace(/^[\d\-\.\*]+\s*/, '')
+          .replace(/^["']|["'],?$/g, '')
+          .trim()
+      )
       .filter(line => line.length > 0 && !existingTopics.includes(line))
       .slice(0, count);
   }
