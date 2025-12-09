@@ -1,49 +1,29 @@
 'use client';
 
-import { Header } from '@/components/header';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Check, Zap, AlertCircle } from 'lucide-react';
+import { Win95Window, Win95Button, Win95Alert, Win95Badge } from '@/components/win95';
+import { DashboardHeader } from '@/components/dashboard-header';
 import { useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/components/auth-provider';
 import { usePlans } from '@/hooks/use-plans';
 import type { SubscriptionPlanWithFeatures } from '@/lib/types';
+import Link from 'next/link';
 
 function PlanCardSkeleton() {
   return (
-    <Card className="border-2 flex flex-col">
-      <CardHeader>
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-4 w-40 mt-2" />
-        <div className="mt-6">
-          <Skeleton className="h-12 w-32" />
-        </div>
-        <Skeleton className="h-4 w-36 mt-3" />
-      </CardHeader>
-      <CardContent className="flex-1">
-        <div className="space-y-4">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="flex items-start gap-3">
-              <Skeleton className="h-5 w-5 rounded-full" />
-              <Skeleton className="h-4 w-full" />
-            </div>
+    <div className="win95-raised p-3">
+      <div className="animate-pulse space-y-3">
+        <div className="h-4 bg-[var(--win95-bg-dark)] w-24"></div>
+        <div className="h-3 bg-[var(--win95-bg-dark)] w-32"></div>
+        <div className="h-6 bg-[var(--win95-bg-dark)] w-20 mt-4"></div>
+        <div className="space-y-2 mt-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-3 bg-[var(--win95-bg-dark)] w-full"></div>
           ))}
         </div>
-      </CardContent>
-      <CardFooter>
-        <Skeleton className="h-10 w-full" />
-      </CardFooter>
-    </Card>
+        <div className="h-6 bg-[var(--win95-bg-dark)] w-full mt-4"></div>
+      </div>
+    </div>
   );
 }
 
@@ -64,21 +44,18 @@ export default function PricingPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   const handleCheckout = async (plan: SubscriptionPlanWithFeatures) => {
-    // Handle email CTA type
     if (plan.cta_type === 'email') {
       window.location.href = 'mailto:sales@drafter.com';
       return;
     }
 
-    // Handle signup CTA type (free plan)
     if (plan.cta_type === 'signup' || plan.price_cents === 0) {
-      window.location.href = user ? '/dashboard' : '/signup';
+      window.location.href = user ? '/dashboard' : '/articles/generate/step-1';
       return;
     }
 
-    // Handle checkout CTA type
     if (!user) {
-      window.location.href = '/signup';
+      window.location.href = '/articles/generate/step-1';
       return;
     }
 
@@ -96,126 +73,134 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <Header />
-      <main className="pt-32 pb-20 px-6 relative overflow-hidden">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-40 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-40 right-20 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
-        </div>
+    <div className="min-h-screen p-4">
+      <div className="max-w-5xl mx-auto">
+        <DashboardHeader />
 
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/50 text-sm font-medium border border-primary/20 mb-6">
-              <Zap className="h-4 w-4 text-primary" />
-              <span>Simple, Transparent Pricing</span>
+        <Win95Window title="Pricing - Drafter" icon={<span>💰</span>}>
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="win95-sunken p-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-[20px]">💰</span>
+                <h1 className="text-[14px] font-bold">Plans for Every Creator</h1>
+              </div>
+              <p className="text-[11px] text-[var(--win95-button-shadow)] mt-1">
+                Start free and upgrade anytime. No credit card required.
+              </p>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Plans for every creator</h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Start free and upgrade anytime. No credit card required to get started.
-            </p>
-          </div>
 
-          {error && (
-            <div className="max-w-md mx-auto mb-8 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
+            {error && (
+              <Win95Alert type="error" title="Error">
+                {error}
+              </Win95Alert>
+            )}
 
-          <div
-            className={`grid gap-6 mx-auto ${
-              !loading && plans.length === 1
-                ? 'grid-cols-1 max-w-sm justify-center'
-                : !loading && plans.length === 2
-                  ? 'grid-cols-1 md:grid-cols-2 max-w-3xl'
-                  : !loading && plans.length === 4
-                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
-                    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'
-            }`}
-          >
-            {loading ? (
-              <>
-                <PlanCardSkeleton />
-                <PlanCardSkeleton />
-                <PlanCardSkeleton />
-              </>
-            ) : (
-              plans.map(plan => (
-                <Card
-                  key={plan.id}
-                  className={`border-2 relative flex flex-col transition-all hover:shadow-lg ${
-                    plan.is_highlighted
-                      ? 'border-primary/50 shadow-xl shadow-primary/10 md:scale-105 md:z-10'
-                      : 'border-border'
-                  }`}
-                >
-                  {plan.is_highlighted && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+            {/* Plans Grid */}
+            <div
+              className={`grid gap-4 ${
+                !loading && plans.length === 1
+                  ? 'grid-cols-1 max-w-[280px] mx-auto'
+                  : !loading && plans.length === 2
+                    ? 'grid-cols-1 md:grid-cols-2'
+                    : !loading && plans.length === 4
+                      ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                      : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+              }`}
+            >
+              {loading ? (
+                <>
+                  <PlanCardSkeleton />
+                  <PlanCardSkeleton />
+                  <PlanCardSkeleton />
+                </>
+              ) : (
+                plans.map(plan => (
+                  <div
+                    key={plan.id}
+                    className={`win95-raised p-3 flex flex-col ${
+                      plan.is_highlighted ? 'ring-2 ring-[var(--win95-title-bar)]' : ''
+                    }`}
+                  >
+                    {plan.is_highlighted && (
+                      <div className="text-center mb-2">
+                        <Win95Badge variant="default">⭐ Most Popular</Win95Badge>
+                      </div>
+                    )}
+
+                    <div className="win95-sunken p-2 mb-3">
+                      <h2 className="text-[12px] font-bold">{plan.name}</h2>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                        {plan.description}
+                      </p>
                     </div>
-                  )}
 
-                  <CardHeader className={plan.is_highlighted ? 'pt-8' : ''}>
-                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                    <CardDescription>{plan.description}</CardDescription>
-                    <div className="mt-6">
-                      <span className="text-5xl font-bold">{formatPrice(plan.price_cents)}</span>
-                      <span className="text-muted-foreground"> / month</span>
+                    <div className="text-center mb-3">
+                      <span className="text-[24px] font-bold text-[var(--win95-title-bar)]">
+                        {formatPrice(plan.price_cents)}
+                      </span>
+                      <span className="text-[11px]"> / month</span>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)] mt-1">
+                        {plan.articles_per_month} articles per month
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-3">
-                      {plan.articles_per_month} articles per month
-                    </p>
-                  </CardHeader>
 
-                  <CardContent className="flex-1">
-                    <div className="space-y-4">
-                      {plan.features.map(feature => (
-                        <div key={feature.id} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-sm">{feature.feature_text}</span>
-                        </div>
-                      ))}
+                    <div className="win95-sunken p-2 flex-1 mb-3">
+                      <p className="text-[10px] font-bold mb-2">Features:</p>
+                      <ul className="space-y-1">
+                        {plan.features.map(feature => (
+                          <li key={feature.id} className="flex items-start gap-1 text-[10px]">
+                            <span className="text-[var(--win95-success)]">✓</span>
+                            <span>{feature.feature_text}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </CardContent>
 
-                  <CardFooter>
-                    <Button
+                    <Win95Button
                       onClick={() => handleCheckout(plan)}
                       disabled={checkoutLoading === plan.id}
-                      variant={plan.is_highlighted ? 'default' : 'outline'}
-                      className="w-full gap-2 shadow-lg shadow-primary/20"
+                      className={`w-full ${checkoutLoading === plan.id ? 'win95-loading' : ''}`}
                     >
                       {checkoutLoading === plan.id ? 'Processing...' : getCtaText(plan)}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))
-            )}
-          </div>
+                    </Win95Button>
+                  </div>
+                ))
+              )}
+            </div>
 
-          <div className="mt-20 max-w-3xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Cancel Anytime</CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  No long-term commitments. Cancel your subscription anytime with just a few clicks.
-                </CardContent>
-              </Card>
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Money-Back Guarantee</CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  30-day guarantee. If you're not happy, we'll refund you completely.
-                </CardContent>
-              </Card>
+            {/* Guarantees */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="win95-groupbox">
+                <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                  <legend className="win95-groupbox-title font-bold">🔄 Cancel Anytime</legend>
+                  <p className="text-[10px]">
+                    No long-term commitments. Cancel your subscription anytime with just a few
+                    clicks.
+                  </p>
+                </fieldset>
+              </div>
+              <div className="win95-groupbox">
+                <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                  <legend className="win95-groupbox-title font-bold">
+                    💯 Money-Back Guarantee
+                  </legend>
+                  <p className="text-[10px]">
+                    30-day guarantee. If you're not happy, we'll refund you completely.
+                  </p>
+                </fieldset>
+              </div>
+            </div>
+
+            {/* Back Link */}
+            <div className="text-center pt-2">
+              <Link href="/">
+                <Win95Button size="sm">← Back to Home</Win95Button>
+              </Link>
             </div>
           </div>
-        </div>
-      </main>
+        </Win95Window>
+      </div>
     </div>
   );
 }

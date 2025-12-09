@@ -3,49 +3,43 @@
 import { useAuth } from '@/components/auth-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+  Win95Window,
+  Win95Button,
+  Win95Input,
+  Win95Select,
+  Win95Checkbox,
+  Win95Alert,
+} from '@/components/win95';
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 
 const DAYS = [
-  { id: 'mon', label: 'Monday' },
-  { id: 'tue', label: 'Tuesday' },
-  { id: 'wed', label: 'Wednesday' },
-  { id: 'thu', label: 'Thursday' },
-  { id: 'fri', label: 'Friday' },
-  { id: 'sat', label: 'Saturday' },
-  { id: 'sun', label: 'Sunday' },
+  { id: 'mon', label: 'Monday', short: 'Mon' },
+  { id: 'tue', label: 'Tuesday', short: 'Tue' },
+  { id: 'wed', label: 'Wednesday', short: 'Wed' },
+  { id: 'thu', label: 'Thursday', short: 'Thu' },
+  { id: 'fri', label: 'Friday', short: 'Fri' },
+  { id: 'sat', label: 'Saturday', short: 'Sat' },
+  { id: 'sun', label: 'Sunday', short: 'Sun' },
 ];
 
 const LANGUAGES = [
-  { code: 'en', label: 'English', flag: '🇺🇸' },
-  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
-  { code: 'fr', label: 'French', flag: '🇫🇷' },
-  { code: 'de', label: 'German', flag: '🇩🇪' },
-  { code: 'it', label: 'Italian', flag: '🇮🇹' },
-  { code: 'pt', label: 'Portuguese', flag: '🇵🇹' },
-  { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
-  { code: 'pl', label: 'Polish', flag: '🇵🇱' },
-  { code: 'ru', label: 'Russian', flag: '🇷🇺' },
-  { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
-  { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
-  { code: 'ko', label: 'Korean', flag: '🇰🇷' },
-  { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
-  { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
+  { value: 'en', label: '🇺🇸 English' },
+  { value: 'es', label: '🇪🇸 Spanish' },
+  { value: 'fr', label: '🇫🇷 French' },
+  { value: 'de', label: '🇩🇪 German' },
+  { value: 'it', label: '🇮🇹 Italian' },
+  { value: 'pt', label: '🇵🇹 Portuguese' },
+  { value: 'nl', label: '🇳🇱 Dutch' },
+  { value: 'pl', label: '🇵🇱 Polish' },
+  { value: 'ru', label: '🇷🇺 Russian' },
+  { value: 'ja', label: '🇯🇵 Japanese' },
+  { value: 'zh', label: '🇨🇳 Chinese' },
+  { value: 'ko', label: '🇰🇷 Korean' },
+  { value: 'ar', label: '🇸🇦 Arabic' },
+  { value: 'hi', label: '🇮🇳 Hindi' },
 ];
 
 export default function SettingsPage() {
@@ -57,7 +51,6 @@ export default function SettingsPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [success, setSuccess] = useState(false);
 
-  // Load existing settings
   useEffect(() => {
     const loadSettings = async () => {
       if (!user) return;
@@ -92,6 +85,14 @@ export default function SettingsPage() {
     );
   };
 
+  const toggleAllDays = () => {
+    if (deliveryDays.length === 7) {
+      setDeliveryDays([]);
+    } else {
+      setDeliveryDays(DAYS.map(d => d.id));
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setLoading(true);
@@ -115,166 +116,123 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-        <DashboardHeader />
+      <div className="min-h-screen p-4">
+        <div className="max-w-3xl mx-auto">
+          <DashboardHeader />
 
-        <main className="pt-10 pb-20 px-6">
-          <div className="max-w-2xl mx-auto space-y-8">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-3xl font-bold">Settings</h1>
-                <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
+          <Win95Window title="Settings" icon={<span>⚙️</span>}>
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="win95-sunken p-2 flex items-center gap-2">
+                  <span className="text-[16px]">⚙️</span>
+                  <div>
+                    <h2 className="text-[12px] font-bold">Settings</h2>
+                    <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                      Manage your account and preferences
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard">
+                  <Win95Button size="sm">← Back</Win95Button>
+                </Link>
               </div>
-            </div>
 
-            {success && (
-              <div className="p-4 rounded-lg bg-green-100 border border-green-300 text-green-900 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
-                Settings saved successfully!
-              </div>
-            )}
+              {success && (
+                <Win95Alert type="success" title="Success">
+                  Settings saved successfully!
+                </Win95Alert>
+              )}
 
-            {initialLoading ? (
-              <>
-                {/* Account Information Skeleton */}
-                <Card className="border-2">
-                  <CardHeader>
-                    <Skeleton className="h-6 w-44" />
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Delivery Preferences Skeleton */}
-                <Card className="border-2">
-                  <CardHeader>
-                    <Skeleton className="h-6 w-40" />
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <div className="grid grid-cols-2 gap-4">
-                        {[...Array(7)].map((_, i) => (
-                          <div key={i} className="flex items-center space-x-2">
-                            <Skeleton className="h-4 w-4" />
-                            <Skeleton className="h-4 w-20" />
-                          </div>
-                        ))}
+              {initialLoading ? (
+                <div className="text-center py-8">
+                  <span className="text-[11px] win95-loading">Loading settings...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Account Information */}
+                  <div className="win95-groupbox">
+                    <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                      <legend className="win95-groupbox-title font-bold">
+                        👤 Account Information
+                      </legend>
+                      <div className="space-y-3">
+                        <Win95Input
+                          label="Email Address"
+                          type="email"
+                          value={user?.email || ''}
+                          disabled
+                        />
+                        <Win95Input
+                          label="Display Name"
+                          placeholder="John Doe"
+                          value={displayName}
+                          onChange={e => setDisplayName(e.target.value)}
+                          disabled={loading}
+                        />
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </fieldset>
+                  </div>
 
-                <Skeleton className="h-11 w-full" />
-              </>
-            ) : (
-              <>
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle>Account Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={user?.email || ''}
-                        readOnly
-                        className="bg-muted cursor-not-allowed"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="displayName">Display Name</Label>
-                      <Input
-                        id="displayName"
-                        placeholder="John Doe"
-                        value={displayName}
-                        onChange={e => setDisplayName(e.target.value)}
-                        disabled={loading}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle>Delivery Preferences</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Label>Select delivery days</Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        {DAYS.map(day => (
-                          <div key={day.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={day.id}
-                              checked={deliveryDays.includes(day.id)}
-                              onCheckedChange={() => toggleDay(day.id)}
+                  {/* Delivery Preferences */}
+                  <div className="win95-groupbox">
+                    <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                      <legend className="win95-groupbox-title font-bold">
+                        📅 Delivery Preferences
+                      </legend>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[11px] font-bold mb-2">Select delivery days</p>
+                          <div className="space-y-2">
+                            <Win95Checkbox
+                              checked={deliveryDays.length === 7}
+                              onCheckedChange={toggleAllDays}
+                              label="Every Day"
                               disabled={loading}
                             />
-                            <Label htmlFor={day.id} className="font-normal cursor-pointer">
-                              {day.label}
-                            </Label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
+                              {DAYS.map(day => (
+                                <Win95Checkbox
+                                  key={day.id}
+                                  checked={deliveryDays.includes(day.id)}
+                                  onCheckedChange={() => toggleDay(day.id)}
+                                  label={day.short}
+                                  disabled={loading}
+                                />
+                              ))}
+                            </div>
                           </div>
-                        ))}
+                        </div>
+
+                        <div>
+                          <p className="text-[11px] font-bold mb-2">Article Language</p>
+                          <Win95Select
+                            value={language}
+                            onValueChange={setLanguage}
+                            options={LANGUAGES}
+                            disabled={loading}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    </fieldset>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="language">Article Language</Label>
-                      <Select value={language} onValueChange={setLanguage} disabled={loading}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LANGUAGES.map(lang => (
-                            <SelectItem key={lang.code} value={lang.code}>
-                              {lang.flag} {lang.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Button
-                  onClick={handleSave}
-                  disabled={loading}
-                  size="lg"
-                  className="w-full gap-2 shadow-lg shadow-primary/20"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </>
-            )}
-          </div>
-        </main>
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2">
+                    <Win95Button
+                      onClick={handleSave}
+                      disabled={loading}
+                      size="lg"
+                      className={loading ? 'win95-loading' : ''}
+                    >
+                      {loading ? 'Saving...' : '💾 Save Changes'}
+                    </Win95Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Win95Window>
+        </div>
       </div>
     </ProtectedRoute>
   );

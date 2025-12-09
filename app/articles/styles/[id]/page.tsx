@@ -6,11 +6,8 @@ import { useAuth } from '@/components/auth-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { DeleteDialog } from '@/components/articles/delete-dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Win95Window, Win95Button, Win95Badge } from '@/components/win95';
 import { apiClient } from '@/lib/api-client';
-import { FileText, Calendar, Pencil, Trash2, ArrowLeft, Loader2, Mail, User } from 'lucide-react';
 import Link from 'next/link';
 import type { ArticleStyle } from '@/lib/types';
 
@@ -76,13 +73,15 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-background">
-          <DashboardHeader />
-          <main className="pt-8 pb-20 px-6">
-            <div className="max-w-4xl mx-auto flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          </main>
+        <div className="min-h-screen p-4">
+          <div className="max-w-4xl mx-auto">
+            <DashboardHeader />
+            <Win95Window title="Loading..." icon={<span>📄</span>}>
+              <div className="text-center py-8">
+                <span className="text-[11px] win95-loading">Loading style...</span>
+              </div>
+            </Win95Window>
+          </div>
         </div>
       </ProtectedRoute>
     );
@@ -94,173 +93,140 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
-        <main className="pt-8 pb-20 px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-4 mb-8">
-              <Link href="/articles/styles">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-            </div>
+      <div className="min-h-screen p-4">
+        <div className="max-w-4xl mx-auto">
+          <DashboardHeader />
 
-            <div className="flex items-start justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-7 w-7 text-primary" />
+          <Win95Window title={`Style: ${style.name}`} icon={<span>📄</span>}>
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <Link href="/articles/styles">
+                  <Win95Button size="sm">← Back</Win95Button>
+                </Link>
+                <div className="flex gap-1">
+                  <Link href={`/articles/styles/${id}/edit`}>
+                    <Win95Button size="sm">✏️ Edit</Win95Button>
+                  </Link>
+                  <Win95Button size="sm" onClick={() => setDeleteOpen(true)}>
+                    🗑️ Delete
+                  </Win95Button>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="win95-sunken p-3 flex items-center gap-3">
+                <div className="win95-raised p-2">
+                  <span className="text-[24px]">📄</span>
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">{style.name}</h1>
-                  <p className="text-sm text-muted-foreground">
+                  <h1 className="text-[14px] font-bold">{style.name}</h1>
+                  <p className="text-[10px] text-[var(--win95-button-shadow)]">
                     Created {new Date(style.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Link href={`/articles/styles/${id}/edit`}>
-                  <Button variant="outline" className="gap-2">
-                    <Pencil className="h-4 w-4" />
-                    Edit
-                  </Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  className="gap-2 text-destructive hover:text-destructive"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
-            </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <User className="h-5 w-5 text-blue-500" />
-                    Delivery Info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase mb-1">Email</p>
-                    <p className="font-medium flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      {style.email || 'Not set'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase mb-1">Display Name</p>
-                    <p className="font-medium">{style.display_name || 'Not set'}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Calendar className="h-5 w-5 text-purple-500" />
-                    Schedule
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase mb-2">Delivery Days</p>
-                    <div className="flex flex-wrap gap-2">
-                      {style.delivery_days.length === 0 ? (
-                        <span className="text-muted-foreground">No days selected</span>
-                      ) : style.delivery_days.length === 7 ? (
-                        <Badge>Every Day</Badge>
-                      ) : (
-                        style.delivery_days.map(day => (
-                          <Badge key={day} variant="secondary">
-                            {DAY_LABELS[day] || day}
-                          </Badge>
-                        ))
-                      )}
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Delivery Info */}
+                <div className="win95-sunken p-3">
+                  <div className="text-[11px] font-bold mb-3">👤 Delivery Info</div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">Email</p>
+                      <p className="text-[11px]">📧 {style.email || 'Not set'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">Display Name</p>
+                      <p className="text-[11px]">{style.display_name || 'Not set'}</p>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase mb-2">Language</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{flag}</span>
-                      <span className="font-medium">{style.preferred_language.toUpperCase()}</span>
+                </div>
+
+                {/* Schedule */}
+                <div className="win95-sunken p-3">
+                  <div className="text-[11px] font-bold mb-3">📅 Schedule</div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)] mb-1">
+                        Delivery Days
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {style.delivery_days.length === 0 ? (
+                          <span className="text-[10px] text-[var(--win95-button-shadow)]">
+                            No days selected
+                          </span>
+                        ) : style.delivery_days.length === 7 ? (
+                          <Win95Badge>Every Day</Win95Badge>
+                        ) : (
+                          style.delivery_days.map(day => (
+                            <Win95Badge key={day} variant="secondary">
+                              {DAY_LABELS[day] || day}
+                            </Win95Badge>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">Language</p>
+                      <p className="text-[11px]">
+                        {flag} {style.preferred_language.toUpperCase()}
+                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Topics ({style.subjects.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+                {/* Topics */}
+                <div className="win95-sunken p-3 md:col-span-2">
+                  <div className="text-[11px] font-bold mb-3">
+                    📝 Topics ({style.subjects.length})
+                  </div>
                   {style.subjects.length === 0 ? (
-                    <p className="text-muted-foreground">No topics added</p>
+                    <p className="text-[10px] text-[var(--win95-button-shadow)]">No topics added</p>
                   ) : (
-                    <div className="grid sm:grid-cols-2 gap-2">
+                    <div className="grid sm:grid-cols-2 gap-1">
                       {style.subjects.map((subject, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50"
-                        >
-                          <Badge variant="outline" className="h-6 w-6 p-0 justify-center shrink-0">
-                            {index + 1}
-                          </Badge>
-                          <span className="text-sm">{subject}</span>
+                        <div key={index} className="win95-raised p-2 flex items-center gap-2">
+                          <Win95Badge variant="outline">{index + 1}</Win95Badge>
+                          <span className="text-[11px]">{subject}</span>
                         </div>
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
 
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    Style Samples ({style.style_samples.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+                {/* Style Samples */}
+                <div className="win95-sunken p-3 md:col-span-2">
+                  <div className="text-[11px] font-bold mb-3">
+                    📄 Style Samples ({style.style_samples.length})
+                  </div>
                   {style.style_samples.length === 0 ? (
-                    <p className="text-muted-foreground">No style samples added</p>
+                    <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                      No style samples added
+                    </p>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {style.style_samples.map((sample, index) => (
-                        <div key={index} className="rounded-lg border bg-secondary/30 p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Badge variant="outline" className="h-6 w-6 p-0 justify-center">
-                              {index + 1}
-                            </Badge>
-                            <span className="text-sm font-medium">Sample {index + 1}</span>
-                            <span className="text-xs text-muted-foreground ml-auto">
+                        <div key={index} className="win95-field p-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Win95Badge variant="outline">{index + 1}</Win95Badge>
+                            <span className="text-[10px] font-bold">Sample {index + 1}</span>
+                            <span className="text-[9px] text-[var(--win95-button-shadow)] ml-auto">
                               {sample.split(/\s+/).length} words
                             </span>
                           </div>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-6">
+                          <p className="text-[10px] text-[var(--win95-button-shadow)] whitespace-pre-wrap line-clamp-4">
                             {sample}
                           </p>
-                          {sample.length > 500 && (
-                            <p className="text-xs text-muted-foreground mt-2 italic">
-                              Showing preview... ({sample.length} characters total)
-                            </p>
-                          )}
                         </div>
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
-          </div>
-        </main>
+          </Win95Window>
+        </div>
       </div>
 
       <DeleteDialog

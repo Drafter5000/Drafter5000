@@ -4,132 +4,29 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { apiClient } from '@/lib/api-client';
 import {
-  CreditCard,
-  Calendar,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
-  ExternalLink,
-  Loader2,
-  Zap,
-} from 'lucide-react';
+  Win95Window,
+  Win95Button,
+  Win95Badge,
+  Win95Alert,
+  Win95Progress,
+} from '@/components/win95';
+import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
 import type { SubscriptionPlanWithFeatures } from '@/lib/types';
 
 function BillingPageSkeleton() {
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-        <DashboardHeader />
-
-        <main className="pt-10 pb-20 px-6">
-          <div className="max-w-5xl mx-auto space-y-8">
-            {/* Header Skeleton */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="h-10 w-64 mb-2" />
-                <Skeleton className="h-6 w-80" />
-              </div>
-              <Skeleton className="h-10 w-44 rounded-md" />
+      <div className="min-h-screen p-4">
+        <div className="max-w-4xl mx-auto">
+          <DashboardHeader />
+          <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
+            <div className="text-center py-8">
+              <span className="text-[11px] win95-loading">Loading billing data...</span>
             </div>
-
-            {/* Current Plan Card Skeleton */}
-            <Card className="border-2">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Skeleton className="h-8 w-40 mb-2" />
-                    <Skeleton className="h-5 w-56" />
-                  </div>
-                  <Skeleton className="h-6 w-20 rounded-full" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-baseline gap-2">
-                  <Skeleton className="h-12 w-24" />
-                  <Skeleton className="h-5 w-16" />
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Skeleton className="h-4 w-4 rounded" />
-                      <Skeleton className="h-3 w-28" />
-                    </div>
-                    <Skeleton className="h-5 w-36" />
-                  </div>
-                  <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Skeleton className="h-4 w-4 rounded" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                    <Skeleton className="h-5 w-28" />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-32" />
-                  <div className="grid md:grid-cols-2 gap-2">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-4 rounded-full" />
-                        <Skeleton className="h-4 w-40" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Usage Card Skeleton */}
-            <Card className="border-2">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-5 rounded" />
-                  <Skeleton className="h-6 w-40" />
-                </div>
-                <Skeleton className="h-5 w-56 mt-1" />
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Skeleton className="h-4 w-36" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                  <Skeleton className="h-3 w-full rounded-full" />
-                  <Skeleton className="h-3 w-40 mt-2" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Upgrade Options Skeleton */}
-            <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
-              <CardHeader>
-                <Skeleton className="h-6 w-40" />
-                <Skeleton className="h-5 w-64 mt-1" />
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {[1, 2].map(i => (
-                    <div key={i} className="p-4 rounded-lg bg-background border-2 border-border">
-                      <Skeleton className="h-6 w-24 mb-2" />
-                      <Skeleton className="h-9 w-28 mb-3" />
-                      <Skeleton className="h-4 w-36 mb-4" />
-                      <Skeleton className="h-10 w-full rounded-md" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
+          </Win95Window>
+        </div>
       </div>
     </ProtectedRoute>
   );
@@ -212,227 +109,203 @@ export default function BillingPage() {
         features: currentPlan.features.map(f => f.feature_text),
       }
     : { name: 'Free', price: 0, articles_per_month: 2, features: [] };
-  const statusColor =
-    subscription?.status === 'active'
-      ? 'bg-green-500/10 text-green-600 border-green-500/20'
-      : subscription?.status === 'past_due'
-        ? 'bg-red-500/10 text-red-600 border-red-500/20'
-        : subscription?.status === 'canceled'
-          ? 'bg-gray-500/10 text-gray-600 border-gray-500/20'
-          : 'bg-blue-500/10 text-blue-600 border-blue-500/20';
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-        <DashboardHeader />
+      <div className="min-h-screen p-4">
+        <div className="max-w-4xl mx-auto">
+          <DashboardHeader />
 
-        <main className="pt-10 pb-20 px-6">
-          <div className="max-w-5xl mx-auto space-y-8">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-2">Billing & Usage</h2>
-                <p className="text-muted-foreground text-lg">
-                  Manage your subscription and track usage
-                </p>
-              </div>
-              {usage?.plan !== 'free' && (
-                <Button
-                  onClick={handleManageSubscription}
-                  disabled={portalLoading}
-                  className="gap-2"
-                >
-                  {portalLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4" />
-                      Manage Subscription
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-
-            {/* Current Plan Card */}
-            <Card className="border-2">
-              <CardHeader>
-                <div className="flex items-start justify-between">
+          <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="win95-sunken p-2 flex items-center gap-2">
+                  <span className="text-[16px]">💳</span>
                   <div>
-                    <CardTitle className="text-2xl mb-2">{planDetails.name} Plan</CardTitle>
-                    <CardDescription>
-                      {usage?.plan === 'free'
-                        ? 'Get started with basic features'
-                        : 'Your current subscription'}
-                    </CardDescription>
-                  </div>
-                  <Badge className={`${statusColor} border`}>
-                    {subscription?.status === 'active' && <CheckCircle className="h-3 w-3 mr-1" />}
-                    {subscription?.status === 'past_due' && (
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                    )}
-                    {subscription?.status || 'Active'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">${planDetails.price / 100}</span>
-                  <span className="text-muted-foreground">/ month</span>
-                </div>
-
-                {subscription?.cancel_at_period_end && (
-                  <div className="flex gap-3 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-600">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Subscription Canceling</p>
-                      <p className="text-sm">
-                        Your subscription will end on{' '}
-                        {subscription.current_period_end &&
-                          new Date(subscription.current_period_end * 1000).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {subscription?.status === 'past_due' && (
-                  <div className="flex gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Payment Failed</p>
-                      <p className="text-sm">
-                        Please update your payment method to continue your subscription
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  {subscription?.current_period_end && (
-                    <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                        <Calendar className="h-4 w-4" />
-                        <p className="text-xs uppercase tracking-wider font-medium">
-                          Next Billing Date
-                        </p>
-                      </div>
-                      <p className="font-semibold">
-                        {new Date(subscription.current_period_end * 1000).toLocaleDateString(
-                          'en-US',
-                          {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                          }
-                        )}
-                      </p>
-                    </div>
-                  )}
-                  <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <TrendingUp className="h-4 w-4" />
-                      <p className="text-xs uppercase tracking-wider font-medium">Articles Limit</p>
-                    </div>
-                    <p className="font-semibold">{planDetails.articles_per_month} per month</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Features included:</p>
-                  <ul className="grid md:grid-cols-2 gap-2">
-                    {planDetails.features.map(feature => (
-                      <li key={feature} className="flex items-start gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Usage Card */}
-            {usage && (
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    Usage This Month
-                  </CardTitle>
-                  <CardDescription>Track your article generation usage</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Articles Generated</span>
-                      <span className="text-sm text-muted-foreground">
-                        {usage.articles_used} / {usage.articles_limit}
-                      </span>
-                    </div>
-                    <Progress value={usage.percentage_used} className="h-3" />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {usage.can_generate
-                        ? `${usage.articles_limit - usage.articles_used} articles remaining`
-                        : "You've reached your monthly limit"}
+                    <h2 className="text-[12px] font-bold">Billing & Usage</h2>
+                    <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                      Manage your subscription and track usage
                     </p>
                   </div>
+                </div>
+                {usage?.plan !== 'free' && (
+                  <Win95Button
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                    className={portalLoading ? 'win95-loading' : ''}
+                  >
+                    {portalLoading ? 'Loading...' : '💳 Manage Subscription'}
+                  </Win95Button>
+                )}
+              </div>
 
-                  {!usage.can_generate && usage.plan === 'free' && (
-                    <div className="flex gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                      <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-primary" />
-                      <div className="flex-1">
-                        <p className="font-medium text-primary">
-                          Upgrade to generate more articles
+              {/* Current Plan */}
+              <div className="win95-groupbox">
+                <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                  <legend className="win95-groupbox-title font-bold">📋 Current Plan</legend>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-[14px] font-bold">{planDetails.name} Plan</h3>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                        {usage?.plan === 'free'
+                          ? 'Get started with basic features'
+                          : 'Your current subscription'}
+                      </p>
+                    </div>
+                    <Win95Badge
+                      variant={subscription?.status === 'active' ? 'default' : 'secondary'}
+                    >
+                      {subscription?.status === 'active'
+                        ? '✓ Active'
+                        : subscription?.status || 'Active'}
+                    </Win95Badge>
+                  </div>
+
+                  <div className="win95-sunken p-2 mb-3">
+                    <span className="text-[24px] font-bold">${planDetails.price / 100}</span>
+                    <span className="text-[11px]"> / month</span>
+                  </div>
+
+                  {subscription?.cancel_at_period_end && (
+                    <Win95Alert type="warning" title="Subscription Canceling">
+                      Your subscription will end on{' '}
+                      {subscription.current_period_end &&
+                        new Date(subscription.current_period_end * 1000).toLocaleDateString()}
+                    </Win95Alert>
+                  )}
+
+                  {subscription?.status === 'past_due' && (
+                    <Win95Alert type="error" title="Payment Failed">
+                      Please update your payment method to continue your subscription
+                    </Win95Alert>
+                  )}
+
+                  <div className="grid md:grid-cols-2 gap-3 mb-3">
+                    {subscription?.current_period_end && (
+                      <div className="win95-raised p-2">
+                        <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                          📅 Next Billing Date
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Upgrade to Pro for 20 articles/month or Enterprise for 100 articles/month
+                        <p className="text-[11px] font-bold">
+                          {new Date(subscription.current_period_end * 1000).toLocaleDateString(
+                            'en-US',
+                            {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric',
+                            }
+                          )}
+                        </p>
+                      </div>
+                    )}
+                    <div className="win95-raised p-2">
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                        📊 Articles Limit
+                      </p>
+                      <p className="text-[11px] font-bold">
+                        {planDetails.articles_per_month} per month
+                      </p>
+                    </div>
+                  </div>
+
+                  {planDetails.features.length > 0 && (
+                    <div className="win95-sunken p-2">
+                      <p className="text-[10px] font-bold mb-2">Features included:</p>
+                      <ul className="grid md:grid-cols-2 gap-1">
+                        {planDetails.features.map(feature => (
+                          <li key={feature} className="flex items-start gap-1 text-[10px]">
+                            <span className="text-[var(--win95-success)]">✓</span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </fieldset>
+              </div>
+
+              {/* Usage */}
+              {usage && (
+                <div className="win95-groupbox">
+                  <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                    <legend className="win95-groupbox-title font-bold">⚡ Usage This Month</legend>
+
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-bold">Articles Generated</span>
+                        <span className="text-[11px]">
+                          {usage.articles_used} / {usage.articles_limit}
+                        </span>
+                      </div>
+                      <Win95Progress value={usage.percentage_used} />
+                      <p className="text-[10px] text-[var(--win95-button-shadow)] mt-1">
+                        {usage.can_generate
+                          ? `${usage.articles_limit - usage.articles_used} articles remaining`
+                          : "You've reached your monthly limit"}
+                      </p>
+                    </div>
+
+                    {!usage.can_generate && usage.plan === 'free' && (
+                      <Win95Alert type="info" title="Upgrade to generate more">
+                        Upgrade to Pro for 20 articles/month or Enterprise for 100 articles/month
+                        <div className="mt-2">
+                          <Link href="/pricing">
+                            <Win95Button size="sm">View Plans →</Win95Button>
+                          </Link>
+                        </div>
+                      </Win95Alert>
+                    )}
+                  </fieldset>
+                </div>
+              )}
+
+              {/* Upgrade Options */}
+              {usage?.plan === 'free' && (
+                <div className="win95-groupbox">
+                  <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                    <legend className="win95-groupbox-title font-bold">🚀 Upgrade Your Plan</legend>
+
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="win95-raised p-3 text-center">
+                        <h3 className="text-[12px] font-bold mb-1">Pro Plan</h3>
+                        <p className="text-[20px] font-bold text-[var(--win95-title-bar)] mb-1">
+                          $70/mo
+                        </p>
+                        <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+                          20 articles per month
                         </p>
                         <Link href="/pricing">
-                          <Button size="sm" className="mt-3 gap-2">
-                            View Plans <ExternalLink className="h-3 w-3" />
-                          </Button>
+                          <Win95Button className="w-full">Upgrade to Pro</Win95Button>
+                        </Link>
+                      </div>
+                      <div className="win95-raised p-3 text-center">
+                        <h3 className="text-[12px] font-bold mb-1">Enterprise Plan</h3>
+                        <p className="text-[20px] font-bold text-[var(--win95-title-bar)] mb-1">
+                          $299/mo
+                        </p>
+                        <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+                          100 articles per month
+                        </p>
+                        <Link href="/pricing">
+                          <Win95Button className="w-full">Upgrade to Enterprise</Win95Button>
                         </Link>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                  </fieldset>
+                </div>
+              )}
 
-            {/* Upgrade Options */}
-            {usage?.plan === 'free' && (
-              <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
-                <CardHeader>
-                  <CardTitle>Upgrade Your Plan</CardTitle>
-                  <CardDescription>Get more articles and advanced features</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="p-4 rounded-lg bg-background border-2 border-border">
-                      <h3 className="font-bold text-lg mb-2">Pro Plan</h3>
-                      <p className="text-3xl font-bold mb-3">$70/mo</p>
-                      <p className="text-sm text-muted-foreground mb-4">20 articles per month</p>
-                      <Link href="/pricing">
-                        <Button className="w-full">Upgrade to Pro</Button>
-                      </Link>
-                    </div>
-                    <div className="p-4 rounded-lg bg-background border-2 border-border">
-                      <h3 className="font-bold text-lg mb-2">Enterprise Plan</h3>
-                      <p className="text-3xl font-bold mb-3">$299/mo</p>
-                      <p className="text-sm text-muted-foreground mb-4">100 articles per month</p>
-                      <Link href="/pricing">
-                        <Button className="w-full">Upgrade to Enterprise</Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </main>
+              {/* Back Link */}
+              <div className="pt-2">
+                <Link href="/dashboard">
+                  <Win95Button size="sm">← Back to Dashboard</Win95Button>
+                </Link>
+              </div>
+            </div>
+          </Win95Window>
+        </div>
       </div>
     </ProtectedRoute>
   );

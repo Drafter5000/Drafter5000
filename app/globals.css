@@ -1,10 +1,51 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
-/* New premium color palette with teal accent */
+/* Windows 95 Color Palette */
 :root {
+  /* Win95 Core Colors */
+  --win95-bg: #c0c0c0;
+  --win95-bg-dark: #808080;
+  --win95-bg-light: #dfdfdf;
+  --win95-white: #ffffff;
+  --win95-black: #000000;
+  --win95-title-bar: #000080;
+  --win95-title-bar-inactive: #808080;
+  --win95-title-text: #ffffff;
+  --win95-button-face: #c0c0c0;
+  --win95-button-highlight: #ffffff;
+  --win95-button-shadow: #808080;
+  --win95-button-dark-shadow: #000000;
+  --win95-field-bg: #ffffff;
+  --win95-field-border: #808080;
+  --win95-selection: #000080;
+  --win95-selection-text: #ffffff;
+  --win95-link: #0000ff;
+  --win95-error: #ff0000;
+  --win95-success: #008000;
+  --win95-warning: #ffff00;
+
+  /* Win95 Typography */
+  --win95-font: 'Tahoma', 'Segoe UI', 'Arial', sans-serif;
+  --win95-font-size: 11px;
+  --win95-font-size-title: 11px;
+
+  /* Win95 Border Effects */
+  --win95-border-raised:
+    inset -1px -1px var(--win95-button-dark-shadow), inset 1px 1px var(--win95-button-highlight),
+    inset -2px -2px var(--win95-button-shadow), inset 2px 2px var(--win95-bg-light);
+  --win95-border-sunken:
+    inset -1px -1px var(--win95-button-highlight), inset 1px 1px var(--win95-button-shadow),
+    inset -2px -2px var(--win95-bg-light), inset 2px 2px var(--win95-button-dark-shadow);
+  --win95-border-field:
+    inset -1px -1px var(--win95-button-highlight), inset 1px 1px var(--win95-button-shadow);
+  --win95-border-window:
+    inset -1px -1px var(--win95-button-dark-shadow), inset 1px 1px var(--win95-button-highlight),
+    inset -2px -2px var(--win95-button-shadow), inset 2px 2px var(--win95-bg-light);
+
+  /* Original theme colors (kept for compatibility) */
   --background: oklch(0.99 0.002 240);
   --foreground: oklch(0.15 0.02 260);
   --card: oklch(1 0 0);
@@ -76,8 +117,8 @@
 }
 
 @theme inline {
-  --font-sans: "Inter", "Inter Fallback", system-ui, sans-serif;
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -121,7 +162,10 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: var(--win95-bg);
+    font-family: var(--win95-font);
+    font-size: 12px;
+    color: var(--win95-black);
   }
 }
 
@@ -147,7 +191,8 @@
 }
 
 @keyframes gradient-x {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -156,7 +201,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -165,7 +211,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(20, 184, 166, 0.3);
   }
   50% {
@@ -237,7 +284,7 @@
 }
 
 .gradient-border::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: -2px;
   border-radius: inherit;
@@ -266,5 +313,303 @@ html {
 
 /* Selection color */
 ::selection {
-  background: oklch(0.55 0.18 180 / 0.3);
+  background: var(--win95-selection);
+  color: var(--win95-selection-text);
+}
+
+/* ========================================
+   Windows 95 Utility Classes
+   ======================================== */
+
+/* Raised border effect (buttons, windows) */
+.win95-raised {
+  box-shadow: var(--win95-border-raised);
+  background-color: var(--win95-button-face);
+}
+
+/* Sunken border effect (pressed buttons, panels) */
+.win95-sunken {
+  box-shadow: var(--win95-border-sunken);
+  background-color: var(--win95-button-face);
+}
+
+/* Field border effect (inputs, textareas) */
+.win95-field {
+  box-shadow: var(--win95-border-field);
+  background-color: var(--win95-field-bg);
+}
+
+/* Window border effect */
+.win95-window-border {
+  box-shadow: var(--win95-border-window);
+  background-color: var(--win95-button-face);
+}
+
+/* Title bar styling */
+.win95-title-bar {
+  background: linear-gradient(90deg, var(--win95-title-bar), #1084d0);
+  color: var(--win95-title-text);
+  font-weight: bold;
+  font-size: var(--win95-font-size-title);
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.win95-title-bar-inactive {
+  background: var(--win95-title-bar-inactive);
+  color: var(--win95-bg-light);
+}
+
+/* Window control buttons */
+.win95-control-btn {
+  width: 16px;
+  height: 14px;
+  box-shadow: var(--win95-border-raised);
+  background-color: var(--win95-button-face);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+}
+
+.win95-control-btn:active {
+  box-shadow: var(--win95-border-sunken);
+}
+
+/* Button base styling */
+.win95-btn {
+  box-shadow: var(--win95-border-raised);
+  background-color: var(--win95-button-face);
+  border: none;
+  padding: 4px 12px;
+  font-family: var(--win95-font);
+  font-size: 11px;
+  cursor: pointer;
+  min-width: 75px;
+  text-align: center;
+}
+
+.win95-btn:active {
+  box-shadow: var(--win95-border-sunken);
+  padding: 5px 11px 3px 13px;
+}
+
+.win95-btn:disabled {
+  color: var(--win95-button-shadow);
+  text-shadow: 1px 1px 0 var(--win95-button-highlight);
+  cursor: not-allowed;
+}
+
+.win95-btn:focus {
+  outline: 1px dotted var(--win95-black);
+  outline-offset: -4px;
+}
+
+/* Input field styling */
+.win95-input {
+  box-shadow: var(--win95-border-field);
+  background-color: var(--win95-field-bg);
+  border: none;
+  padding: 3px 4px;
+  font-family: var(--win95-font);
+  font-size: 11px;
+}
+
+.win95-input:focus {
+  outline: none;
+}
+
+/* Groupbox/Panel styling */
+.win95-groupbox {
+  border: 1px solid var(--win95-button-shadow);
+  border-top-color: var(--win95-button-highlight);
+  border-left-color: var(--win95-button-highlight);
+  padding: 8px;
+  margin: 4px 0;
+}
+
+.win95-groupbox-title {
+  background-color: var(--win95-bg);
+  padding: 0 4px;
+  margin-left: 8px;
+  font-size: 11px;
+}
+
+/* Tab styling */
+.win95-tab {
+  box-shadow:
+    inset -1px 0 var(--win95-button-dark-shadow),
+    inset 1px 1px var(--win95-button-highlight),
+    inset -2px 0 var(--win95-button-shadow),
+    inset 2px 2px var(--win95-bg-light);
+  background-color: var(--win95-button-face);
+  padding: 4px 12px;
+  cursor: pointer;
+  border: none;
+  position: relative;
+  margin-right: -1px;
+}
+
+.win95-tab-active {
+  box-shadow:
+    inset -1px 0 var(--win95-button-dark-shadow),
+    inset 1px 1px var(--win95-button-highlight),
+    inset -2px 0 var(--win95-button-shadow),
+    inset 2px 2px var(--win95-bg-light);
+  padding-bottom: 6px;
+  margin-bottom: -2px;
+  z-index: 1;
+}
+
+/* Checkbox styling */
+.win95-checkbox {
+  width: 13px;
+  height: 13px;
+  box-shadow: var(--win95-border-field);
+  background-color: var(--win95-field-bg);
+  appearance: none;
+  cursor: pointer;
+  position: relative;
+}
+
+.win95-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: -2px;
+  left: 1px;
+  font-size: 12px;
+  color: var(--win95-black);
+}
+
+/* Progress bar styling */
+.win95-progress {
+  box-shadow: var(--win95-border-field);
+  background-color: var(--win95-field-bg);
+  height: 16px;
+  padding: 2px;
+}
+
+.win95-progress-bar {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--win95-title-bar) 0px,
+    var(--win95-title-bar) 8px,
+    transparent 8px,
+    transparent 10px
+  );
+  height: 100%;
+}
+
+/* Scrollbar styling */
+.win95-scrollbar::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+.win95-scrollbar::-webkit-scrollbar-track {
+  background: repeating-conic-gradient(var(--win95-bg) 0% 25%, var(--win95-white) 0% 50%) 50% / 2px
+    2px;
+}
+
+.win95-scrollbar::-webkit-scrollbar-thumb {
+  box-shadow: var(--win95-border-raised);
+  background-color: var(--win95-button-face);
+}
+
+.win95-scrollbar::-webkit-scrollbar-button {
+  box-shadow: var(--win95-border-raised);
+  background-color: var(--win95-button-face);
+  display: block;
+  height: 16px;
+  width: 16px;
+}
+
+/* Status bar styling */
+.win95-status-bar {
+  box-shadow: var(--win95-border-sunken);
+  background-color: var(--win95-button-face);
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+/* Menu styling */
+.win95-menu {
+  box-shadow: var(--win95-border-raised);
+  background-color: var(--win95-button-face);
+  padding: 2px;
+}
+
+.win95-menu-item {
+  padding: 2px 20px;
+  cursor: pointer;
+}
+
+.win95-menu-item:hover {
+  background-color: var(--win95-selection);
+  color: var(--win95-selection-text);
+}
+
+/* Hourglass cursor for loading */
+.win95-loading {
+  cursor: wait;
+}
+
+/* ========================================
+   Windows 95 Responsive Styles
+   ======================================== */
+
+/* Desktop - centered windows with max-width */
+@media (min-width: 1024px) {
+  .win95-window-border {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Tablet - adjusted margins */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .win95-window-border {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+}
+
+/* Mobile - full width with minimal margins */
+@media (max-width: 767px) {
+  .win95-window-border {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+
+  /* Stack grid columns vertically */
+  .grid.md\\:grid-cols-2,
+  .grid.md\\:grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Smaller fonts on mobile */
+  .win95-title-bar {
+    font-size: 10px;
+  }
+
+  .win95-btn {
+    min-width: 60px;
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  /* Adjust control buttons */
+  .win95-control-btn {
+    width: 14px;
+    height: 12px;
+    font-size: 8px;
+  }
 }
