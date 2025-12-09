@@ -75,7 +75,26 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-5xl mx-auto">
-        <DashboardHeader />
+        {user && <DashboardHeader />}
+
+        {!user && (
+          <div className="win95-raised p-1 mb-4">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="flex items-center gap-2">
+                <span className="text-[16px]">🏠</span>
+                <span className="text-[12px] font-bold">Drafter</span>
+              </Link>
+              <div className="flex items-center gap-1">
+                <Link href="/articles/generate/step-1">
+                  <Win95Button size="sm">✨ Get Started</Win95Button>
+                </Link>
+                <Link href="/login">
+                  <Win95Button size="sm">🔐 Log In</Win95Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Win95Window title="Pricing - Drafter" icon={<span>💰</span>}>
           <div className="space-y-4">
