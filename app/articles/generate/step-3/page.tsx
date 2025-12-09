@@ -34,15 +34,7 @@ const DAYS = [
 
 const LANGUAGES = [
   { value: 'en', label: '🇺🇸 English' },
-  { value: 'es', label: '🇪🇸 Spanish' },
   { value: 'fr', label: '🇫🇷 French' },
-  { value: 'de', label: '🇩🇪 German' },
-  { value: 'it', label: '🇮🇹 Italian' },
-  { value: 'pt', label: '🇵🇹 Portuguese' },
-  { value: 'nl', label: '🇳🇱 Dutch' },
-  { value: 'ja', label: '🇯🇵 Japanese' },
-  { value: 'zh', label: '🇨🇳 Chinese' },
-  { value: 'ko', label: '🇰🇷 Korean' },
 ];
 
 export default function GenerateStep3Page() {
@@ -263,14 +255,24 @@ export default function GenerateStep3Page() {
               disabled={loading}
               error={fieldErrors.email}
             />
-            <Win95Input
-              label="Job Title *"
-              placeholder="Marketing Manager"
-              value={job}
-              onChange={e => setJob(e.target.value)}
-              disabled={loading}
-              error={fieldErrors.job}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-[11px] font-bold">Job Title *</label>
+                <span
+                  className="text-[10px] cursor-help win95-raised px-1"
+                  title="The AI will draft articles as if it was doing this job"
+                >
+                  ℹ️
+                </span>
+              </div>
+              <Win95Input
+                placeholder="Marketing Manager"
+                value={job}
+                onChange={e => setJob(e.target.value)}
+                disabled={loading}
+                error={fieldErrors.job}
+              />
+            </div>
           </div>
         </div>
 

@@ -1,7 +1,8 @@
-import { appendToMainSheet } from '@/lib/google-sheets';
+import { appendToMainSheet, createCustomerSheet } from '@/lib/google-sheets';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { ArticleStyle } from '@/lib/types';
 import Stripe from 'stripe';
+import { google } from 'googleapis';
 
 export interface SyncResult {
   success: boolean;
@@ -116,6 +117,7 @@ export async function syncStyleToSheets(
     const endOfMembership = await getSubscriptionEndDate(style.user_id);
     const customerSheetName = `${style.display_name || style.name || style.user_id}`;
 
+    // Append to Main Sheet
     await appendToMainSheet(spreadsheetId, {
       sheetName: customerSheetName,
       customerName: style.display_name || style.name || style.user_id,
@@ -136,6 +138,42 @@ export async function syncStyleToSheets(
       article2Example: style.style_samples[1] || '',
       article3Example: style.style_samples[2] || '',
     });
+
+    // Create customer-specific sheet with topics
+    try {
+      const headerRow = ['Topic', 'Status', 'Subject', 'Article', 'Last Update', 'Client'];
+      await createCustomerSheet(spreadsheetId, customerSheetName, headerRow);
+
+      // Add topics from subjects with "Needs Draft" status
+      if (style.subjects && style.subjects.length > 0) {
+        const auth = new google.auth.GoogleAuth({
+          keyFile: process.env.GOOGLE_CREDENTIALS_PATH,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+        const sheets = google.sheets({ version: 'v4', auth });
+
+        const topicRows = style.subjects.map((subject: string) => [
+          subject, // Topic
+          'Needs Draft', // Status
+          subject, // Subject (same as topic for now)
+          '', // Article (empty until drafted)
+          formatDate(new Date()), // Last Update
+          style.display_name || style.name || '', // Client
+        ]);
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `'${customerSheetName}'!A2`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: topicRows,
+          },
+        });
+      }
+    } catch (sheetError) {
+      // Log but don't fail if customer sheet creation fails
+      console.error('Failed to create customer sheet:', sheetError);
+    }
 
     return {
       success: true,

@@ -158,7 +158,12 @@ export default function LoginPage() {
               </div>
             </form>
 
-            <div className="mt-4 pt-4 border-t border-[var(--win95-button-shadow)] text-center">
+            <div className="mt-4 pt-4 border-t border-[var(--win95-button-shadow)] text-center space-y-2">
+              <p className="text-[11px]">
+                <Link href="/forgot-password" className="text-[var(--win95-link)] underline">
+                  Forgot your password?
+                </Link>
+              </p>
               <p className="text-[11px]">
                 {"Don't have an account? "}
                 <Link href="/signup" className="text-[var(--win95-link)] underline">

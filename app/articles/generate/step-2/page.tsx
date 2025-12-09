@@ -104,9 +104,13 @@ export default function GenerateStep2Page() {
             <span className="text-[11px] font-bold">💡 Your Topics</span>
             {subjects.length > 0 && <Win95Badge>{subjects.length} added</Win95Badge>}
           </div>
-          <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+          <p className="text-[10px] text-[var(--win95-button-shadow)] mb-2">
             Type a topic and press Enter or click Add
           </p>
+          <div className="win95-sunken p-2 mb-3 text-[9px] text-[var(--win95-button-shadow)]">
+            <span className="font-bold">Example format:</span> "Why Follow-Ups Fail When Reps Only
+            'Check In'—And a Repeatable Formula for Follow-Ups That Actually Move Deals Forward"
+          </div>
 
           <div className="flex gap-2 mb-3">
             <Win95Input

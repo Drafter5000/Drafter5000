@@ -150,6 +150,12 @@ export async function POST(request: NextRequest) {
               .select()
               .single();
 
+            // Mark onboarding as completed
+            await supabase
+              .from('user_profiles')
+              .update({ onboarding_completed: true })
+              .eq('id', profileId);
+
             if (styleError) {
               console.error('Failed to create article style:', styleError);
             } else if (articleStyle) {

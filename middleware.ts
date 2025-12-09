@@ -1,7 +1,16 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-const publicRoutes = ['/', '/login', '/signup', '/pricing', '/auth/callback', '/admin/login'];
+const publicRoutes = [
+  '/',
+  '/login',
+  '/signup',
+  '/pricing',
+  '/auth/callback',
+  '/admin/login',
+  '/forgot-password',
+  '/reset-password',
+];
 
 // Routes accessible without authentication (anonymous onboarding flow)
 const anonymousRoutes = ['/articles/generate'];
@@ -76,20 +85,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // For authenticated users, check subscription status for protected routes
+  // For authenticated users, check subscription status and onboarding completion
   const requiresSubscription = subscriptionRequiredRoutes.some(route => pathname.startsWith(route));
   const isSubscribePage = pathname === '/subscribe';
 
   if (requiresSubscription || isSubscribePage) {
-    // Fetch user profile to check subscription status
+    // Fetch user profile to check subscription status and onboarding
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('subscription_status')
+      .select('subscription_status, onboarding_completed')
       .eq('id', user.id)
       .single();
 
     // Only active subscription grants access (no trial)
     const hasActiveSubscription = profile?.subscription_status === 'active';
+    const hasCompletedOnboarding = profile?.onboarding_completed === true;
 
     // If on subscribe page but already has subscription, redirect to dashboard
     if (isSubscribePage && hasActiveSubscription) {
@@ -99,6 +109,11 @@ export async function middleware(request: NextRequest) {
     // If trying to access subscription-required routes without subscription, redirect to subscribe
     if (requiresSubscription && !hasActiveSubscription) {
       return NextResponse.redirect(new URL('/subscribe', request.url));
+    }
+
+    // If trying to access dashboard but onboarding not completed, redirect to step 1
+    if (requiresSubscription && hasActiveSubscription && !hasCompletedOnboarding) {
+      return NextResponse.redirect(new URL('/articles/generate/step-1', request.url));
     }
   }
 
