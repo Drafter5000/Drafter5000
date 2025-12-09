@@ -71,6 +71,12 @@ export default function GenerateStep3Page() {
   const wasCancelled = searchParams.get('cancelled') === 'true';
 
   useEffect(() => {
+    // Don't redirect if signup is already complete (showing email verification)
+    if (signupComplete) {
+      setInitialLoading(false);
+      return;
+    }
+
     const draftSession = DraftSessionService.load();
 
     if (!draftSession?.style_samples || draftSession.style_samples.length === 0) {
@@ -88,7 +94,7 @@ export default function GenerateStep3Page() {
       subjects: draftSession.subjects,
     });
     setInitialLoading(false);
-  }, [router]);
+  }, [router, signupComplete]);
 
   const handleToggleDay = (dayId: DayCode) => {
     setFrequency(prev => toggleDayUtil(prev, dayId));
