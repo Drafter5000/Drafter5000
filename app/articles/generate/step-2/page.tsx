@@ -2,60 +2,54 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { StyleFormStep2 } from '@/components/articles/style-form-step2';
-import { apiClient } from '@/lib/api-client';
+import { DraftSessionService } from '@/lib/draft-session';
+import { isSubjectListValid } from '@/lib/onboarding-validation';
 import { Loader2, Lightbulb } from 'lucide-react';
 
+/**
+ * Step 2 - Topics (Anonymous Access)
+ * Requirements: 3.1, 3.3, 3.4
+ */
 export default function GenerateStep2Page() {
   const router = useRouter();
-  const { user } = useAuth();
   const [initialSubjects, setInitialSubjects] = useState<string[]>([]);
-  const [draftId, setDraftId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadExistingData = async () => {
-      if (!user) return;
+    // Load existing data from DraftSessionService
+    const draftSession = DraftSessionService.load();
 
-      // Get draft_id from session storage or API
-      const storedDraftId = sessionStorage.getItem('article_style_draft_id');
-
-      try {
-        const data = await apiClient.get<{ subjects: string[]; draft_id: string | null }>(
-          `/article-styles/step-2?user_id=${user.id}`
-        );
-        if (data.subjects?.length > 0) {
-          setInitialSubjects(data.subjects);
-        }
-        setDraftId(storedDraftId || data.draft_id);
-      } catch {
-        setDraftId(storedDraftId);
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    loadExistingData();
-  }, [user]);
-
-  const handleSubmit = async (subjects: string[]) => {
-    if (!user) return;
-
-    if (!draftId) {
-      setError('Please complete step 1 first');
+    // Redirect to step 1 if no style samples exist
+    if (!draftSession?.style_samples || draftSession.style_samples.length === 0) {
+      router.push('/articles/generate/step-1');
       return;
     }
 
+    if (draftSession?.subjects && draftSession.subjects.length > 0) {
+      setInitialSubjects(draftSession.subjects);
+    }
+    setInitialLoading(false);
+  }, [router]);
+
+  const handleSubmit = async (subjects: string[]) => {
     setLoading(true);
     setError(null);
 
     try {
-      await apiClient.post('/article-styles/step-2', {
-        user_id: user.id,
+      // Validate at least one subject
+      if (!isSubjectListValid(subjects)) {
+        setError('Please add at least one topic');
+        setLoading(false);
+        return;
+      }
+
+      // Save to DraftSessionService
+      DraftSessionService.save({
         subjects,
-        draft_id: draftId,
+        current_step: 3,
       });
 
       router.push('/articles/generate/step-3');
@@ -99,7 +93,6 @@ export default function GenerateStep2Page() {
         onBack={handleBack}
         loading={loading}
         error={error}
-        userId={user?.id}
       />
     </div>
   );

@@ -3,11 +3,11 @@ import { createServerClient } from '@supabase/ssr';
 
 const publicRoutes = ['/', '/login', '/signup', '/pricing', '/auth/callback', '/admin/login'];
 
-// Routes that require active subscription (no trial)
-const subscriptionRequiredRoutes = ['/dashboard', '/articles'];
+// Routes accessible without authentication (anonymous onboarding flow)
+const anonymousRoutes = ['/articles/generate'];
 
-// Routes accessible without subscription (but require auth)
-const authOnlyRoutes = ['/subscribe'];
+// Routes that require active subscription
+const subscriptionRequiredRoutes = ['/dashboard', '/articles'];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -62,6 +62,12 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/subscribe', request.url));
       }
     }
+    return supabaseResponse;
+  }
+
+  // Allow anonymous routes (onboarding flow) for everyone
+  const isAnonymousRoute = anonymousRoutes.some(route => pathname.startsWith(route));
+  if (isAnonymousRoute) {
     return supabaseResponse;
   }
 

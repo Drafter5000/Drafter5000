@@ -55,7 +55,7 @@ function getCtaText(plan: SubscriptionPlanWithFeatures): string {
   if (plan.cta_text) return plan.cta_text;
   if (plan.price_cents === 0) return 'Get Started';
   if (plan.cta_type === 'email') return 'Contact Sales';
-  return 'Start Free Trial';
+  return 'Subscribe Now';
 }
 
 export default function PricingPage() {
@@ -198,10 +198,10 @@ export default function PricingPage() {
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="border-2">
                 <CardHeader>
-                  <CardTitle className="text-lg">Free Trial</CardTitle>
+                  <CardTitle className="text-lg">Cancel Anytime</CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground text-sm">
-                  Start with our Free plan. No credit card required. Upgrade anytime.
+                  No long-term commitments. Cancel your subscription anytime with just a few clicks.
                 </CardContent>
               </Card>
               <Card className="border-2">

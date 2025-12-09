@@ -1,24 +1,20 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Loader2,
   CheckCircle2,
   CreditCard,
   Shield,
   Sparkles,
-  Clock,
   AlertCircle,
   LogOut,
   PenLine,
-  PartyPopper,
-  ArrowRight,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
@@ -102,9 +98,6 @@ function SubscribeSkeleton() {
 
           <Card className="border-2 border-primary/20 shadow-2xl shadow-primary/10">
             <CardHeader className="text-center pb-4">
-              <div className="flex justify-center mb-2">
-                <Skeleton className="h-6 w-32 rounded-full" />
-              </div>
               <Skeleton className="h-8 w-40 mx-auto mb-2" />
               <Skeleton className="h-4 w-56 mx-auto" />
               <div className="pt-4">
@@ -139,23 +132,15 @@ function SubscribeSkeleton() {
   );
 }
 
-// Main subscribe content component that uses useSearchParams
+// Main subscribe content component
 function SubscribeContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, loading: authLoading, signOut } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trialEnabled, setTrialEnabled] = useState(false);
-  const [trialDays, setTrialDays] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [verifyingPayment, setVerifyingPayment] = useState(false);
-  const [redirectCountdown, setRedirectCountdown] = useState(5);
-
-  const sessionId = searchParams.get('session_id');
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -168,88 +153,6 @@ function SubscribeContent() {
     }
   };
 
-  const verifyPaymentSuccess = useCallback(async () => {
-    if (!sessionId || !user) return;
-
-    setVerifyingPayment(true);
-    try {
-      const verifyResult = await apiClient.post<{
-        success: boolean;
-        status: string;
-        plan?: string;
-      }>('/stripe/verify-session', { session_id: sessionId });
-
-      if (
-        verifyResult.success &&
-        (verifyResult.status === 'active' || verifyResult.status === 'trialing')
-      ) {
-        setPaymentSuccess(true);
-        return;
-      }
-
-      let attempts = 0;
-      const maxAttempts = 5;
-
-      const checkStatus = async (): Promise<boolean> => {
-        const profile = await apiClient.get<{
-          subscription_status: string;
-          subscription_plan: string;
-        }>(`/auth/profile`);
-
-        if (
-          profile.subscription_status === 'active' ||
-          profile.subscription_status === 'trialing'
-        ) {
-          return true;
-        }
-        return false;
-      };
-
-      let isActive = await checkStatus();
-
-      while (!isActive && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        isActive = await checkStatus();
-        attempts++;
-      }
-
-      setPaymentSuccess(true);
-    } catch (err) {
-      console.error('Failed to verify payment:', err);
-      setPaymentSuccess(true);
-    } finally {
-      setVerifyingPayment(false);
-    }
-  }, [sessionId, user]);
-
-  useEffect(() => {
-    if (sessionId && user && !paymentSuccess && !verifyingPayment) {
-      verifyPaymentSuccess();
-    }
-  }, [sessionId, user, paymentSuccess, verifyingPayment, verifyPaymentSuccess]);
-
-  useEffect(() => {
-    if (!paymentSuccess) return;
-
-    const timer = setInterval(() => {
-      setRedirectCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [paymentSuccess]);
-
-  useEffect(() => {
-    if (paymentSuccess && redirectCountdown === 0) {
-      router.push('/dashboard');
-    }
-  }, [paymentSuccess, redirectCountdown, router]);
-
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
@@ -260,21 +163,13 @@ function SubscribeContent() {
     const fetchData = async () => {
       if (!user) return;
 
-      if (sessionId) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const profile = await apiClient.get<{
           subscription_status: string;
           subscription_plan: string;
         }>(`/auth/profile`);
 
-        if (
-          profile.subscription_status === 'active' ||
-          profile.subscription_status === 'trialing'
-        ) {
+        if (profile.subscription_status === 'active') {
           router.push('/dashboard');
           return;
         }
@@ -288,19 +183,6 @@ function SubscribeContent() {
         } else {
           setError('No subscription plan available');
         }
-
-        try {
-          const config = await apiClient.get<{
-            trial_enabled: boolean;
-            trial_days: number;
-          }>('/config/paywall');
-          setTrialEnabled(config.trial_enabled || false);
-          setTrialDays(config.trial_enabled ? config.trial_days : 0);
-        } catch {
-          // Use defaults (no trial)
-          setTrialEnabled(false);
-          setTrialDays(0);
-        }
       } catch (err) {
         console.error('Failed to fetch plan:', err);
         setError('Failed to load subscription details');
@@ -310,7 +192,7 @@ function SubscribeContent() {
     };
 
     fetchData();
-  }, [user, router, sessionId]);
+  }, [user, router]);
 
   const handleSubscribe = async () => {
     if (!plan) return;
@@ -321,8 +203,7 @@ function SubscribeContent() {
     try {
       const response = await apiClient.post<{ sessionUrl: string }>('/stripe/checkout', {
         plan_id: plan.id,
-        trial_days: trialDays,
-        success_url: `${window.location.origin}/subscribe?session_id={CHECKOUT_SESSION_ID}&success=true`,
+        success_url: `${window.location.origin}/dashboard?payment_success=true`,
         cancel_url: `${window.location.origin}/subscribe`,
       });
 
@@ -336,122 +217,10 @@ function SubscribeContent() {
     }
   };
 
-  const handleGoToDashboard = () => {
-    router.push('/dashboard');
-  };
-
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (sessionId && verifyingPayment) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-        <SubscribeHeader onLogout={handleLogout} loggingOut={loggingOut} />
-        <main className="pt-32 pb-20 px-4 sm:px-6 relative overflow-hidden">
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-40 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
-            <div className="absolute bottom-40 right-20 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
-          </div>
-
-          <div className="max-w-lg mx-auto text-center">
-            <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-primary/10 mb-6">
-              <Loader2 className="h-10 w-10 text-primary animate-spin" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-3">Verifying Payment...</h1>
-            <p className="text-muted-foreground">Please wait while we confirm your subscription.</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (paymentSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-500/5 via-background to-primary/5">
-        <SubscribeHeader onLogout={handleLogout} loggingOut={loggingOut} />
-        <main className="pt-24 sm:pt-32 pb-20 px-4 sm:px-6 relative overflow-hidden">
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-40 left-10 sm:left-20 w-48 sm:w-72 h-48 sm:h-72 bg-green-500/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-40 right-10 sm:right-20 w-64 sm:w-96 h-64 sm:h-96 bg-primary/10 rounded-full blur-3xl" />
-          </div>
-
-          <div className="max-w-lg mx-auto">
-            <Card className="border-2 border-green-500/20 shadow-2xl shadow-green-500/10">
-              <CardContent className="pt-8 sm:pt-10 pb-8 sm:pb-10 px-6 sm:px-8">
-                <div className="text-center mb-6 sm:mb-8">
-                  <div className="relative inline-flex">
-                    <div className="absolute inset-0 animate-ping rounded-full bg-green-500/20" />
-                    <div className="relative inline-flex items-center justify-center h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-green-500/10 border-2 border-green-500/30">
-                      <CheckCircle2 className="h-10 w-10 sm:h-12 sm:w-12 text-green-500" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center space-y-3 sm:space-y-4 mb-6 sm:mb-8">
-                  <div className="flex items-center justify-center gap-2">
-                    <PartyPopper className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
-                    <h1 className="text-2xl sm:text-3xl font-bold text-green-600">
-                      Payment Successful!
-                    </h1>
-                    <PartyPopper className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500 scale-x-[-1]" />
-                  </div>
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    Welcome to Drafter Pro! Your subscription is now active.
-                  </p>
-                </div>
-
-                <div className="bg-muted/50 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
-                  <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">What's next?</h3>
-                  <ul className="space-y-2 sm:space-y-3">
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-xs sm:text-sm">
-                        Set up your writing style preferences
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-xs sm:text-sm">Configure your content topics</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-xs sm:text-sm">Start creating amazing content</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <Button
-                  onClick={handleGoToDashboard}
-                  className="w-full h-11 sm:h-12 text-sm sm:text-base shadow-lg shadow-primary/20 gap-2"
-                >
-                  Continue to Setup
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-
-                <p className="text-xs sm:text-sm text-center text-muted-foreground mt-4">
-                  Redirecting automatically in {redirectCountdown} second
-                  {redirectCountdown !== 1 ? 's' : ''}...
-                </p>
-              </CardContent>
-            </Card>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mt-6 sm:mt-8 text-xs sm:text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span>Secure payment processed</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Cancel anytime</span>
-              </div>
-            </div>
-          </div>
-        </main>
       </div>
     );
   }
@@ -474,7 +243,7 @@ function SubscribeContent() {
             <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 mb-4">
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Start Your Journey</h1>
+            <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
             <p className="text-muted-foreground">
               Subscribe to unlock all features and start creating amazing content
             </p>
@@ -489,14 +258,6 @@ function SubscribeContent() {
 
           <Card className="border-2 border-primary/20 shadow-2xl shadow-primary/10">
             <CardHeader className="text-center pb-4">
-              {trialEnabled && trialDays > 0 && (
-                <div className="flex justify-center mb-2">
-                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {trialDays}-Day Free Trial
-                  </Badge>
-                </div>
-              )}
               <CardTitle className="text-2xl">{plan?.name || 'Pro Plan'}</CardTitle>
               <CardDescription>{plan?.description}</CardDescription>
               <div className="pt-4">
@@ -505,13 +266,7 @@ function SubscribeContent() {
                 </span>
                 <span className="text-muted-foreground">/month</span>
               </div>
-              {trialEnabled && trialDays > 0 ? (
-                <p className="text-sm text-muted-foreground mt-1">
-                  after {trialDays}-day free trial
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground mt-1">billed monthly</p>
-              )}
+              <p className="text-sm text-muted-foreground mt-1">billed monthly</p>
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -537,9 +292,7 @@ function SubscribeContent() {
                 ) : (
                   <>
                     <CreditCard className="h-4 w-4" />
-                    {trialEnabled && trialDays > 0
-                      ? `Start ${trialDays}-Day Free Trial`
-                      : 'Subscribe Now'}
+                    Subscribe Now
                   </>
                 )}
               </Button>
@@ -556,9 +309,7 @@ function SubscribeContent() {
               </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                {trialEnabled && trialDays > 0
-                  ? "You won't be charged until your trial ends. Cancel anytime before then."
-                  : 'Your subscription will start immediately. Cancel anytime.'}
+                Your subscription will start immediately. Cancel anytime.
               </p>
             </CardContent>
           </Card>

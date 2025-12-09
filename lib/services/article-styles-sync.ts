@@ -102,7 +102,10 @@ async function getSubscriptionEndDate(userId: string): Promise<string> {
   }
 }
 
-export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult> {
+export async function syncStyleToSheets(
+  style: ArticleStyle,
+  userJob?: string
+): Promise<SyncResult> {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEETS_ARTICLES_ID;
     if (!spreadsheetId) {
@@ -117,6 +120,7 @@ export async function syncStyleToSheets(style: ArticleStyle): Promise<SyncResult
       sheetName: customerSheetName,
       customerName: style.display_name || style.name || style.user_id,
       customerEmail: style.email || '',
+      customerJob: userJob || '',
       language: getLanguageName(style.preferred_language),
       emailMonday: style.delivery_days.includes('mon'),
       emailTuesday: style.delivery_days.includes('tue'),

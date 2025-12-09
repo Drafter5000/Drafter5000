@@ -7,6 +7,9 @@ import {
   isSubjectListValid,
   isStep3FormValid,
   selectAISuggestion,
+  validateStyleSample,
+  validateTopic,
+  validateSignupForm,
 } from './onboarding-validation';
 
 describe('onboarding-validation', () => {
@@ -130,6 +133,93 @@ describe('onboarding-validation', () => {
         { numRuns: 100 }
       );
     });
+  });
+});
+
+describe('Property 1: Style Sample Validation', () => {
+  // **Feature: onboarding-signup-flow, Property 1: Style Sample Validation**
+  it('should return true iff string length >= 100 characters', () => {
+    fc.assert(
+      fc.property(fc.string(), (text: string) => {
+        const result = validateStyleSample(text);
+        const expected = text.length >= 100;
+        expect(result).toBe(expected);
+      }),
+      { numRuns: 100 }
+    );
+  });
+});
+
+describe('Property 2: Topic Validation', () => {
+  // **Feature: onboarding-signup-flow, Property 2: Topic Validation**
+  it('should return true iff string length is between 3 and 200 characters inclusive', () => {
+    fc.assert(
+      fc.property(fc.string(), (text: string) => {
+        const result = validateTopic(text);
+        const expected = text.length >= 3 && text.length <= 200;
+        expect(result).toBe(expected);
+      }),
+      { numRuns: 100 }
+    );
+  });
+});
+
+describe('Property 3: Signup Form Validation', () => {
+  // **Feature: onboarding-signup-flow, Property 3: Signup Form Validation**
+  it('should return errors for invalid fields according to rules', () => {
+    const formDataArbitrary = fc.record({
+      name: fc.string(),
+      email: fc.string(),
+      password: fc.string(),
+      confirmPassword: fc.string(),
+      job: fc.string(),
+    });
+
+    fc.assert(
+      fc.property(formDataArbitrary, data => {
+        const result = validateSignupForm(data);
+
+        // Name validation: minimum 2 characters
+        if (data.name.length < 2) {
+          expect(result.errors.name).toBeDefined();
+        } else {
+          expect(result.errors.name).toBeUndefined();
+        }
+
+        // Email validation: valid email pattern
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(data.email)) {
+          expect(result.errors.email).toBeDefined();
+        } else {
+          expect(result.errors.email).toBeUndefined();
+        }
+
+        // Password validation: minimum 8 characters
+        if (data.password.length < 8) {
+          expect(result.errors.password).toBeDefined();
+        } else {
+          expect(result.errors.password).toBeUndefined();
+        }
+
+        // Confirm password validation: must match password
+        if (data.confirmPassword !== data.password) {
+          expect(result.errors.confirmPassword).toBeDefined();
+        } else {
+          expect(result.errors.confirmPassword).toBeUndefined();
+        }
+
+        // Job validation: minimum 2 characters
+        if (data.job.length < 2) {
+          expect(result.errors.job).toBeDefined();
+        } else {
+          expect(result.errors.job).toBeUndefined();
+        }
+
+        // Valid flag should be true only if no errors
+        expect(result.valid).toBe(Object.keys(result.errors).length === 0);
+      }),
+      { numRuns: 100 }
+    );
   });
 });
 

@@ -17,11 +17,12 @@ export async function getGoogleSheetsClient() {
   return sheetsClient;
 }
 
-// Main Sheet columns (16 columns: A-P)
+// Main Sheet columns (18 columns: A-R)
 export interface MainSheetRowData {
   sheetName: string;
   customerName: string;
   customerEmail: string;
+  customerJob: string;
   language: string;
   emailMonday: boolean;
   emailTuesday: boolean;
@@ -89,6 +90,7 @@ export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRo
           data.sheetName,
           data.customerName,
           data.customerEmail,
+          data.customerJob,
           data.language,
           data.emailMonday ? 'x' : '',
           data.emailTuesday ? 'x' : '',

@@ -1,6 +1,7 @@
 import { getStripeClient } from '@/lib/stripe-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getPlanByPriceIdAdmin } from '@/lib/plan-utils';
+import { syncStyleToSheets } from '@/lib/services/article-styles-sync';
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
         const subscriptionId = session.subscription;
         const userId = session.metadata?.user_id;
         const planIdFromMetadata = session.metadata?.plan_id;
+        const hasPendingStyle = session.metadata?.pending_style === 'true';
 
         if (!subscriptionId) break;
 
@@ -112,8 +114,60 @@ export async function POST(request: NextRequest) {
           });
         }
 
+        // Handle pending style data from onboarding signup flow
+        // Requirements: 4.5, 4.6
+        if (hasPendingStyle && profileId) {
+          try {
+            const metadata = session.metadata || {};
+            const styleSamples = metadata.style_samples ? JSON.parse(metadata.style_samples) : [];
+            const subjects = metadata.subjects ? JSON.parse(metadata.subjects) : [];
+            const deliveryDays = metadata.delivery_days ? JSON.parse(metadata.delivery_days) : [];
+            const preferredLanguage = metadata.preferred_language || 'en';
+            const displayName = metadata.display_name || '';
+            const job = metadata.job || '';
+
+            // Get user email from profile
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('id', profileId)
+              .single();
+
+            // Create article_style record
+            const { data: articleStyle, error: styleError } = await supabase
+              .from('article_styles')
+              .insert({
+                user_id: profileId,
+                name: `${displayName}'s Style`,
+                style_samples: styleSamples,
+                subjects: subjects,
+                email: userProfile?.email || '',
+                display_name: displayName,
+                preferred_language: preferredLanguage,
+                delivery_days: deliveryDays,
+                is_active: true,
+              })
+              .select()
+              .single();
+
+            if (styleError) {
+              console.error('Failed to create article style:', styleError);
+            } else if (articleStyle) {
+              // Sync to Google Sheets with job field
+              const syncResult = await syncStyleToSheets(articleStyle, job);
+              if (!syncResult.success) {
+                console.error('Failed to sync style to Google Sheets:', syncResult.error);
+              } else {
+                console.log(`Style synced to Google Sheets for user ${profileId}`);
+              }
+            }
+          } catch (styleProcessError) {
+            console.error('Error processing pending style data:', styleProcessError);
+          }
+        }
+
         console.log(
-          `Checkout completed: user=${userId}, status=${subscriptionStatus}, plan=${plan}`
+          `Checkout completed: user=${userId}, status=${subscriptionStatus}, plan=${plan}, hasPendingStyle=${hasPendingStyle}`
         );
         break;
       }

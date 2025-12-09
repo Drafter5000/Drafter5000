@@ -35,6 +35,33 @@ export function isStyleSampleValid(samples: string[]): boolean {
 }
 
 /**
+ * Validates a single style sample text.
+ * Returns true if the text has at least 100 characters.
+ *
+ * @param text - The style sample text to validate
+ * @returns true if length >= 100 characters
+ *
+ * Requirements: 2.2
+ */
+export function validateStyleSample(text: string): boolean {
+  return text.length >= 100;
+}
+
+/**
+ * Validates a single topic text.
+ * Returns true if the text length is between 3 and 200 characters inclusive.
+ *
+ * @param text - The topic text to validate
+ * @returns true if length is between 3 and 200 characters
+ *
+ * Requirements: 3.2
+ */
+export function validateTopic(text: string): boolean {
+  const length = text.length;
+  return length >= 3 && length <= 200;
+}
+
+/**
  * Validates whether a subject can be added to the existing list.
  * A subject is valid if it is non-empty, not whitespace-only, and not a duplicate.
  *
@@ -90,6 +117,70 @@ export function isStep3FormValid(
     lastName.trim().length > 0 &&
     deliveryDays.length > 0
   );
+}
+
+/**
+ * Validation result for signup form
+ */
+export interface SignupValidationResult {
+  valid: boolean;
+  errors: {
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    job?: string;
+  };
+}
+
+/**
+ * Validates signup form data.
+ * Returns validation result with errors for each invalid field.
+ *
+ * @param data - The signup form data to validate
+ * @returns ValidationResult with valid flag and field errors
+ *
+ * Requirements: 4.2
+ */
+export function validateSignupForm(data: {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  job: string;
+}): SignupValidationResult {
+  const errors: SignupValidationResult['errors'] = {};
+
+  // Name validation: minimum 2 characters
+  if (data.name.length < 2) {
+    errors.name = 'Name must be at least 2 characters';
+  }
+
+  // Email validation: valid email pattern
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(data.email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+
+  // Password validation: minimum 8 characters
+  if (data.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters';
+  }
+
+  // Confirm password validation: must match password
+  if (data.confirmPassword !== data.password) {
+    errors.confirmPassword = 'Passwords do not match';
+  }
+
+  // Job validation: minimum 2 characters
+  if (data.job.length < 2) {
+    errors.job = 'Job must be at least 2 characters';
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+  };
 }
 
 /**

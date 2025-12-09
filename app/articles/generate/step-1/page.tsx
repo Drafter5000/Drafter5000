@@ -2,58 +2,49 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { StyleFormStep1 } from '@/components/articles/style-form-step1';
-import { apiClient } from '@/lib/api-client';
+import { DraftSessionService } from '@/lib/draft-session';
+import { isStyleSampleValid } from '@/lib/onboarding-validation';
 import { Loader2, FileText } from 'lucide-react';
 
+/**
+ * Step 1 - Writing Style (Anonymous Access)
+ * Requirements: 1.2, 2.1, 2.3, 2.4
+ */
 export default function GenerateStep1Page() {
   const router = useRouter();
-  const { user } = useAuth();
   const [initialArticles, setInitialArticles] = useState<string[]>(['', '', '']);
-  const [draftId, setDraftId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadExistingData = async () => {
-      if (!user) return;
-      try {
-        const data = await apiClient.get<{ style_samples: string[]; draft_id: string | null }>(
-          `/article-styles/step-1?user_id=${user.id}`
-        );
-        if (data.style_samples?.length > 0) {
-          setInitialArticles([...data.style_samples, '', '', ''].slice(0, 3));
-        }
-        if (data.draft_id) {
-          setDraftId(data.draft_id);
-        }
-      } catch {
-        // No existing data
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    loadExistingData();
-  }, [user]);
+    // Load existing data from DraftSessionService
+    const draftSession = DraftSessionService.load();
+    if (draftSession?.style_samples && draftSession.style_samples.length > 0) {
+      setInitialArticles([...draftSession.style_samples, '', '', ''].slice(0, 3));
+    }
+    setInitialLoading(false);
+  }, []);
 
   const handleSubmit = async (articles: string[]) => {
-    if (!user) return;
     setLoading(true);
     setError(null);
 
     try {
-      const response = await apiClient.post<{ draft_id: string }>('/article-styles/step-1', {
-        user_id: user.id,
-        style_samples: articles,
-        draft_id: draftId,
-      });
-
-      // Store draft_id for next steps
-      if (response.draft_id) {
-        sessionStorage.setItem('article_style_draft_id', response.draft_id);
+      // Validate at least one sample
+      const validArticles = articles.filter(a => a.trim());
+      if (!isStyleSampleValid(validArticles)) {
+        setError('Please add at least one article sample');
+        setLoading(false);
+        return;
       }
+
+      // Save to DraftSessionService
+      DraftSessionService.save({
+        style_samples: validArticles,
+        current_step: 2,
+      });
 
       router.push('/articles/generate/step-2');
     } catch (err: unknown) {

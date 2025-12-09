@@ -6,7 +6,7 @@ import type { NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/dashboard';
+  const next = searchParams.get('next');
 
   if (code) {
     const cookieStore = await cookies();
@@ -27,10 +27,30 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+    if (!error && data.user) {
+      // If explicit next URL provided, use it
+      if (next) {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
+
+      // Check subscription status to determine redirect
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('subscription_status')
+        .eq('id', data.user.id)
+        .single();
+
+      // Redirect based on subscription status
+      const hasActiveSubscription = profile?.subscription_status === 'active';
+
+      if (hasActiveSubscription) {
+        return NextResponse.redirect(`${origin}/dashboard`);
+      } else {
+        // User needs to subscribe - redirect to subscribe page
+        return NextResponse.redirect(`${origin}/subscribe`);
+      }
     }
   }
 

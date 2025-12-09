@@ -20,6 +20,7 @@ import {
   Mail,
   Lock,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
@@ -97,13 +98,29 @@ export default function SignupPage() {
     try {
       await apiClient.post('/auth/signup', { name: name.trim(), email, password });
       setSuccess(true);
-      setTimeout(() => router.push('/login'), 2000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create account';
       setError(message);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get email provider URL based on email domain
+  const getEmailProviderUrl = () => {
+    const domain = email.split('@')[1]?.toLowerCase();
+    if (!domain) return 'https://mail.google.com';
+
+    if (domain.includes('gmail')) return 'https://mail.google.com';
+    if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live'))
+      return 'https://outlook.live.com';
+    if (domain.includes('yahoo')) return 'https://mail.yahoo.com';
+    if (domain.includes('icloud') || domain.includes('me.com') || domain.includes('mac.com'))
+      return 'https://www.icloud.com/mail';
+    if (domain.includes('proton')) return 'https://mail.proton.me';
+
+    // Default to Gmail for unknown domains
+    return 'https://mail.google.com';
   };
 
   if (authLoading || user) {
@@ -117,6 +134,7 @@ export default function SignupPage() {
     );
   }
 
+  // Email Verification Screen
   if (success) {
     return (
       <div className="min-h-screen bg-white overflow-hidden relative">
@@ -124,15 +142,56 @@ export default function SignupPage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <main className="pt-32 pb-20 px-6 flex items-center justify-center relative z-10">
           <Card className="max-w-md mx-auto border border-gray-200 shadow-2xl shadow-gray-200/50 bg-white/80 backdrop-blur-sm">
-            <CardContent className="pt-12 pb-8 text-center">
-              <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 mb-4 mx-auto shadow-xl shadow-green-500/30">
-                <CheckCircle2 className="h-10 w-10 text-white" />
+            <CardContent className="pt-12 pb-8 text-center space-y-6">
+              <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 mb-2 mx-auto shadow-xl shadow-amber-500/30">
+                <Mail className="h-10 w-10 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                Account created!
-              </h2>
-              <p className="text-gray-500 mb-6">Check your email to verify your account</p>
-              <p className="text-sm text-gray-400">Redirecting to login...</p>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  Verify Your Email
+                </h2>
+                <p className="text-gray-500">We've sent a verification link to</p>
+                <p className="font-semibold text-gray-900">{email}</p>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-medium mb-1">Please verify your email to:</p>
+                    <ul className="list-disc list-inside space-y-1 text-amber-700">
+                      <li>Log in to your account</li>
+                      <li>Access all features</li>
+                      <li>Start using Drafter</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <a
+                  href={getEmailProviderUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button className="w-full h-12 text-base gap-2 shadow-lg shadow-primary/25">
+                    Open Email
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </a>
+
+                <Link href="/login">
+                  <Button variant="outline" className="w-full h-12 text-base">
+                    Go to Login
+                  </Button>
+                </Link>
+              </div>
+
+              <p className="text-xs text-gray-400 pt-2">
+                Didn't receive the email? Check your spam folder or contact support.
+              </p>
             </CardContent>
           </Card>
         </main>
@@ -215,7 +274,7 @@ export default function SignupPage() {
             <CardDescription
               className={`text-base text-gray-500 transition-all duration-700 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              Start with a 7-day free trial
+              Join Drafter and start creating amazing content
             </CardDescription>
           </CardHeader>
 

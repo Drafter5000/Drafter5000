@@ -34,6 +34,7 @@ export interface UserProfile {
   stripe_customer_id: string | null;
   current_organization_id: string | null;
   is_super_admin: boolean;
+  job: string | null;
 }
 
 export interface Organization {
@@ -304,6 +305,7 @@ export interface ArticleStyleStep3Data {
   display_name: string;
   preferred_language: string;
   delivery_days: string[];
+  job?: string;
 }
 
 export interface ArticleStyleDraft {

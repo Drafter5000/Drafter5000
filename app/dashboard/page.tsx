@@ -1,19 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { MetricCard } from '@/components/metric-card';
-import { StyleList } from '@/components/articles/style-list';
-import { ArticleList } from '@/components/articles/article-list';
+import { StyleCard } from '@/components/articles/style-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/api-client';
-import { FileText, Sparkles, Mail, Plus, ArrowRight, AlertCircle } from 'lucide-react';
+import {
+  FileText,
+  Sparkles,
+  Mail,
+  Plus,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  PartyPopper,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import type { ArticleStyle, ArticleWithStyle } from '@/lib/types';
+import { useSearchParams, useRouter } from 'next/navigation';
+import type { ArticleStyle } from '@/lib/types';
 
 interface TrendData {
   value: number;
@@ -37,14 +46,25 @@ interface DashboardData {
   };
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
-  const [styles, setStyles] = useState<ArticleStyle[]>([]);
-  const [articles, setArticles] = useState<ArticleWithStyle[]>([]);
+  const [style, setStyle] = useState<ArticleStyle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stylesLoading, setStylesLoading] = useState(true);
+  const [styleLoading, setStyleLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+
+  // Check for payment success query param
+  useEffect(() => {
+    if (searchParams.get('payment_success') === 'true') {
+      setShowPaymentSuccess(true);
+      // Remove the query param from URL without reload
+      router.replace('/dashboard', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,27 +77,29 @@ export default function DashboardPage() {
           apiClient.get<ArticleStyle[]>(`/article-styles?user_id=${user.id}`),
         ]);
         setData(dashboardData);
-        setStyles(stylesData.slice(0, 6)); // Show max 6 styles
-
-        // Mock articles for now - would come from API
-        setArticles([]);
+        // Only use the first style (single style per user)
+        setStyle(stylesData.length > 0 ? stylesData[0] : null);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to load dashboard';
         setError(message);
         console.error('Dashboard error:', err);
       } finally {
         setLoading(false);
-        setStylesLoading(false);
+        setStyleLoading(false);
       }
     };
 
     fetchData();
   }, [user]);
 
+  const dismissPaymentSuccess = () => {
+    setShowPaymentSuccess(false);
+  };
+
   const handleDeleteStyle = async (id: string) => {
     if (!user) return;
     await apiClient.delete(`/article-styles/${id}?user_id=${user.id}`);
-    setStyles(styles.filter(s => s.id !== id));
+    setStyle(null);
   };
 
   if (loading) {
@@ -94,8 +116,8 @@ export default function DashboardPage() {
               </div>
 
               {/* Metrics Grid Skeleton */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, i) => (
                   <Card key={i} className="border-2">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between mb-4">
@@ -109,37 +131,27 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {/* Article Styles Section Skeleton */}
+              {/* Article Style Section Skeleton */}
               <Card className="border-2">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-6 w-48" />
-                    <div className="flex gap-2">
-                      <Skeleton className="h-9 w-24" />
-                      <Skeleton className="h-9 w-28" />
-                    </div>
-                  </div>
+                  <Skeleton className="h-6 w-48" />
                 </CardHeader>
                 <CardContent>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[...Array(3)].map((_, i) => (
-                      <Card key={i} className="border">
-                        <CardContent className="pt-6">
-                          <div className="flex items-start gap-4">
-                            <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <Skeleton className="h-5 w-32 mb-2" />
-                              <Skeleton className="h-4 w-24 mb-3" />
-                              <div className="flex gap-1">
-                                <Skeleton className="h-5 w-16 rounded-full" />
-                                <Skeleton className="h-5 w-20 rounded-full" />
-                              </div>
-                            </div>
+                  <Card className="border">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <Skeleton className="h-5 w-32 mb-2" />
+                          <Skeleton className="h-4 w-24 mb-3" />
+                          <div className="flex gap-1">
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                            <Skeleton className="h-5 w-20 rounded-full" />
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
             </div>
@@ -176,6 +188,34 @@ export default function DashboardPage() {
 
         <main className="pt-10 pb-20 px-6">
           <div className="max-w-7xl mx-auto space-y-8">
+            {/* Payment Success Banner */}
+            {showPaymentSuccess && (
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 border border-green-500/20 p-4 sm:p-6">
+                <button
+                  onClick={dismissPaymentSuccess}
+                  className="absolute top-3 right-3 p-1 rounded-full hover:bg-green-500/10 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4 text-green-600" />
+                </button>
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-green-700">Payment Successful!</h3>
+                      <PartyPopper className="h-4 w-4 text-yellow-500" />
+                    </div>
+                    <p className="text-sm text-green-600/80">
+                      Welcome to Drafter Pro! Your subscription is now active. Start creating
+                      amazing content today.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Welcome Section */}
             <div>
               <h2 className="text-3xl md:text-4xl font-bold mb-2">Welcome back, {firstName}! 👋</h2>
@@ -185,7 +225,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Metrics Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <MetricCard
                 title="Articles Generated"
                 value={data.metrics.articles_generated}
@@ -207,67 +247,96 @@ export default function DashboardPage() {
                 icon={Sparkles}
                 trend={data.metrics.trends.draft_articles ?? undefined}
               />
-              <MetricCard
-                title="Article Styles"
-                value={styles.length}
-                description="Active writing styles"
-                icon={FileText}
-              />
             </div>
 
-            {/* Article Styles Section */}
+            {/* Article Style Section */}
             <Card className="border-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
-                    Recent Article Styles
+                    Your Article Style
                   </CardTitle>
-                  <div className="flex gap-2">
-                    <Link href="/articles/styles">
-                      <Button variant="ghost" size="sm" className="gap-2">
-                        View All <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {styleLoading ? (
+                  <Card className="border">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <Skeleton className="h-5 w-32 mb-2" />
+                          <Skeleton className="h-4 w-24 mb-3" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : style ? (
+                  <div className="max-w-md">
+                    <StyleCard style={style} onDelete={handleDeleteStyle} />
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <FileText className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">No Article Style Yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                      Create your article style to start generating personalized content.
+                    </p>
                     <Link href="/articles/generate/step-1">
-                      <Button size="sm" className="gap-2">
+                      <Button className="gap-2">
                         <Plus className="h-4 w-4" />
-                        New Style
+                        Create Your Style
                       </Button>
                     </Link>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <StyleList styles={styles} loading={stylesLoading} onDelete={handleDeleteStyle} />
+                )}
               </CardContent>
             </Card>
-
-            {/* My Articles Section */}
-            {/* <Card className="border-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    My Articles
-                  </CardTitle>
-                  <Link href="/articles">
-                    <Button variant="ghost" size="sm" className="gap-2">
-                      View All <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ArticleList
-                  articles={articles}
-                  loading={false}
-                />
-              </CardContent>
-            </Card> */}
           </div>
         </main>
       </div>
     </ProtectedRoute>
+  );
+}
+
+// Main page component with Suspense boundary for useSearchParams
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <ProtectedRoute>
+          <div className="min-h-screen bg-background">
+            <DashboardHeader />
+            <main className="pt-10 pb-20 px-6">
+              <div className="max-w-7xl mx-auto space-y-8">
+                <div>
+                  <Skeleton className="h-10 w-80 mb-2" />
+                  <Skeleton className="h-6 w-96" />
+                </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="border-2">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-8 w-8 rounded-lg" />
+                        </div>
+                        <Skeleton className="h-8 w-16 mb-2" />
+                        <Skeleton className="h-4 w-28" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </main>
+          </div>
+        </ProtectedRoute>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }

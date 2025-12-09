@@ -26,7 +26,7 @@ interface StyleFormStep2Props {
   onBack?: () => void;
   loading?: boolean;
   error?: string | null;
-  userId?: string;
+  userId?: string; // Optional - AI suggestions disabled for anonymous users
 }
 
 export function StyleFormStep2({

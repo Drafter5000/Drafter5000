@@ -36,16 +36,16 @@ export async function createCheckoutSession(userId: string, planId: 'pro' | 'ent
         },
       ],
       subscription_data: {
-        trial_period_days: 7, // Default 7-day trial for all paid plans
         metadata: {
           user_id: userId,
           plan_id: planId,
         },
       },
+      payment_method_collection: 'always',
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/dashboard/billing?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/pricing`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/dashboard?payment_success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/subscribe`,
       metadata: {
         user_id: userId,
         plan_id: planId,
