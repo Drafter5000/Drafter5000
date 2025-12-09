@@ -86,7 +86,13 @@ export default function LoginPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to sign in';
+      let message = err instanceof Error ? err.message : 'Failed to sign in';
+
+      // Replace Supabase's generic message with a more helpful one
+      if (message.toLowerCase().includes('email not confirmed')) {
+        message = 'Email not verified. Check your inbox for the verification link.';
+      }
+
       setError(message);
     } finally {
       setLoading(false);
