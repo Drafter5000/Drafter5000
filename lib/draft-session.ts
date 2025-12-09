@@ -10,11 +10,32 @@
 const DRAFT_SESSION_KEY = 'onboarding_draft_session';
 
 /**
+ * Sample article data structure for step 1
+ */
+export interface SampleArticle {
+  content: string;
+  wordCount: number;
+}
+
+/**
+ * Topic data structure for step 2
+ */
+export interface TopicEntry {
+  topic: string;
+  status: 'Needs Draft' | 'Needs to be sent' | 'Sent';
+  subject: string;
+  article: string;
+  lastUpdate: string;
+}
+
+/**
  * Draft session data structure
  */
 export interface DraftSession {
   style_samples: string[];
+  sample_articles: SampleArticle[];
   subjects: string[];
+  topic_entries: TopicEntry[];
   preferred_language: string;
   delivery_days: string[];
   current_step: 1 | 2 | 3;
@@ -26,7 +47,9 @@ export interface DraftSession {
  */
 const DEFAULT_DRAFT_SESSION: DraftSession = {
   style_samples: [],
+  sample_articles: [],
   subjects: [],
+  topic_entries: [],
   preferred_language: 'en',
   delivery_days: [],
   current_step: 1,
@@ -136,5 +159,64 @@ export const DraftSessionService = {
   getLastUpdated(): string | null {
     const session = this.load();
     return session?.last_updated ?? null;
+  },
+
+  /**
+   * Save sample articles with word counts
+   *
+   * @param articles - Array of article content strings
+   */
+  saveSampleArticles(articles: string[]): void {
+    const sampleArticles: SampleArticle[] = articles
+      .filter(a => a.trim().length > 0)
+      .map(content => ({
+        content: content.trim(),
+        wordCount: content.trim().split(/\s+/).filter(Boolean).length,
+      }));
+
+    this.save({
+      style_samples: articles.filter(a => a.trim()),
+      sample_articles: sampleArticles,
+    });
+  },
+
+  /**
+   * Save topics as topic entries with default "Needs Draft" status
+   *
+   * @param subjects - Array of topic/subject strings
+   */
+  saveTopicEntries(subjects: string[]): void {
+    const topicEntries: TopicEntry[] = subjects.map(topic => ({
+      topic,
+      status: 'Needs Draft',
+      subject: topic,
+      article: '',
+      lastUpdate: new Date().toISOString(),
+    }));
+
+    this.save({
+      subjects,
+      topic_entries: topicEntries,
+    });
+  },
+
+  /**
+   * Get sample articles
+   *
+   * @returns Array of SampleArticle objects or empty array
+   */
+  getSampleArticles(): SampleArticle[] {
+    const session = this.load();
+    return session?.sample_articles ?? [];
+  },
+
+  /**
+   * Get topic entries
+   *
+   * @returns Array of TopicEntry objects or empty array
+   */
+  getTopicEntries(): TopicEntry[] {
+    const session = this.load();
+    return session?.topic_entries ?? [];
   },
 };

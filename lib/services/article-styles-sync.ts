@@ -145,6 +145,7 @@ export async function syncStyleToSheets(
       await createCustomerSheet(spreadsheetId, customerSheetName, headerRow);
 
       // Add topics from subjects with "Needs Draft" status
+      // Columns: Topic | Status | Subject | Article | Last Update | Client
       if (style.subjects && style.subjects.length > 0) {
         const auth = new google.auth.GoogleAuth({
           keyFile: process.env.GOOGLE_CREDENTIALS_PATH,
@@ -152,13 +153,17 @@ export async function syncStyleToSheets(
         });
         const sheets = google.sheets({ version: 'v4', auth });
 
+        const clientName = style.display_name || style.name || '';
+        const currentDate = formatDate(new Date());
+
+        // Create rows for each topic with "Needs Draft" status
         const topicRows = style.subjects.map((subject: string) => [
-          subject, // Topic
-          'Needs Draft', // Status
-          subject, // Subject (same as topic for now)
-          '', // Article (empty until drafted)
-          formatDate(new Date()), // Last Update
-          style.display_name || style.name || '', // Client
+          subject, // Topic - the topic/subject text
+          'Needs Draft', // Status - default status enum value
+          subject, // Subject - same as topic initially
+          '', // Article - empty until article is drafted
+          currentDate, // Last Update - current date
+          clientName, // Client - customer name
         ]);
 
         await sheets.spreadsheets.values.append({
@@ -169,6 +174,10 @@ export async function syncStyleToSheets(
             values: topicRows,
           },
         });
+
+        console.log(
+          `Added ${topicRows.length} topics with "Needs Draft" status to sheet: ${customerSheetName}`
+        );
       }
     } catch (sheetError) {
       // Log but don't fail if customer sheet creation fails

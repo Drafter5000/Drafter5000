@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,7 +15,8 @@ import { isStyleSampleValid, countWords } from '@/lib/onboarding-validation';
 
 /**
  * Step 1 - Writing Style (Anonymous Access)
- * Requirements: 1.2, 2.1, 2.3, 2.4
+ * This page allows the user to input three style samples for generating articles.
+ * It validates the input and saves the data to the draft session.
  */
 export default function GenerateStep1Page() {
   const router = useRouter();
@@ -40,7 +40,7 @@ export default function GenerateStep1Page() {
     setArticles(updated);
   };
 
-  const hasAtLeastOneArticle = isStyleSampleValid(articles);
+  const hasAllArticles = isStyleSampleValid(articles);
   const filledCount = articles.filter(a => a.trim().length > 0).length;
   const progressValue = (filledCount / 3) * 100;
 
@@ -57,13 +57,14 @@ export default function GenerateStep1Page() {
     try {
       const validArticles = articles.filter(a => a.trim());
       if (!isStyleSampleValid(validArticles)) {
-        setError('Please add at least one article sample');
+        setError('Please add all three article samples');
         setLoading(false);
         return;
       }
 
+      // Save sample articles with word counts
+      DraftSessionService.saveSampleArticles(articles);
       DraftSessionService.save({
-        style_samples: validArticles,
         current_step: 2,
       });
 
@@ -116,7 +117,7 @@ export default function GenerateStep1Page() {
                 <span className={hasContent ? 'text-[var(--win95-success)]' : ''}>
                   {hasContent ? '✓' : '○'} Article {num}
                 </span>
-                {num === 1 && !hasContent && <Win95Badge variant="secondary">Required</Win95Badge>}
+                {!hasContent && <Win95Badge variant="secondary">Required</Win95Badge>}
               </div>
             );
           })}
@@ -125,8 +126,8 @@ export default function GenerateStep1Page() {
 
       {/* Info */}
       <Win95Alert type="info">
-        Paste articles you have written or content whose style you want to emulate. At least one
-        article is required, but more samples improve accuracy.
+        Paste articles you have written or content whose style you want to emulate. All three
+        articles are required for accurate style analysis.
       </Win95Alert>
 
       {error && (
@@ -146,12 +147,11 @@ export default function GenerateStep1Page() {
                   <div>
                     <span className="text-[11px] font-bold">Article {num}</span>
                     <span className="text-[10px] text-[var(--win95-button-shadow)] ml-2">
-                      {num === 1 ? 'Required to continue' : 'Optional - improves results'}
+                      Required to continue
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     {hasContent && <Win95Badge>{wordCount} words</Win95Badge>}
-                    {num > 1 && <Win95Badge variant="outline">Optional</Win95Badge>}
                   </div>
                 </div>
 
@@ -180,18 +180,18 @@ export default function GenerateStep1Page() {
       {/* Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-[var(--win95-button-shadow)]">
         <div className="text-[11px]">
-          {hasAtLeastOneArticle ? (
+          {hasAllArticles ? (
             <span className="text-[var(--win95-success)]">✓ Ready to continue</span>
           ) : (
             <span className="text-[var(--win95-button-shadow)]">
-              Add at least one article to continue
+              Add all three articles to continue
             </span>
           )}
         </div>
 
         <Win95Button
           onClick={handleSubmit}
-          disabled={!hasAtLeastOneArticle || loading}
+          disabled={!hasAllArticles || loading}
           size="lg"
           className={loading ? 'win95-loading' : ''}
         >

@@ -17,6 +17,10 @@ export default function GenerateStep2Page() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [styleSamples, setStyleSamples] = useState<string[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     const draftSession = DraftSessionService.load();
@@ -25,6 +29,8 @@ export default function GenerateStep2Page() {
       router.push('/articles/generate/step-1');
       return;
     }
+
+    setStyleSamples(draftSession.style_samples);
 
     if (draftSession?.subjects && draftSession.subjects.length > 0) {
       setSubjects(draftSession.subjects);
@@ -54,8 +60,9 @@ export default function GenerateStep2Page() {
         return;
       }
 
+      // Save topics as topic entries with "Needs Draft" status
+      DraftSessionService.saveTopicEntries(subjects);
       DraftSessionService.save({
-        subjects,
         current_step: 3,
       });
 
@@ -70,6 +77,47 @@ export default function GenerateStep2Page() {
 
   const handleBack = () => {
     router.push('/articles/generate/step-1');
+  };
+
+  const generateAISuggestions = async () => {
+    if (styleSamples.length === 0) {
+      setAiError('No style samples found. Please complete step 1 first.');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const response = await fetch('/api/ai/suggestions/anonymous', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          style_samples: styleSamples,
+          existing_topics: subjects,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate suggestions');
+      }
+
+      setAiSuggestions(data.suggestions || []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to generate suggestions';
+      setAiError(message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const addFromAI = (suggestion: string) => {
+    if (isSubjectValid(suggestion, subjects)) {
+      setSubjects([...subjects, suggestion]);
+      setAiSuggestions(aiSuggestions.filter(s => s !== suggestion));
+    }
   };
 
   if (initialLoading) {
@@ -167,22 +215,73 @@ export default function GenerateStep2Page() {
           </div>
         </div>
 
-        {/* AI Suggestions (disabled for anonymous users) */}
+        {/* AI Suggestions */}
         <div className="win95-sunken p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold">✨ AI Suggestions</span>
+            <div className="flex items-center gap-2">
+              {aiSuggestions.length > 0 && (
+                <Win95Button
+                  onClick={generateAISuggestions}
+                  size="sm"
+                  disabled={aiLoading || loading}
+                >
+                  {aiLoading ? '...' : '↻'}
+                </Win95Button>
+              )}
+              {aiSuggestions.length === 0 && (
+                <Win95Button
+                  onClick={generateAISuggestions}
+                  size="sm"
+                  disabled={aiLoading || loading}
+                >
+                  {aiLoading ? 'Generating...' : 'Generate Ideas'}
+                </Win95Button>
+              )}
+            </div>
           </div>
           <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
-            Get AI-powered topic ideas based on your writing style
+            {aiSuggestions.length > 0
+              ? 'Click a suggestion to add it to your topics'
+              : 'Get AI-powered topic ideas based on your writing style'}
           </p>
 
-          <div className="win95-field min-h-[180px] flex items-center justify-center">
-            <div className="text-center py-8">
-              <div className="text-[24px] mb-2">✨</div>
-              <p className="text-[10px] text-[var(--win95-button-shadow)]">
-                AI suggestions available after signup
-              </p>
-            </div>
+          {aiError && (
+            <Win95Alert type="error" title="Error" className="mb-3">
+              {aiError}
+            </Win95Alert>
+          )}
+
+          <div className="win95-field min-h-[180px] max-h-[200px] overflow-y-auto win95-scrollbar p-2">
+            {aiLoading ? (
+              <div className="text-center py-8">
+                <div className="text-[24px] mb-2 animate-pulse">✨</div>
+                <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                  Analyzing your writing style...
+                </p>
+              </div>
+            ) : aiSuggestions.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-[24px] mb-2">✨</div>
+                <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                  Click "Generate Ideas" to get AI suggestions
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {aiSuggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => addFromAI(suggestion)}
+                    disabled={loading}
+                    className="w-full text-left p-2 win95-raised hover:bg-[var(--win95-button-face)] transition-colors text-[11px] flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <span className="text-[var(--win95-button-highlight)]">+</span>
+                    <span>{suggestion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

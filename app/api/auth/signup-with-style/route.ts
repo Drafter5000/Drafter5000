@@ -1,10 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getStripeClient } from '@/lib/stripe-client';
 import { setupNewUserOrganization } from '@/lib/organization-utils';
 import { UserRoleType } from '@/lib/types';
 import { mapToDbFields } from '@/lib/role-config';
-import { getPlanById } from '@/lib/plan-utils';
 import { validateSignupForm } from '@/lib/onboarding-validation';
 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
@@ -13,8 +11,8 @@ const CUSTOMER_DB_FIELDS = mapToDbFields(UserRoleType.CUSTOMER);
 /**
  * POST /api/auth/signup-with-style
  *
- * Creates a new user account and stores pending style data for processing
- * after successful payment. Returns a Stripe checkout URL.
+ * Creates a new user account and stores pending style data for processing.
+ * User must verify email first, then select a plan on /subscribe page.
  *
  * Requirements: 4.3, 4.4
  */
@@ -31,7 +29,6 @@ export async function POST(request: NextRequest) {
       subjects,
       preferred_language,
       delivery_days,
-      plan_id,
     } = body;
 
     // Validate signup form
@@ -116,100 +113,27 @@ export async function POST(request: NextRequest) {
     // Setup organization membership
     await setupNewUserOrganization(authData.user.id);
 
-    // Get plan for checkout
-    const selectedPlanId = plan_id || process.env.DEFAULT_PLAN_ID || 'pro';
-    const plan = await getPlanById(selectedPlanId);
-
-    if (!plan || plan.price_cents === 0) {
-      return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 });
-    }
-
-    // Create Stripe customer
-    const stripe = getStripeClient();
-    const customer = await stripe.customers.create({
-      email,
-      name,
-      metadata: { user_id: authData.user.id },
-    });
-
-    // Update profile with Stripe customer ID
-    await supabaseAdmin
-      .from('user_profiles')
-      .update({ stripe_customer_id: customer.id })
-      .eq('id', authData.user.id);
-
-    // Prepare pending style data for Stripe metadata
-    const pendingStyleData = {
-      style_samples: JSON.stringify(style_samples),
-      subjects: JSON.stringify(subjects),
+    // Store pending style data in database for processing after subscription
+    const { error: pendingStyleError } = await supabaseAdmin.from('pending_style_data').upsert({
+      user_id: authData.user.id,
+      style_samples,
+      subjects,
       preferred_language: preferred_language || 'en',
-      delivery_days: JSON.stringify(delivery_days || []),
+      delivery_days: delivery_days || [],
       job,
       display_name: name,
-    };
-
-    // Ensure Stripe price exists
-    let priceId = plan.stripe_price_id;
-    if (!priceId) {
-      // Create product and price if not exists
-      let productId = plan.stripe_product_id;
-      if (!productId) {
-        const product = await stripe.products.create({
-          name: plan.name,
-          description: plan.description || undefined,
-          metadata: { plan_id: plan.id },
-        });
-        productId = product.id;
-        await supabaseAdmin
-          .from('subscription_plans')
-          .update({ stripe_product_id: productId })
-          .eq('id', plan.id);
-      }
-
-      const price = await stripe.prices.create({
-        product: productId,
-        unit_amount: plan.price_cents,
-        currency: plan.currency.toLowerCase(),
-        recurring: { interval: 'month' },
-        metadata: { plan_id: plan.id },
-      });
-      priceId = price.id;
-      await supabaseAdmin
-        .from('subscription_plans')
-        .update({ stripe_price_id: priceId })
-        .eq('id', plan.id);
-    }
-
-    // Create Stripe checkout session with pending style data
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const checkoutSession = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: {
-        metadata: {
-          user_id: authData.user.id,
-          plan_id: plan.id,
-          ...pendingStyleData,
-        },
-      },
-      payment_method_collection: 'always',
-      allow_promotion_codes: true,
-      billing_address_collection: 'auto',
-      success_url: `${baseUrl}/dashboard?payment_success=true`,
-      cancel_url: `${baseUrl}/articles/generate/step-3?cancelled=true`,
-      metadata: {
-        user_id: authData.user.id,
-        plan_id: plan.id,
-        pending_style: 'true',
-        ...pendingStyleData,
-      },
+      created_at: new Date().toISOString(),
     });
 
+    if (pendingStyleError) {
+      console.error('Failed to store pending style data:', pendingStyleError);
+      // Continue anyway - we'll try to recover from profile data
+    }
+
+    // Return success - user needs to verify email first, then select plan on /subscribe
     return NextResponse.json({
       user_id: authData.user.id,
-      checkout_url: checkoutSession.url,
+      message: 'Account created. Please verify your email to continue.',
     });
   } catch (error: unknown) {
     console.error('Signup with style error:', error);

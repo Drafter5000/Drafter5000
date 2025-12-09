@@ -1,15 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
-  Win95Window,
   Win95Button,
   Win95Input,
   Win95Select,
   Win95Checkbox,
   Win95Alert,
-  Win95Badge,
 } from '@/components/win95';
 import { DraftSessionService } from '@/lib/draft-session';
 import { apiClient } from '@/lib/api-client';
@@ -20,7 +18,6 @@ import {
   areAllDaysSelected,
   DayCode,
 } from '@/lib/day-selection';
-import Link from 'next/link';
 
 const DAYS = [
   { id: 'mon' as DayCode, label: 'Monday', short: 'Mon' },
@@ -39,7 +36,6 @@ const LANGUAGES = [
 
 export default function GenerateStep3Page() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +55,6 @@ export default function GenerateStep3Page() {
   const [frequency, setFrequency] = useState<DayCode[]>([]);
   const [language, setLanguage] = useState('en');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const wasCancelled = searchParams.get('cancelled') === 'true';
 
   useEffect(() => {
     // Don't redirect if signup is already complete (showing email verification)
@@ -135,28 +129,21 @@ export default function GenerateStep3Page() {
     setError(null);
 
     try {
-      const response = await apiClient.post<{ user_id: string; checkout_url: string }>(
-        '/auth/signup-with-style',
-        {
-          name,
-          email,
-          password,
-          confirmPassword,
-          job,
-          style_samples: draftData.style_samples,
-          subjects: draftData.subjects,
-          preferred_language: language,
-          delivery_days: frequency,
-        }
-      );
+      await apiClient.post<{ user_id: string; message: string }>('/auth/signup-with-style', {
+        name,
+        email,
+        password,
+        confirmPassword,
+        job,
+        style_samples: draftData.style_samples,
+        subjects: draftData.subjects,
+        preferred_language: language,
+        delivery_days: frequency,
+      });
 
       DraftSessionService.clear();
       setUserEmail(email);
       setSignupComplete(true);
-
-      if (response.checkout_url) {
-        window.location.href = response.checkout_url;
-      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create account';
       setError(message);
@@ -186,11 +173,12 @@ export default function GenerateStep3Page() {
         <p className="text-[11px] font-bold mb-4">{userEmail}</p>
 
         <div className="win95-sunken p-3 text-left mb-4 max-w-[300px] mx-auto">
-          <p className="text-[11px] font-bold mb-1">✓ Please verify your email to:</p>
+          <p className="text-[11px] font-bold mb-1">✓ Next steps:</p>
           <ul className="text-[10px] ml-4 list-disc">
-            <li>Log in to your account</li>
-            <li>Access all features</li>
-            <li>Start receiving your articles</li>
+            <li>Check your email and click the verification link</li>
+            <li>You'll be automatically logged in</li>
+            <li>Select your subscription plan</li>
+            <li>Start receiving your personalized articles</li>
           </ul>
         </div>
 
@@ -200,11 +188,6 @@ export default function GenerateStep3Page() {
               Open Email
             </Win95Button>
           </a>
-          <Link href="/login">
-            <Win95Button size="lg" className="w-full">
-              Go to Login
-            </Win95Button>
-          </Link>
         </div>
       </div>
     );
@@ -217,15 +200,9 @@ export default function GenerateStep3Page() {
         <div className="text-[32px] mb-2">🚀</div>
         <h2 className="text-[14px] font-bold">Create Your Account</h2>
         <p className="text-[11px] text-[var(--win95-button-shadow)]">
-          Sign up and complete payment to start receiving your personalized articles
+          Sign up to start receiving your personalized articles
         </p>
       </div>
-
-      {wasCancelled && (
-        <Win95Alert type="warning" title="Payment Cancelled">
-          Payment was cancelled. Please try again to complete your signup.
-        </Win95Alert>
-      )}
 
       {error && (
         <Win95Alert type="error" title="Error">
@@ -368,7 +345,8 @@ export default function GenerateStep3Page() {
             ?.label.split(' ')
             .slice(1)
             .join(' ')}
-          . After payment, your personalized articles will start arriving.
+          . After verifying your email and selecting a plan, your personalized articles will start
+          arriving.
         </Win95Alert>
       )}
 
@@ -384,7 +362,7 @@ export default function GenerateStep3Page() {
           size="lg"
           className={loading ? 'win95-loading' : ''}
         >
-          {loading ? 'Creating Account...' : '🚀 Create Account & Pay'}
+          {loading ? 'Creating Account...' : '🚀 Create Account'}
         </Win95Button>
       </div>
     </div>

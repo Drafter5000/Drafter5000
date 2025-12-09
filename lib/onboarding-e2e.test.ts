@@ -75,9 +75,13 @@ describe('E2E: Onboarding Signup Flow', () => {
       expect(isStyleSampleValid([])).toBe(false);
       expect(isStyleSampleValid(['', '', ''])).toBe(false);
 
-      // Test: At least one non-empty sample should be valid
-      expect(isStyleSampleValid(['Sample text', '', ''])).toBe(true);
-      expect(isStyleSampleValid(['', 'Sample text', ''])).toBe(true);
+      // Test: Less than 3 non-empty samples should not be valid
+      expect(isStyleSampleValid(['Sample text', '', ''])).toBe(false);
+      expect(isStyleSampleValid(['', 'Sample text', ''])).toBe(false);
+      expect(isStyleSampleValid(['Sample 1', 'Sample 2', ''])).toBe(false);
+
+      // Test: All 3 non-empty samples should be valid
+      expect(isStyleSampleValid(['Sample 1', 'Sample 2', 'Sample 3'])).toBe(true);
     });
 
     /**
@@ -101,15 +105,16 @@ describe('E2E: Onboarding Signup Flow', () => {
     });
 
     it('should save style samples to draft session', () => {
-      const samples = ['Sample article 1 with enough content', 'Sample article 2'];
+      const samples = ['Sample article 1 with enough content', 'Sample article 2', 'Sample 3'];
 
-      DraftSessionService.save({
-        style_samples: samples,
-        current_step: 2,
-      });
+      DraftSessionService.saveSampleArticles(samples);
+      DraftSessionService.save({ current_step: 2 });
 
       const loaded = DraftSessionService.load();
       expect(loaded?.style_samples).toEqual(samples);
+      expect(loaded?.sample_articles).toHaveLength(3);
+      expect(loaded?.sample_articles?.[0].content).toBe('Sample article 1 with enough content');
+      expect(loaded?.sample_articles?.[0].wordCount).toBe(5);
       expect(loaded?.current_step).toBe(2);
     });
   });
@@ -156,21 +161,22 @@ describe('E2E: Onboarding Signup Flow', () => {
       expect(isSubjectListValid(['Topic 1', 'Topic 2'])).toBe(true);
     });
 
-    it('should save subjects to draft session', () => {
+    it('should save subjects to draft session with topic entries', () => {
       // First save style samples (required for step 2)
-      DraftSessionService.save({
-        style_samples: ['Sample article'],
-        current_step: 2,
-      });
+      DraftSessionService.saveSampleArticles(['Sample article 1', 'Sample 2', 'Sample 3']);
+      DraftSessionService.save({ current_step: 2 });
 
-      // Then save subjects
-      DraftSessionService.save({
-        subjects: ['Topic 1', 'Topic 2', 'Topic 3'],
-        current_step: 3,
-      });
+      // Then save subjects as topic entries
+      DraftSessionService.saveTopicEntries(['Topic 1', 'Topic 2', 'Topic 3']);
+      DraftSessionService.save({ current_step: 3 });
 
       const loaded = DraftSessionService.load();
       expect(loaded?.subjects).toEqual(['Topic 1', 'Topic 2', 'Topic 3']);
+      expect(loaded?.topic_entries).toHaveLength(3);
+      expect(loaded?.topic_entries?.[0].topic).toBe('Topic 1');
+      expect(loaded?.topic_entries?.[0].status).toBe('Needs Draft');
+      expect(loaded?.topic_entries?.[0].subject).toBe('Topic 1');
+      expect(loaded?.topic_entries?.[0].article).toBe('');
       expect(loaded?.current_step).toBe(3);
     });
   });

@@ -116,15 +116,27 @@ export async function POST(request: NextRequest) {
 
         // Handle pending style data from onboarding signup flow
         // Requirements: 4.5, 4.6
+        // Style data is stored in pending_style_data table (not Stripe metadata due to 500 char limit)
         if (hasPendingStyle && profileId) {
           try {
-            const metadata = session.metadata || {};
-            const styleSamples = metadata.style_samples ? JSON.parse(metadata.style_samples) : [];
-            const subjects = metadata.subjects ? JSON.parse(metadata.subjects) : [];
-            const deliveryDays = metadata.delivery_days ? JSON.parse(metadata.delivery_days) : [];
-            const preferredLanguage = metadata.preferred_language || 'en';
-            const displayName = metadata.display_name || '';
-            const job = metadata.job || '';
+            // Fetch pending style data from database
+            const { data: pendingData, error: pendingError } = await supabase
+              .from('pending_style_data')
+              .select('*')
+              .eq('user_id', profileId)
+              .single();
+
+            if (pendingError || !pendingData) {
+              console.error('Failed to fetch pending style data:', pendingError);
+              break;
+            }
+
+            const styleSamples = pendingData.style_samples || [];
+            const subjects = pendingData.subjects || [];
+            const deliveryDays = pendingData.delivery_days || [];
+            const preferredLanguage = pendingData.preferred_language || 'en';
+            const displayName = pendingData.display_name || '';
+            const job = pendingData.job || '';
 
             // Get user email from profile
             const { data: userProfile } = await supabase
@@ -166,6 +178,9 @@ export async function POST(request: NextRequest) {
               } else {
                 console.log(`Style synced to Google Sheets for user ${profileId}`);
               }
+
+              // Clean up pending style data after successful processing
+              await supabase.from('pending_style_data').delete().eq('user_id', profileId);
             }
           } catch (styleProcessError) {
             console.error('Error processing pending style data:', styleProcessError);

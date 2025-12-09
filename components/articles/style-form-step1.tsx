@@ -41,7 +41,7 @@ export function StyleFormStep1({
     setArticles(updated);
   };
 
-  const hasAtLeastOneArticle = isStyleSampleValid(articles);
+  const hasAllArticles = isStyleSampleValid(articles);
   const filledCount = articles.filter(a => a.trim().length > 0).length;
   const progressValue = (filledCount / 3) * 100;
 
@@ -77,7 +77,7 @@ export function StyleFormStep1({
                   <span className={hasContent ? 'text-foreground' : 'text-muted-foreground'}>
                     Article {num}
                   </span>
-                  {num === 1 && !hasContent && (
+                  {!hasContent && (
                     <Badge variant="secondary" className="text-xs">
                       Required
                     </Badge>
@@ -92,8 +92,8 @@ export function StyleFormStep1({
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          Paste articles you have written or content whose style you want to emulate. At least one
-          article is required, but more samples improve accuracy.
+          Paste articles you have written or content whose style you want to emulate. All three
+          articles are required for accurate style analysis.
         </AlertDescription>
       </Alert>
 
@@ -139,13 +139,10 @@ export function StyleFormStep1({
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold">Article {num}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {num === 1 ? 'Required to continue' : 'Optional - improves results'}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Required to continue</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {hasContent && <Badge variant="secondary">{wordCount} words</Badge>}
-                      {num > 1 && <Badge variant="outline">Optional</Badge>}
                     </div>
                   </div>
 
@@ -178,17 +175,17 @@ export function StyleFormStep1({
 
       <div className="flex items-center justify-between pt-4">
         <div className="text-sm text-muted-foreground">
-          {hasAtLeastOneArticle ? (
+          {hasAllArticles ? (
             <span className="text-green-600 flex items-center gap-1">
               <CheckCircle2 className="h-4 w-4" />
               Ready to continue
             </span>
           ) : (
-            'Add at least one article to continue'
+            'Add all three articles to continue'
           )}
         </div>
 
-        <Button onClick={handleSubmit} disabled={!hasAtLeastOneArticle || loading} size="lg">
+        <Button onClick={handleSubmit} disabled={!hasAllArticles || loading} size="lg">
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />

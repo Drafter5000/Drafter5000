@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background -->
+  <circle cx="32" cy="32" r="32" fill="#e8d4f0"/>
+  
+  <!-- Hair -->
+  <ellipse cx="32" cy="28" rx="20" ry="18" fill="#4a3728"/>
+  <ellipse cx="32" cy="45" rx="16" ry="12" fill="#4a3728"/>
+  
+  <!-- Face -->
+  <ellipse cx="32" cy="32" rx="14" ry="16" fill="#f5d0c5"/>
+  
+  <!-- Eyes -->
+  <ellipse cx="26" cy="30" rx="2.5" ry="3" fill="#4a3728"/>
+  <ellipse cx="38" cy="30" rx="2.5" ry="3" fill="#4a3728"/>
+  <circle cx="27" cy="29" r="1" fill="white"/>
+  <circle cx="39" cy="29" r="1" fill="white"/>
+  
+  <!-- Eyebrows -->
+  <path d="M23 26 Q26 24 29 26" stroke="#4a3728" stroke-width="1.5" fill="none"/>
+  <path d="M35 26 Q38 24 41 26" stroke="#4a3728" stroke-width="1.5" fill="none"/>
+  
+  <!-- Nose -->
+  <path d="M32 32 L31 37 L33 37" stroke="#d4a89a" stroke-width="1" fill="none"/>
+  
+  <!-- Smile -->
+  <path d="M27 42 Q32 46 37 42" stroke="#c97878" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Blush -->
+  <ellipse cx="23" cy="38" rx="3" ry="2" fill="#f0b0a0" opacity="0.5"/>
+  <ellipse cx="41" cy="38" rx="3" ry="2" fill="#f0b0a0" opacity="0.5"/>
+</svg>
