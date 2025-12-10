@@ -163,11 +163,12 @@ export async function POST(request: NextRequest) {
     // No trial period - payment required immediately
 
     // Determine URLs - use provided URLs or defaults
+    // Success URL redirects to /subscribe with session_id for verification flow
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       process.env.NEXT_PUBLIC_VERCEL_URL ||
       'http://localhost:3000';
-    const finalSuccessUrl = success_url || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
+    const finalSuccessUrl = success_url || `${baseUrl}/subscribe?session_id={CHECKOUT_SESSION_ID}`;
     const finalCancelUrl = cancel_url || `${baseUrl}/subscribe`;
 
     // Create checkout session - no trial, payment required immediately

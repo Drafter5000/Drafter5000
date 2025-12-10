@@ -1,4 +1,4 @@
-import { getServerSupabaseSession } from '@/lib/supabase-client';
+import { getServerSupabaseUser } from '@/lib/supabase-client';
 import { getStripeClient } from '@/lib/stripe-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getPlanByPriceIdAdmin } from '@/lib/plan-utils';
@@ -7,11 +7,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 /**
  * POST - Verify a Stripe checkout session and update subscription status
  * This is used as a fallback when the webhook hasn't processed yet
+ * Uses getUser() for secure authentication instead of getSession().
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSupabaseSession();
-    if (!session?.user) {
+    // Use getUser() for secure authentication (validates token with Supabase Auth server)
+    const user = await getServerSupabaseUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Verify the session belongs to this user
-    if (checkoutSession.metadata?.user_id !== session.user.id) {
+    if (checkoutSession.metadata?.user_id !== user.id) {
       return NextResponse.json({ error: 'Session does not belong to this user' }, { status: 403 });
     }
 
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
         stripe_customer_id: checkoutSession.customer as string,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', session.user.id);
+      .eq('id', user.id);
 
     if (updateError) {
       console.error('Failed to update profile:', updateError);
@@ -89,7 +91,7 @@ export async function POST(request: NextRequest) {
       subscription.current_period_end || Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
 
     await supabaseAdmin.from('subscriptions').upsert({
-      user_id: session.user.id,
+      user_id: user.id,
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId || '',
       plan: plan || 'pro',

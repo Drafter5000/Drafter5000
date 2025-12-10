@@ -23,7 +23,7 @@ export function countWords(text: string): number {
 
 /**
  * Validates whether the style samples array enables the continue button.
- * All three non-empty (after trimming) samples are required.
+ * All 3 non-empty (after trimming) samples are required.
  *
  * @param samples - Array of style sample strings (typically 3)
  * @returns true if all 3 samples have non-zero length after trimming
@@ -31,8 +31,11 @@ export function countWords(text: string): number {
  * Requirements: 1.3, 1.5
  */
 export function isStyleSampleValid(samples: string[]): boolean {
-  const nonEmptySamples = samples.filter(sample => sample.trim().length > 0);
-  return nonEmptySamples.length >= 3;
+  // Require exactly 3 articles, all non-empty
+  if (samples.length < 3) {
+    return false;
+  }
+  return samples.slice(0, 3).every(sample => sample.trim().length > 0);
 }
 
 /**

@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
-import { PenLine, Sparkles, Menu, X } from 'lucide-react';
+import { DesignContext } from '@/components/design-provider';
+import { PenLine, Sparkles, Menu, X, Monitor } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,6 +20,8 @@ const navLinks = [
 export function MarketingHeader() {
   const { user, loading } = useAuth();
   const pathname = usePathname();
+  const context = useContext(DesignContext);
+  const toggleAndReload = context?.toggleAndReload;
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -73,6 +77,18 @@ export function MarketingHeader() {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-3">
+            {/* Design Toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleAndReload}
+              className="hidden sm:flex items-center gap-1.5 rounded-xl"
+              title="Switch to Win95 Design"
+            >
+              <Monitor className="h-4 w-4" />
+              <span className="hidden md:inline">Win95</span>
+            </Button>
+
             {!loading && (
               <>
                 {user ? (
@@ -95,7 +111,7 @@ export function MarketingHeader() {
                       </Link>
                     )}
                     {!isSignupPage && (
-                      <Link href="/signup">
+                      <Link href="/articles/generate/step-1">
                         <Button className="rounded-xl font-semibold bg-gradient-to-r from-primary to-chart-2 hover:from-primary/90 hover:to-chart-2/90 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02]">
                           Get Started Free
                         </Button>
@@ -153,7 +169,10 @@ export function MarketingHeader() {
                       </Link>
                     )}
                     {!isSignupPage && (
-                      <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                      <Link
+                        href="/articles/generate/step-1"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
                         <Button className="w-full rounded-xl font-semibold bg-gradient-to-r from-primary to-chart-2 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200">
                           Get Started Free
                         </Button>

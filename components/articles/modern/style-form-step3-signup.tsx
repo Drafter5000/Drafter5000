@@ -35,29 +35,7 @@ import {
   DayCode,
 } from '@/lib/day-selection';
 import { validateSignupForm } from '@/lib/onboarding-validation';
-
-const DAYS = [
-  { id: 'mon' as DayCode, label: 'Monday', short: 'Mon' },
-  { id: 'tue' as DayCode, label: 'Tuesday', short: 'Tue' },
-  { id: 'wed' as DayCode, label: 'Wednesday', short: 'Wed' },
-  { id: 'thu' as DayCode, label: 'Thursday', short: 'Thu' },
-  { id: 'fri' as DayCode, label: 'Friday', short: 'Fri' },
-  { id: 'sat' as DayCode, label: 'Saturday', short: 'Sat' },
-  { id: 'sun' as DayCode, label: 'Sunday', short: 'Sun' },
-];
-
-const LANGUAGES = [
-  { code: 'en', label: 'English', flag: '🇺🇸' },
-  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
-  { code: 'fr', label: 'French', flag: '🇫🇷' },
-  { code: 'de', label: 'German', flag: '🇩🇪' },
-  { code: 'it', label: 'Italian', flag: '🇮🇹' },
-  { code: 'pt', label: 'Portuguese', flag: '🇵🇹' },
-  { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
-  { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
-  { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
-  { code: 'ko', label: 'Korean', flag: '🇰🇷' },
-];
+import { LANGUAGES, DAYS } from '@/lib/constants';
 
 export interface SignupFormData {
   name: string;

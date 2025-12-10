@@ -33,12 +33,12 @@ function getCtaText(plan: SubscriptionPlanWithFeatures): string {
   if (plan.cta_text) return plan.cta_text;
   if (plan.price_cents === 0) return 'Get Started';
   if (plan.cta_type === 'email') return 'Contact Sales';
-  return 'Subscribe Now';
+  return 'Start Free Trial';
 }
 
 function getCtaHref(plan: SubscriptionPlanWithFeatures): string {
   if (plan.cta_type === 'email') return '/pricing';
-  return '/signup';
+  return '/articles/generate/step-1';
 }
 
 function PlanCardSkeleton({ index }: { index: number }) {
@@ -106,7 +106,7 @@ export function PricingPreview() {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the plan that fits your needs. Cancel anytime.
+            Choose the plan that fits your needs. All plans include a 14-day free trial.
           </p>
         </motion.div>
 

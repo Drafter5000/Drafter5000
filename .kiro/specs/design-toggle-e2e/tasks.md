@@ -1,0 +1,154 @@
+# Implementation Plan
+
+- [x] 1. Extract modern components from feature branch
+  - [x] 1.1 Create modern variant of StyleFormStep1
+    - Extract the modern design from `feature/07-dec-2025` branch for style-form-step1
+    - Save as `components/articles/style-form-step1-modern.tsx`
+    - _Requirements: 2.1_
+  - [x] 1.2 Create modern variant of StyleFormStep2
+    - Extract the modern design from `feature/07-dec-2025` branch for style-form-step2
+    - Save as `components/articles/style-form-step2-modern.tsx`
+    - _Requirements: 2.2_
+  - [x] 1.3 Create modern variant of StyleFormStep3
+    - Extract the modern design from `feature/07-dec-2025` branch for style-form-step3
+    - Save as `components/articles/style-form-step3-modern.tsx`
+    - _Requirements: 2.3_
+  - [x] 1.4 Create modern variant of StyleCard
+    - Extract the modern design from `feature/07-dec-2025` branch for style-card
+    - Save as `components/articles/style-card-modern.tsx`
+    - _Requirements: 3.3_
+
+- [x] 2. Create Win95 variants of style form components
+  - [x] 2.1 Create Win95 variant of StyleFormStep1
+    - Create Win95-styled version using Win95Window, Win95Button, Win95Textarea components
+    - Save as `components/articles/style-form-step1-win95.tsx`
+    - _Requirements: 2.1_
+  - [x] 2.2 Create Win95 variant of StyleFormStep2
+    - Create Win95-styled version using Win95Window, Win95Button, Win95Input components
+    - Save as `components/articles/style-form-step2-win95.tsx`
+    - _Requirements: 2.2_
+  - [x] 2.3 Create Win95 variant of StyleFormStep3
+    - Create Win95-styled version using Win95Window, Win95Button, Win95Input, Win95Select, Win95Checkbox components
+    - Save as `components/articles/style-form-step3-win95.tsx`
+    - _Requirements: 2.3_
+  - [x] 2.4 Create Win95 variant of StyleCard
+    - Create Win95-styled version using Win95Window components
+    - Save as `components/articles/style-card-win95.tsx`
+    - _Requirements: 3.3_
+
+- [x] 3. Create design-aware wrapper components
+  - [x] 3.1 Update StyleFormStep1 to be design-aware wrapper
+    - Import both modern and win95 variants
+    - Use useDesign hook to conditionally render appropriate variant
+    - Maintain same props interface
+    - _Requirements: 2.1, 5.2_
+  - [x] 3.2 Update StyleFormStep2 to be design-aware wrapper
+    - Import both modern and win95 variants
+    - Use useDesign hook to conditionally render appropriate variant
+    - Maintain same props interface
+    - _Requirements: 2.2, 5.2_
+  - [x] 3.3 Update StyleFormStep3 to be design-aware wrapper
+    - Import both modern and win95 variants
+    - Use useDesign hook to conditionally render appropriate variant
+    - Maintain same props interface
+    - _Requirements: 2.3, 5.2_
+  - [x] 3.4 Update StyleCard to be design-aware wrapper
+    - Import both modern and win95 variants
+    - Use useDesign hook to conditionally render appropriate variant
+    - Maintain same props interface
+    - _Requirements: 3.3, 5.2_
+  - [ ]\* 3.5 Write property test for design mode toggle alternation
+    - **Property 1: Design Mode Toggle Alternation**
+    - **Validates: Requirements 1.1**
+  - [ ]\* 3.6 Write property test for design mode persistence round-trip
+    - **Property 2: Design Mode Persistence Round-Trip**
+    - **Validates: Requirements 1.2, 1.3**
+
+- [x] 4. Checkpoint - Make sure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Create dashboard page variants
+  - [x] 5.1 Extract modern dashboard content from feature branch
+    - Extract dashboard page content from `feature/07-dec-2025` branch
+    - Save as `app/dashboard/page-modern.tsx` or inline modern content component
+    - _Requirements: 3.1_
+  - [x] 5.2 Create Win95 dashboard content
+    - Create Win95-styled dashboard using Win95Window, Win95 metric displays
+    - _Requirements: 3.2_
+  - [x] 5.3 Update dashboard page to be design-aware
+    - Use useDesign hook to conditionally render modern or win95 dashboard
+    - _Requirements: 3.1, 3.2, 5.2_
+  - [ ]\* 5.4 Write property test for CSS class consistency
+    - **Property 3: CSS Class Consistency**
+    - **Validates: Requirements 5.1**
+
+- [x] 6. Create article styles page variants
+  - [x] 6.1 Extract modern article styles page from feature branch
+    - Extract styles page content from `feature/07-dec-2025` branch
+    - _Requirements: 3.3_
+  - [x] 6.2 Create Win95 article styles page content
+    - Create Win95-styled styles list page
+    - _Requirements: 3.3_
+  - [x] 6.3 Update article styles page to be design-aware
+    - Use useDesign hook to conditionally render modern or win95 styles page
+    - _Requirements: 3.3, 5.2_
+
+- [x] 7. Create settings and billing page variants
+  - [x] 7.1 Extract modern settings page from feature branch
+    - Extract settings page content from `feature/07-dec-2025` branch
+    - _Requirements: 4.2_
+  - [x] 7.2 Create Win95 settings page content
+    - Create Win95-styled settings page
+    - _Requirements: 4.2_
+  - [x] 7.3 Update settings page to be design-aware
+    - Use useDesign hook to conditionally render modern or win95 settings
+    - _Requirements: 4.2, 5.2_
+  - [x] 7.4 Extract modern billing page from feature branch
+    - Extract billing page content from `feature/07-dec-2025` branch
+    - _Requirements: 4.1_
+  - [x] 7.5 Create Win95 billing page content
+    - Create Win95-styled billing page
+    - _Requirements: 4.1_
+  - [x] 7.6 Update billing page to be design-aware
+    - Use useDesign hook to conditionally render modern or win95 billing
+    - _Requirements: 4.1, 5.2_
+  - [ ]\* 7.7 Write property test for style form data mode independence
+    - **Property 4: Style Form Data Mode Independence**
+    - **Validates: Requirements 2.1, 2.2, 2.3, 2.4**
+
+- [x] 8. Checkpoint - Make sure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 9. Update generate flow pages
+  - [x] 9.1 Update step-1 page to use design-aware StyleFormStep1
+    - Ensure the page uses the wrapper component that handles design switching
+    - _Requirements: 2.1_
+  - [x] 9.2 Update step-2 page to use design-aware StyleFormStep2
+    - Ensure the page uses the wrapper component that handles design switching
+    - _Requirements: 2.2_
+  - [x] 9.3 Update step-3 page to use design-aware StyleFormStep3
+    - Ensure the page uses the wrapper component that handles design switching
+    - _Requirements: 2.3_
+  - [ ]\* 9.4 Write property test for navigation mode persistence
+    - **Property 5: Navigation Mode Persistence**
+    - **Validates: Requirements 4.3**
+  - [ ]\* 9.5 Write property test for toggle display consistency
+    - **Property 6: Toggle Display Consistency**
+    - **Validates: Requirements 1.4**
+
+- [x] 10. Final verification and cleanup
+  - [x] 10.1 Verify design toggle works across all pages
+    - Test toggle functionality on dashboard, styles, settings, billing, and generate flow pages
+    - Verify localStorage persistence works correctly
+    - _Requirements: 1.1, 1.2, 1.3, 4.3_
+  - [x] 10.2 Verify both design modes render correctly
+    - Visual verification of modern design on all pages
+    - Visual verification of Win95 design on all pages
+    - _Requirements: 3.1, 3.2, 4.1, 4.2_
+  - [x] 10.3 Clean up any unused code
+    - Remove any duplicate or dead code
+    - Ensure consistent file naming
+    - _Requirements: N/A_
+
+- [x] 11. Final Checkpoint - Make sure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

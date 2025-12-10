@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useAuth } from '@/components/auth-provider';
+import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
 import {
@@ -11,26 +12,23 @@ import {
   Win95Alert,
   Win95Progress,
 } from '@/components/win95';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api-client';
+import {
+  CreditCard,
+  Calendar,
+  Zap,
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react';
 import Link from 'next/link';
 import type { SubscriptionPlanWithFeatures } from '@/lib/types';
-
-function BillingPageSkeleton() {
-  return (
-    <ProtectedRoute>
-      <div className="min-h-screen p-4">
-        <div className="max-w-4xl mx-auto">
-          <DashboardHeader />
-          <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
-            <div className="text-center py-8">
-              <span className="text-[11px] win95-loading">Loading billing data...</span>
-            </div>
-          </Win95Window>
-        </div>
-      </div>
-    </ProtectedRoute>
-  );
-}
 
 interface UsageData {
   plan: 'free' | 'pro' | 'enterprise';
@@ -55,6 +53,8 @@ interface PlansResponse {
 
 export default function BillingPage() {
   const { user } = useAuth();
+  const context = useContext(DesignContext);
+  const designMode: DesignMode = context?.designMode ?? 'modern';
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlanWithFeatures[]>([]);
@@ -96,10 +96,6 @@ export default function BillingPage() {
     }
   };
 
-  if (loading) {
-    return <BillingPageSkeleton />;
-  }
-
   const currentPlan = plans.find(p => p.id === usage?.plan) || plans.find(p => p.id === 'free');
   const planDetails = currentPlan
     ? {
@@ -110,202 +106,329 @@ export default function BillingPage() {
       }
     : { name: 'Free', price: 0, articles_per_month: 2, features: [] };
 
+  // Win95 Design
+  if (designMode === 'win95') {
+    if (loading) {
+      return (
+        <ProtectedRoute>
+          <div className="min-h-screen p-4">
+            <div className="max-w-4xl mx-auto">
+              <DashboardHeader />
+              <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
+                <div className="text-center py-8">
+                  <span className="text-[11px] win95-loading">Loading billing data...</span>
+                </div>
+              </Win95Window>
+            </div>
+          </div>
+        </ProtectedRoute>
+      );
+    }
+
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen p-4">
+          <div className="max-w-4xl mx-auto">
+            <DashboardHeader />
+
+            <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="win95-sunken p-2 flex items-center gap-2">
+                    <span className="text-[16px]">💳</span>
+                    <div>
+                      <h2 className="text-[12px] font-bold">Billing & Usage</h2>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                        Manage your subscription and track usage
+                      </p>
+                    </div>
+                  </div>
+                  {usage?.plan !== 'free' && (
+                    <Win95Button onClick={handleManageSubscription} disabled={portalLoading}>
+                      {portalLoading ? 'Loading...' : '💳 Manage Subscription'}
+                    </Win95Button>
+                  )}
+                </div>
+
+                <div className="win95-groupbox">
+                  <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                    <legend className="win95-groupbox-title font-bold">📋 Current Plan</legend>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="text-[14px] font-bold">{planDetails.name} Plan</h3>
+                        <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                          {usage?.plan === 'free'
+                            ? 'Get started with basic features'
+                            : 'Your current subscription'}
+                        </p>
+                      </div>
+                      <Win95Badge
+                        variant={subscription?.status === 'active' ? 'default' : 'secondary'}
+                      >
+                        {subscription?.status === 'active'
+                          ? '✓ Active'
+                          : subscription?.status || 'Active'}
+                      </Win95Badge>
+                    </div>
+                    <div className="win95-sunken p-2 mb-3">
+                      <span className="text-[24px] font-bold">${planDetails.price / 100}</span>
+                      <span className="text-[11px]"> / month</span>
+                    </div>
+                  </fieldset>
+                </div>
+
+                {usage && (
+                  <div className="win95-groupbox">
+                    <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                      <legend className="win95-groupbox-title font-bold">
+                        ⚡ Usage This Month
+                      </legend>
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-bold">Articles Generated</span>
+                          <span className="text-[11px]">
+                            {usage.articles_used} / {usage.articles_limit}
+                          </span>
+                        </div>
+                        <Win95Progress value={usage.percentage_used} />
+                        <p className="text-[10px] text-[var(--win95-button-shadow)] mt-1">
+                          {usage.can_generate
+                            ? `${usage.articles_limit - usage.articles_used} articles remaining`
+                            : "You've reached your monthly limit"}
+                        </p>
+                      </div>
+                    </fieldset>
+                  </div>
+                )}
+
+                {usage?.plan === 'free' && (
+                  <div className="win95-groupbox">
+                    <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                      <legend className="win95-groupbox-title font-bold">
+                        🚀 Upgrade Your Plan
+                      </legend>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div className="win95-raised p-3 text-center">
+                          <h3 className="text-[12px] font-bold mb-1">Pro Plan</h3>
+                          <p className="text-[20px] font-bold mb-1">$70/mo</p>
+                          <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+                            20 articles per month
+                          </p>
+                          <Link href="/pricing">
+                            <Win95Button className="w-full">Upgrade to Pro</Win95Button>
+                          </Link>
+                        </div>
+                        <div className="win95-raised p-3 text-center">
+                          <h3 className="text-[12px] font-bold mb-1">Enterprise Plan</h3>
+                          <p className="text-[20px] font-bold mb-1">$299/mo</p>
+                          <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+                            100 articles per month
+                          </p>
+                          <Link href="/pricing">
+                            <Win95Button className="w-full">Upgrade to Enterprise</Win95Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </fieldset>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <Link href="/dashboard">
+                    <Win95Button size="sm">← Back to Dashboard</Win95Button>
+                  </Link>
+                </div>
+              </div>
+            </Win95Window>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  // Modern Design
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-background">
+          <DashboardHeader />
+          <main className="pt-8 pb-20 px-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                <p className="text-muted-foreground mt-2">Loading billing data...</p>
+              </div>
+            </div>
+          </main>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen p-4">
-        <div className="max-w-4xl mx-auto">
-          <DashboardHeader />
-
-          <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
-            <div className="space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div className="win95-sunken p-2 flex items-center gap-2">
-                  <span className="text-[16px]">💳</span>
-                  <div>
-                    <h2 className="text-[12px] font-bold">Billing & Usage</h2>
-                    <p className="text-[10px] text-[var(--win95-button-shadow)]">
-                      Manage your subscription and track usage
-                    </p>
-                  </div>
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <main className="pt-8 pb-20 px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-primary" />
                 </div>
-                {usage?.plan !== 'free' && (
-                  <Win95Button
-                    onClick={handleManageSubscription}
-                    disabled={portalLoading}
-                    className={portalLoading ? 'win95-loading' : ''}
-                  >
-                    {portalLoading ? 'Loading...' : '💳 Manage Subscription'}
-                  </Win95Button>
-                )}
+                <div>
+                  <h1 className="text-2xl font-bold">Billing & Usage</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Manage your subscription and track usage
+                  </p>
+                </div>
               </div>
+              <div className="flex gap-2">
+                {usage?.plan !== 'free' && (
+                  <Button onClick={handleManageSubscription} disabled={portalLoading}>
+                    {portalLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Manage Subscription'
+                    )}
+                  </Button>
+                )}
+                <Link href="/dashboard">
+                  <Button variant="outline" className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                </Link>
+              </div>
+            </div>
 
-              {/* Current Plan */}
-              <div className="win95-groupbox">
-                <fieldset className="border border-[var(--win95-button-shadow)] p-3">
-                  <legend className="win95-groupbox-title font-bold">📋 Current Plan</legend>
-
-                  <div className="flex items-center justify-between mb-3">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-[14px] font-bold">{planDetails.name} Plan</h3>
-                      <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        Current Plan
+                      </CardTitle>
+                      <CardDescription>
                         {usage?.plan === 'free'
                           ? 'Get started with basic features'
                           : 'Your current subscription'}
-                      </p>
+                      </CardDescription>
                     </div>
-                    <Win95Badge
-                      variant={subscription?.status === 'active' ? 'default' : 'secondary'}
-                    >
-                      {subscription?.status === 'active'
-                        ? '✓ Active'
-                        : subscription?.status || 'Active'}
-                    </Win95Badge>
+                    <Badge variant={subscription?.status === 'active' ? 'default' : 'secondary'}>
+                      {subscription?.status === 'active' ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Active
+                        </>
+                      ) : (
+                        subscription?.status || 'Active'
+                      )}
+                    </Badge>
                   </div>
-
-                  <div className="win95-sunken p-2 mb-3">
-                    <span className="text-[24px] font-bold">${planDetails.price / 100}</span>
-                    <span className="text-[11px]"> / month</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-4xl font-bold">${planDetails.price / 100}</span>
+                    <span className="text-muted-foreground">/ month</span>
                   </div>
-
-                  {subscription?.cancel_at_period_end && (
-                    <Win95Alert type="warning" title="Subscription Canceling">
-                      Your subscription will end on{' '}
-                      {subscription.current_period_end &&
-                        new Date(subscription.current_period_end * 1000).toLocaleDateString()}
-                    </Win95Alert>
-                  )}
-
-                  {subscription?.status === 'past_due' && (
-                    <Win95Alert type="error" title="Payment Failed">
-                      Please update your payment method to continue your subscription
-                    </Win95Alert>
-                  )}
-
-                  <div className="grid md:grid-cols-2 gap-3 mb-3">
+                  <div className="grid md:grid-cols-2 gap-4">
                     {subscription?.current_period_end && (
-                      <div className="win95-raised p-2">
-                        <p className="text-[10px] text-[var(--win95-button-shadow)]">
-                          📅 Next Billing Date
-                        </p>
-                        <p className="text-[11px] font-bold">
+                      <div className="p-4 rounded-lg bg-secondary/50 border">
+                        <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          Next Billing Date
+                        </div>
+                        <p className="font-semibold">
                           {new Date(subscription.current_period_end * 1000).toLocaleDateString(
                             'en-US',
-                            {
-                              month: 'long',
-                              day: 'numeric',
-                              year: 'numeric',
-                            }
+                            { month: 'long', day: 'numeric', year: 'numeric' }
                           )}
                         </p>
                       </div>
                     )}
-                    <div className="win95-raised p-2">
-                      <p className="text-[10px] text-[var(--win95-button-shadow)]">
-                        📊 Articles Limit
-                      </p>
-                      <p className="text-[11px] font-bold">
-                        {planDetails.articles_per_month} per month
-                      </p>
+                    <div className="p-4 rounded-lg bg-secondary/50 border">
+                      <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                        <Zap className="h-4 w-4" />
+                        Articles Limit
+                      </div>
+                      <p className="font-semibold">{planDetails.articles_per_month} per month</p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  {planDetails.features.length > 0 && (
-                    <div className="win95-sunken p-2">
-                      <p className="text-[10px] font-bold mb-2">Features included:</p>
-                      <ul className="grid md:grid-cols-2 gap-1">
-                        {planDetails.features.map(feature => (
-                          <li key={feature} className="flex items-start gap-1 text-[10px]">
-                            <span className="text-[var(--win95-success)]">✓</span>
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </fieldset>
-              </div>
-
-              {/* Usage */}
               {usage && (
-                <div className="win95-groupbox">
-                  <fieldset className="border border-[var(--win95-button-shadow)] p-3">
-                    <legend className="win95-groupbox-title font-bold">⚡ Usage This Month</legend>
-
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold">Articles Generated</span>
-                        <span className="text-[11px]">
-                          {usage.articles_used} / {usage.articles_limit}
-                        </span>
-                      </div>
-                      <Win95Progress value={usage.percentage_used} />
-                      <p className="text-[10px] text-[var(--win95-button-shadow)] mt-1">
-                        {usage.can_generate
-                          ? `${usage.articles_limit - usage.articles_used} articles remaining`
-                          : "You've reached your monthly limit"}
-                      </p>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-amber-500" />
+                      Usage This Month
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">Articles Generated</span>
+                      <span className="text-muted-foreground">
+                        {usage.articles_used} / {usage.articles_limit}
+                      </span>
                     </div>
-
+                    <Progress value={usage.percentage_used} className="h-3" />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {usage.can_generate
+                        ? `${usage.articles_limit - usage.articles_used} articles remaining`
+                        : "You've reached your monthly limit"}
+                    </p>
                     {!usage.can_generate && usage.plan === 'free' && (
-                      <Win95Alert type="info" title="Upgrade to generate more">
-                        Upgrade to Pro for 20 articles/month or Enterprise for 100 articles/month
-                        <div className="mt-2">
-                          <Link href="/pricing">
-                            <Win95Button size="sm">View Plans →</Win95Button>
+                      <Alert className="mt-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Upgrade to Pro for 20 articles/month or Enterprise for 100 articles/month.
+                          <Link href="/pricing" className="ml-2 text-primary hover:underline">
+                            View Plans →
                           </Link>
-                        </div>
-                      </Win95Alert>
+                        </AlertDescription>
+                      </Alert>
                     )}
-                  </fieldset>
-                </div>
+                  </CardContent>
+                </Card>
               )}
 
-              {/* Upgrade Options */}
               {usage?.plan === 'free' && (
-                <div className="win95-groupbox">
-                  <fieldset className="border border-[var(--win95-button-shadow)] p-3">
-                    <legend className="win95-groupbox-title font-bold">🚀 Upgrade Your Plan</legend>
-
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <div className="win95-raised p-3 text-center">
-                        <h3 className="text-[12px] font-bold mb-1">Pro Plan</h3>
-                        <p className="text-[20px] font-bold text-[var(--win95-title-bar)] mb-1">
-                          $70/mo
-                        </p>
-                        <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
-                          20 articles per month
-                        </p>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>🚀 Upgrade Your Plan</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="p-6 rounded-lg border text-center">
+                        <h3 className="font-bold mb-1">Pro Plan</h3>
+                        <p className="text-3xl font-bold text-primary mb-1">$70/mo</p>
+                        <p className="text-sm text-muted-foreground mb-4">20 articles per month</p>
                         <Link href="/pricing">
-                          <Win95Button className="w-full">Upgrade to Pro</Win95Button>
+                          <Button className="w-full">Upgrade to Pro</Button>
                         </Link>
                       </div>
-                      <div className="win95-raised p-3 text-center">
-                        <h3 className="text-[12px] font-bold mb-1">Enterprise Plan</h3>
-                        <p className="text-[20px] font-bold text-[var(--win95-title-bar)] mb-1">
-                          $299/mo
-                        </p>
-                        <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
-                          100 articles per month
-                        </p>
+                      <div className="p-6 rounded-lg border text-center">
+                        <h3 className="font-bold mb-1">Enterprise Plan</h3>
+                        <p className="text-3xl font-bold text-primary mb-1">$299/mo</p>
+                        <p className="text-sm text-muted-foreground mb-4">100 articles per month</p>
                         <Link href="/pricing">
-                          <Win95Button className="w-full">Upgrade to Enterprise</Win95Button>
+                          <Button className="w-full">Upgrade to Enterprise</Button>
                         </Link>
                       </div>
                     </div>
-                  </fieldset>
-                </div>
+                  </CardContent>
+                </Card>
               )}
-
-              {/* Back Link */}
-              <div className="pt-2">
-                <Link href="/dashboard">
-                  <Win95Button size="sm">← Back to Dashboard</Win95Button>
-                </Link>
-              </div>
             </div>
-          </Win95Window>
-        </div>
+          </div>
+        </main>
       </div>
     </ProtectedRoute>
   );

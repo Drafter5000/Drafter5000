@@ -33,29 +33,7 @@ import {
 } from '@/lib/onboarding-validation';
 import Link from 'next/link';
 import type { ArticleStyle } from '@/lib/types';
-
-const DAYS = [
-  { id: 'mon' as DayCode, short: 'Mon' },
-  { id: 'tue' as DayCode, short: 'Tue' },
-  { id: 'wed' as DayCode, short: 'Wed' },
-  { id: 'thu' as DayCode, short: 'Thu' },
-  { id: 'fri' as DayCode, short: 'Fri' },
-  { id: 'sat' as DayCode, short: 'Sat' },
-  { id: 'sun' as DayCode, short: 'Sun' },
-];
-
-const LANGUAGES = [
-  { value: 'en', label: '🇺🇸 English' },
-  { value: 'es', label: '🇪🇸 Spanish' },
-  { value: 'fr', label: '🇫🇷 French' },
-  { value: 'de', label: '🇩🇪 German' },
-  { value: 'it', label: '🇮🇹 Italian' },
-  { value: 'pt', label: '🇵🇹 Portuguese' },
-  { value: 'nl', label: '🇳🇱 Dutch' },
-  { value: 'ja', label: '🇯🇵 Japanese' },
-  { value: 'zh', label: '🇨🇳 Chinese' },
-  { value: 'ko', label: '🇰🇷 Korean' },
-];
+import { LANGUAGES, DAYS } from '@/lib/constants';
 
 export default function EditStylePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -207,7 +185,7 @@ export default function EditStylePage({ params }: { params: Promise<{ id: string
                         <div key={index} className="win95-sunken p-2">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-[11px] font-bold">
-                              Article {index + 1} {index === 0 ? '(Required)' : '(Optional)'}
+                              Article {index + 1} (Required)
                             </span>
                             {hasContent && <Win95Badge>{wordCount} words</Win95Badge>}
                           </div>
@@ -352,7 +330,10 @@ export default function EditStylePage({ params }: { params: Promise<{ id: string
                       <Win95Select
                         value={language}
                         onValueChange={setLanguage}
-                        options={LANGUAGES}
+                        options={LANGUAGES.map(l => ({
+                          value: l.code,
+                          label: `${l.flag} ${l.label}`,
+                        }))}
                         disabled={saving}
                       />
                     </div>

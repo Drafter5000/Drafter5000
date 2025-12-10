@@ -194,10 +194,10 @@ export function HowItWorksSection() {
             Ready to get started? It only takes 5 minutes.
           </p>
           <a
-            href="/signup"
+            href="/articles/generate/step-1"
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors"
           >
-            Get Started
+            Start Free Trial
             <ArrowRight className="h-4 w-4" />
           </a>
         </motion.div>

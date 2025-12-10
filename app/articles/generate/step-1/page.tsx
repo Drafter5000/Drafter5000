@@ -1,27 +1,22 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Win95Button,
-  Win95Textarea,
-  Win95Tabs,
-  Win95TabContent,
-  Win95Progress,
-  Win95Alert,
-  Win95Badge,
-} from '@/components/win95';
+import { DesignContext, type DesignMode } from '@/components/design-provider';
+import { StyleFormStep1 } from '@/components/articles/style-form-step1';
 import { DraftSessionService } from '@/lib/draft-session';
-import { isStyleSampleValid, countWords } from '@/lib/onboarding-validation';
+import { isStyleSampleValid } from '@/lib/onboarding-validation';
+import { FileText } from 'lucide-react';
 
 /**
  * Step 1 - Writing Style (Anonymous Access)
- * This page allows the user to input three style samples for generating articles.
- * It validates the input and saves the data to the draft session.
+ * Requirements: 1.2, 2.1, 2.3, 2.4
  */
 export default function GenerateStep1Page() {
   const router = useRouter();
-  const [articles, setArticles] = useState<string[]>(['', '', '']);
-  const [activeTab, setActiveTab] = useState('1');
+  const context = useContext(DesignContext);
+  const designMode: DesignMode = context?.designMode ?? 'modern';
+  const [initialArticles, setInitialArticles] = useState<string[]>(['', '', '']);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,42 +24,25 @@ export default function GenerateStep1Page() {
   useEffect(() => {
     const draftSession = DraftSessionService.load();
     if (draftSession?.style_samples && draftSession.style_samples.length > 0) {
-      setArticles([...draftSession.style_samples, '', '', ''].slice(0, 3));
+      setInitialArticles([...draftSession.style_samples, '', '', ''].slice(0, 3));
     }
     setInitialLoading(false);
   }, []);
 
-  const updateArticle = (index: number, value: string) => {
-    const updated = [...articles];
-    updated[index] = value;
-    setArticles(updated);
-  };
-
-  const hasAllArticles = isStyleSampleValid(articles);
-  const filledCount = articles.filter(a => a.trim().length > 0).length;
-  const progressValue = (filledCount / 3) * 100;
-
-  const getArticleStatus = (index: number) => {
-    const hasContent = articles[index].trim().length > 0;
-    const wordCount = countWords(articles[index]);
-    return { hasContent, wordCount };
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (articles: string[]) => {
     setLoading(true);
     setError(null);
 
     try {
       const validArticles = articles.filter(a => a.trim());
-      if (!isStyleSampleValid(validArticles)) {
-        setError('Please add all three article samples');
+      if (!isStyleSampleValid(articles)) {
+        setError('Please add all 3 article samples to continue');
         setLoading(false);
         return;
       }
 
-      // Save sample articles with word counts
-      DraftSessionService.saveSampleArticles(articles);
       DraftSessionService.save({
+        style_samples: validArticles,
         current_step: 2,
       });
 
@@ -80,124 +58,56 @@ export default function GenerateStep1Page() {
   if (initialLoading) {
     return (
       <div className="text-center py-8">
-        <span className="text-[11px] win95-loading">Loading...</span>
+        <span
+          className={designMode === 'win95' ? 'text-[11px] win95-loading' : 'text-muted-foreground'}
+        >
+          Loading...
+        </span>
       </div>
     );
   }
 
-  const tabs = [
-    { value: '1', label: `Article 1 ${getArticleStatus(0).hasContent ? '✓' : ''}` },
-    { value: '2', label: `Article 2 ${getArticleStatus(1).hasContent ? '✓' : ''}` },
-    { value: '3', label: `Article 3 ${getArticleStatus(2).hasContent ? '✓' : ''}` },
-  ];
+  // Win95 Design
+  if (designMode === 'win95') {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <div className="text-[32px] mb-2">📝</div>
+          <h2 className="text-[14px] font-bold">Define Your Writing Style</h2>
+          <p className="text-[11px] text-[var(--win95-button-shadow)]">
+            Share 3 articles so our AI can learn your unique voice
+          </p>
+        </div>
 
+        <StyleFormStep1
+          initialArticles={initialArticles}
+          onSubmit={handleSubmit}
+          loading={loading}
+          error={error}
+        />
+      </div>
+    );
+  }
+
+  // Modern Design
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="text-center">
-        <div className="text-[32px] mb-2">📝</div>
-        <h2 className="text-[14px] font-bold">Define Your Writing Style</h2>
-        <p className="text-[11px] text-[var(--win95-button-shadow)]">
-          Share up to 3 articles so our AI can learn your unique voice
+        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <FileText className="h-8 w-8 text-primary" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">Define Your Writing Style</h2>
+        <p className="text-muted-foreground">
+          Share 3 articles so our AI can learn your unique voice
         </p>
       </div>
 
-      {/* Progress */}
-      <div className="win95-sunken p-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold">Progress</span>
-          <span className="text-[11px]">{filledCount} of 3 articles</span>
-        </div>
-        <Win95Progress value={progressValue} />
-        <div className="flex justify-between mt-2">
-          {[1, 2, 3].map((num, index) => {
-            const { hasContent } = getArticleStatus(index);
-            return (
-              <div key={num} className="flex items-center gap-1 text-[10px]">
-                <span className={hasContent ? 'text-[var(--win95-success)]' : ''}>
-                  {hasContent ? '✓' : '○'} Article {num}
-                </span>
-                {!hasContent && <Win95Badge variant="secondary">Required</Win95Badge>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Info */}
-      <Win95Alert type="info">
-        Paste articles you have written or content whose style you want to emulate. All three
-        articles are required for accurate style analysis.
-      </Win95Alert>
-
-      {error && (
-        <Win95Alert type="error" title="Error">
-          {error}
-        </Win95Alert>
-      )}
-
-      {/* Tabs */}
-      <Win95Tabs value={activeTab} onValueChange={setActiveTab} tabs={tabs}>
-        {[1, 2, 3].map((num, index) => {
-          const { hasContent, wordCount } = getArticleStatus(index);
-          return (
-            <Win95TabContent key={num} value={String(num)} activeValue={activeTab}>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold">Article {num}</span>
-                    <span className="text-[10px] text-[var(--win95-button-shadow)] ml-2">
-                      Required to continue
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {hasContent && <Win95Badge>{wordCount} words</Win95Badge>}
-                  </div>
-                </div>
-
-                <Win95Textarea
-                  placeholder={`Paste your article here...\n\nThis could be a blog post, newsletter, essay, or any written content.`}
-                  className="min-h-[200px]"
-                  value={articles[index]}
-                  onChange={e => updateArticle(index, e.target.value)}
-                  disabled={loading}
-                />
-
-                <div className="flex items-center justify-between text-[10px]">
-                  <div className="text-[var(--win95-button-shadow)]">
-                    {wordCount} words | {articles[index].length} characters
-                  </div>
-                  {wordCount >= 100 && (
-                    <span className="text-[var(--win95-success)]">✓ Good length</span>
-                  )}
-                </div>
-              </div>
-            </Win95TabContent>
-          );
-        })}
-      </Win95Tabs>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-[var(--win95-button-shadow)]">
-        <div className="text-[11px]">
-          {hasAllArticles ? (
-            <span className="text-[var(--win95-success)]">✓ Ready to continue</span>
-          ) : (
-            <span className="text-[var(--win95-button-shadow)]">
-              Add all three articles to continue
-            </span>
-          )}
-        </div>
-
-        <Win95Button
-          onClick={handleSubmit}
-          disabled={!hasAllArticles || loading}
-          size="lg"
-          className={loading ? 'win95-loading' : ''}
-        >
-          {loading ? 'Saving...' : 'Continue →'}
-        </Win95Button>
-      </div>
+      <StyleFormStep1
+        initialArticles={initialArticles}
+        onSubmit={handleSubmit}
+        loading={loading}
+        error={error}
+      />
     </div>
   );
 }

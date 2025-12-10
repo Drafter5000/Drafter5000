@@ -33,13 +33,15 @@ describe('onboarding-validation', () => {
 
   describe('Property 2: Style sample validation enables continue', () => {
     // **Feature: onboarding-google-sheets, Property 2: Style sample validation enables continue**
-    it('should enable continue iff at least one sample has non-zero length after trimming', () => {
+    it('should enable continue iff all 3 samples have non-zero length after trimming', () => {
       const styleSamplesArbitrary = fc.array(fc.string(), { minLength: 0, maxLength: 5 });
 
       fc.assert(
         fc.property(styleSamplesArbitrary, (samples: string[]) => {
           const result = isStyleSampleValid(samples);
-          const expected = samples.some(s => s.trim().length > 0);
+          // Require exactly 3 articles, all non-empty
+          const expected =
+            samples.length >= 3 && samples.slice(0, 3).every(s => s.trim().length > 0);
 
           expect(result).toBe(expected);
         }),

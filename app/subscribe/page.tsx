@@ -1,33 +1,35 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/components/auth-provider';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Loader2,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { usePlans } from '@/hooks/use-plans';
+import { apiClient } from '@/lib/api-client';
+import type { SubscriptionPlanWithFeatures } from '@/lib/types';
+import {
+  AlertCircle,
+  Check,
   CheckCircle2,
   CreditCard,
-  Shield,
-  Sparkles,
-  AlertCircle,
+  Loader2,
   LogOut,
   PenLine,
+  Shield,
+  Zap,
 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { apiClient } from '@/lib/api-client';
-
-interface SubscriptionPlan {
-  id: string;
-  name: string;
-  description: string | null;
-  price_cents: number;
-  currency: string;
-  features: { feature_text: string }[];
-  stripe_price_id: string | null;
-}
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { PaymentVerification } from '@/components/payment-verification';
 
 // Custom header for subscribe page with logout button
 function SubscribeHeader({ onLogout, loggingOut }: { onLogout: () => void; loggingOut: boolean }) {
@@ -132,15 +134,39 @@ function SubscribeSkeleton() {
   );
 }
 
+function formatPrice(priceCents: number): string {
+  return `${(priceCents / 100).toFixed(0)}`;
+}
+
+function getCtaText(plan: SubscriptionPlanWithFeatures): string {
+  if (plan.cta_text) return plan.cta_text;
+  if (plan.price_cents === 0) return 'Get Started';
+  if (plan.cta_type === 'email') return 'Contact Sales';
+  return 'Subscribe Now';
+}
+
 // Main subscribe content component
 function SubscribeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading, signOut } = useAuth();
-  const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const { plans, loading, error: plansError } = usePlans();
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Check for session_id from Stripe checkout return
+  const sessionId = searchParams.get('session_id');
+  const [isVerifying, setIsVerifying] = useState(!!sessionId);
+  const [verificationStarted, setVerificationStarted] = useState(false);
+
+  // Mark verification as started when we have a session_id
+  useEffect(() => {
+    if (sessionId && !verificationStarted) {
+      setVerificationStarted(true);
+      setIsVerifying(true);
+    }
+  }, [sessionId, verificationStarted]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -160,8 +186,9 @@ function SubscribeContent() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
+    const checkSubscription = async () => {
+      // Don't check subscription if we're in the middle of verification
+      if (!user || isVerifying || sessionId) return;
 
       try {
         const profile = await apiClient.get<{
@@ -171,39 +198,35 @@ function SubscribeContent() {
 
         if (profile.subscription_status === 'active') {
           router.push('/dashboard');
-          return;
-        }
-
-        const response = await apiClient.get<{ plans: SubscriptionPlan[] }>('/stripe/plans');
-        const plans = response.plans || [];
-        const proPlan =
-          plans.find(p => p.id === 'pro') || plans.find(p => p.price_cents > 0) || plans[0];
-        if (proPlan) {
-          setPlan(proPlan);
-        } else {
-          setError('No subscription plan available');
         }
       } catch (err) {
-        console.error('Failed to fetch plan:', err);
-        setError('Failed to load subscription details');
-      } finally {
-        setLoading(false);
+        console.error('Failed to check subscription:', err);
       }
     };
 
-    fetchData();
-  }, [user, router]);
+    checkSubscription();
+  }, [user, router, isVerifying, sessionId]);
 
-  const handleSubscribe = async () => {
-    if (!plan) return;
+  const handleCheckout = async (plan: SubscriptionPlanWithFeatures) => {
+    // Handle email CTA type
+    if (plan.cta_type === 'email') {
+      window.location.href = 'mailto:sales@drafter.com';
+      return;
+    }
 
-    setCheckoutLoading(true);
+    // Handle signup CTA type (free plan)
+    if (plan.cta_type === 'signup' || plan.price_cents === 0) {
+      router.push('/dashboard');
+      return;
+    }
+
+    setCheckoutLoading(plan.id);
     setError(null);
 
     try {
       const response = await apiClient.post<{ sessionUrl: string }>('/stripe/checkout', {
         plan_id: plan.id,
-        success_url: `${window.location.origin}/dashboard?payment_success=true`,
+        success_url: `${window.location.origin}/subscribe?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${window.location.origin}/subscribe`,
       });
 
@@ -213,10 +236,31 @@ function SubscribeContent() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start checkout';
       setError(errorMessage);
-      setCheckoutLoading(false);
+      setCheckoutLoading(null);
     }
   };
 
+  // Show payment verification flow when returning from Stripe checkout
+  // This should take priority over auth loading to prevent flashing
+  if (isVerifying && sessionId) {
+    return (
+      <PaymentVerification
+        sessionId={sessionId}
+        onComplete={() => {
+          // Don't set isVerifying to false - the redirect will happen in the component
+          // This prevents showing the pricing screen briefly before redirect
+        }}
+        onError={err => {
+          console.error('Verification error:', err);
+          setIsVerifying(false);
+          setVerificationStarted(false);
+          setError(err);
+        }}
+      />
+    );
+  }
+
+  // Show loading state only if not verifying
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -229,6 +273,8 @@ function SubscribeContent() {
     return <SubscribeSkeleton />;
   }
 
+  const displayError = error || plansError;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
       <SubscribeHeader onLogout={handleLogout} loggingOut={loggingOut} />
@@ -238,81 +284,108 @@ function SubscribeContent() {
           <div className="absolute bottom-40 right-20 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
         </div>
 
-        <div className="max-w-lg mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 mb-4">
-              <Sparkles className="h-8 w-8 text-primary" />
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/50 text-sm font-medium border border-primary/20 mb-6">
+              <Zap className="h-4 w-4 text-primary" />
+              <span>Choose Your Plan</span>
             </div>
-            <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
-            <p className="text-muted-foreground">
-              Subscribe to unlock all features and start creating amazing content
+            <h1 className="text-3xl md:text-4xl font-bold mb-4">Activate Your Writing Style</h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Subscribe to unlock all features and start receiving your personalized articles
             </p>
           </div>
 
-          {error && (
-            <div className="flex gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm mb-6">
-              <AlertCircle className="h-5 w-5 shrink-0" />
-              <p>{error}</p>
+          {displayError && (
+            <div className="max-w-md mx-auto mb-8 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <p className="text-sm text-destructive">{displayError}</p>
             </div>
           )}
 
-          <Card className="border-2 border-primary/20 shadow-2xl shadow-primary/10">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl">{plan?.name || 'Pro Plan'}</CardTitle>
-              <CardDescription>{plan?.description}</CardDescription>
-              <div className="pt-4">
-                <span className="text-4xl font-bold">
-                  ${plan ? (plan.price_cents / 100).toFixed(2) : '0'}
-                </span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">billed monthly</p>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                {plan?.features?.map((feature, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-                    <span className="text-sm">{feature.feature_text}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                onClick={handleSubscribe}
-                disabled={checkoutLoading || !plan}
-                className="w-full h-12 text-base shadow-lg shadow-primary/20 gap-2"
+          <div
+            className={`grid gap-6 mx-auto ${
+              plans.length === 1
+                ? 'grid-cols-1 max-w-sm justify-center'
+                : plans.length === 2
+                  ? 'grid-cols-1 md:grid-cols-2 max-w-3xl'
+                  : plans.length === 4
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
+                    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'
+            }`}
+          >
+            {plans.map(plan => (
+              <Card
+                key={plan.id}
+                className={`border-2 relative flex flex-col transition-all hover:shadow-lg ${
+                  plan.is_highlighted
+                    ? 'border-primary/50 shadow-xl shadow-primary/10 md:scale-105 md:z-10'
+                    : 'border-border'
+                }`}
               >
-                {checkoutLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Redirecting to checkout...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="h-4 w-4" />
-                    Subscribe Now
-                  </>
+                {plan.is_highlighted && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                  </div>
                 )}
-              </Button>
 
-              <div className="flex items-center justify-center gap-4 pt-4 border-t">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Shield className="h-4 w-4" />
-                  <span>Secure checkout</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Cancel anytime</span>
-                </div>
-              </div>
+                <CardHeader className={plan.is_highlighted ? 'pt-8' : ''}>
+                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="mt-6">
+                    <span className="text-5xl font-bold">${formatPrice(plan.price_cents)}</span>
+                    <span className="text-muted-foreground"> / month</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-3">
+                    {plan.articles_per_month} articles per month
+                  </p>
+                </CardHeader>
 
-              <p className="text-xs text-center text-muted-foreground">
-                Your subscription will start immediately. Cancel anytime.
-              </p>
-            </CardContent>
-          </Card>
+                <CardContent className="flex-1">
+                  <div className="space-y-4">
+                    {plan.features.map(feature => (
+                      <div key={feature.id} className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <span className="text-sm">{feature.feature_text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+
+                <CardFooter>
+                  <Button
+                    onClick={() => handleCheckout(plan)}
+                    disabled={checkoutLoading === plan.id}
+                    variant={plan.is_highlighted ? 'default' : 'outline'}
+                    className="w-full gap-2 shadow-lg shadow-primary/20"
+                  >
+                    {checkoutLoading === plan.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-4 w-4" />
+                        {getCtaText(plan)}
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-12 flex items-center justify-center gap-8">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Shield className="h-5 w-5" />
+              <span>Secure checkout</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-5 w-5" />
+              <span>Cancel anytime</span>
+            </div>
+          </div>
         </div>
       </main>
     </div>

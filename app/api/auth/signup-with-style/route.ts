@@ -11,8 +11,13 @@ const CUSTOMER_DB_FIELDS = mapToDbFields(UserRoleType.CUSTOMER);
 /**
  * POST /api/auth/signup-with-style
  *
- * Creates a new user account and stores pending style data for processing.
- * User must verify email first, then select a plan on /subscribe page.
+ * Creates a new user account and stores pending style data in the database.
+ * User must verify email and then purchase a plan to activate the style.
+ *
+ * Flow:
+ * 1. Create account with pending style
+ * 2. Show email verification screen
+ * 3. After login, user purchases plan to activate style
  *
  * Requirements: 4.3, 4.4
  */
@@ -113,27 +118,29 @@ export async function POST(request: NextRequest) {
     // Setup organization membership
     await setupNewUserOrganization(authData.user.id);
 
-    // Store pending style data in database for processing after subscription
-    const { error: pendingStyleError } = await supabaseAdmin.from('pending_style_data').upsert({
+    // Create pending article style in database (status: pending)
+    // This will be activated after user purchases a plan
+    const { error: styleError } = await supabaseAdmin.from('article_styles').insert({
       user_id: authData.user.id,
-      style_samples,
-      subjects,
+      name: 'My Writing Style',
+      email: email,
+      display_name: name,
+      style_samples: style_samples,
+      subjects: subjects,
       preferred_language: preferred_language || 'en',
       delivery_days: delivery_days || [],
-      job,
-      display_name: name,
-      created_at: new Date().toISOString(),
+      status: 'pending', // Will be activated after payment
+      is_active: false,
     });
 
-    if (pendingStyleError) {
-      console.error('Failed to store pending style data:', pendingStyleError);
-      // Continue anyway - we'll try to recover from profile data
+    if (styleError) {
+      console.error('Failed to create pending style:', styleError);
+      // Don't fail the signup, just log the error
     }
 
-    // Return success - user needs to verify email first, then select plan on /subscribe
     return NextResponse.json({
       user_id: authData.user.id,
-      message: 'Account created. Please verify your email to continue.',
+      message: 'Account created successfully. Please verify your email.',
     });
   } catch (error: unknown) {
     console.error('Signup with style error:', error);

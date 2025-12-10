@@ -22,6 +22,7 @@ export class APIClient {
     try {
       response = await fetch(url.toString(), {
         ...requestInit,
+        credentials: 'include', // Ensure cookies are sent with requests
         headers: {
           'Content-Type': 'application/json',
           ...requestInit.headers,
