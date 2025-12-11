@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Check, Zap, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/components/auth-provider';
@@ -59,7 +59,7 @@ function getCtaText(plan: SubscriptionPlanWithFeatures, isNewUser: boolean): str
   return isNewUser ? 'Select Plan' : 'Subscribe Now';
 }
 
-export default function PricingPage() {
+function PricingContent() {
   const { user } = useAuth();
   const { plans, loading, error } = usePlans();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
@@ -301,5 +301,35 @@ export default function PricingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+function PricingPageFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <Header />
+      <main className="pt-32 pb-20 px-6 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Skeleton className="h-8 w-48 mx-auto mb-6" />
+            <Skeleton className="h-12 w-96 mx-auto mb-4" />
+            <Skeleton className="h-6 w-80 mx-auto" />
+          </div>
+          <div className="grid gap-6 mx-auto grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl">
+            <PlanCardSkeleton />
+            <PlanCardSkeleton />
+            <PlanCardSkeleton />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<PricingPageFallback />}>
+      <PricingContent />
+    </Suspense>
   );
 }
