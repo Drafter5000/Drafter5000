@@ -1,4 +1,4 @@
-import { appendToMainSheet, createCustomerSheet } from '@/lib/google-sheets';
+import { appendToMainSheet, createCustomerSheet, getGoogleAuth } from '@/lib/google-sheets';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { ArticleStyle } from '@/lib/types';
 import Stripe from 'stripe';
@@ -143,14 +143,7 @@ export async function syncStyleToSheets(
       return { success: true };
     }
 
-    const credentialsPath = process.env.GOOGLE_CREDENTIALS_PATH;
-    if (!credentialsPath) {
-      console.error('GOOGLE_CREDENTIALS_PATH not configured!');
-      return {
-        success: false,
-        error: 'Google credentials path not configured',
-      };
-    }
+    // Credentials are handled by getGoogleAuth() - supports both JSON and file path
 
     console.log('Getting subscription end date...');
     const endOfMembership = await getSubscriptionEndDate(style.user_id);
@@ -223,11 +216,7 @@ export async function syncStyleToSheets(
         if (style.subjects && style.subjects.length > 0) {
           console.log(`Preparing to add ${style.subjects.length} topics to customer sheet...`);
 
-          const credPath = process.env.GOOGLE_CREDENTIALS_PATH;
-          const auth = new google.auth.GoogleAuth({
-            keyFile: credPath,
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-          });
+          const auth = getGoogleAuth();
           const sheets = google.sheets({ version: 'v4', auth });
 
           // Escape sheet name for use in ranges

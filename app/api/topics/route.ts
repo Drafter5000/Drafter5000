@@ -1,5 +1,6 @@
 import { getServerSupabaseUser } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getGoogleAuth } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -41,9 +42,8 @@ export async function GET(request: NextRequest) {
     const sheetName = style.display_name || style.name || user.id;
     // Use Customers spreadsheet for customer sheets (tabs)
     const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
-    const credentialsPath = process.env.GOOGLE_CREDENTIALS_PATH;
 
-    if (!spreadsheetId || !credentialsPath) {
+    if (!spreadsheetId) {
       return NextResponse.json({ error: 'Google Sheets not configured' }, { status: 500 });
     }
 
@@ -53,10 +53,7 @@ export async function GET(request: NextRequest) {
         ? `'${sheetName.replace(/'/g, "''")}'`
         : sheetName;
 
-    const auth = new google.auth.GoogleAuth({
-      keyFile: credentialsPath,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
     const sheets = google.sheets({ version: 'v4', auth });
 
     // Fetch all data from the customer sheet (tab) in Customers spreadsheet
@@ -117,9 +114,8 @@ export async function POST(request: NextRequest) {
     const sheetName = style.display_name || style.name || user.id;
     // Use Customers spreadsheet for customer sheets (tabs)
     const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
-    const credentialsPath = process.env.GOOGLE_CREDENTIALS_PATH;
 
-    if (!spreadsheetId || !credentialsPath) {
+    if (!spreadsheetId) {
       return NextResponse.json({ error: 'Google Sheets not configured' }, { status: 500 });
     }
 
@@ -128,10 +124,7 @@ export async function POST(request: NextRequest) {
         ? `'${sheetName.replace(/'/g, "''")}'`
         : sheetName;
 
-    const auth = new google.auth.GoogleAuth({
-      keyFile: credentialsPath,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
+    const auth = getGoogleAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
     // Check if topic already exists in the sheet (prevent duplicates)

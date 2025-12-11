@@ -1,5 +1,6 @@
 import { getServerSupabaseUser } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getGoogleAuth } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -42,9 +43,8 @@ export async function PUT(
     const sheetName = style.display_name || style.name || user.id;
     // Use Customers spreadsheet for customer sheets (tabs)
     const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
-    const credentialsPath = process.env.GOOGLE_CREDENTIALS_PATH;
 
-    if (!spreadsheetId || !credentialsPath) {
+    if (!spreadsheetId) {
       return NextResponse.json({ error: 'Google Sheets not configured' }, { status: 500 });
     }
 
@@ -53,10 +53,7 @@ export async function PUT(
         ? `'${sheetName.replace(/'/g, "''")}'`
         : sheetName;
 
-    const auth = new google.auth.GoogleAuth({
-      keyFile: credentialsPath,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
+    const auth = getGoogleAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
     const currentDate = new Date().toISOString().split('T')[0];
@@ -144,16 +141,12 @@ export async function DELETE(
     const sheetName = style.display_name || style.name || user.id;
     // Use Customers spreadsheet for customer sheets (tabs)
     const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
-    const credentialsPath = process.env.GOOGLE_CREDENTIALS_PATH;
 
-    if (!spreadsheetId || !credentialsPath) {
+    if (!spreadsheetId) {
       return NextResponse.json({ error: 'Google Sheets not configured' }, { status: 500 });
     }
 
-    const auth = new google.auth.GoogleAuth({
-      keyFile: credentialsPath,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
+    const auth = getGoogleAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
     // First, get the sheet ID

@@ -2,18 +2,42 @@ import { google } from 'googleapis';
 
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 
-function getGoogleAuth() {
+/**
+ * Get Google Auth instance with proper credentials handling.
+ * Supports both JSON credentials (for Vercel/production) and file path (for local dev).
+ * @param scopes - OAuth scopes to request (defaults to spreadsheets)
+ */
+export function getGoogleAuth(scopes: string[] = ['https://www.googleapis.com/auth/spreadsheets']) {
+  const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
   const credentialsPath = process.env.GOOGLE_CREDENTIALS_PATH;
-  console.log('[GoogleSheets] Credentials path:', credentialsPath);
 
-  if (!credentialsPath) {
-    console.error('[GoogleSheets] GOOGLE_CREDENTIALS_PATH not configured!');
+  // Prefer JSON credentials (for Vercel/production), fall back to file path (for local dev)
+  if (credentialsJson) {
+    console.log('[GoogleSheets] Using GOOGLE_CREDENTIALS_JSON (environment variable)');
+    try {
+      const credentials = JSON.parse(credentialsJson);
+      return new google.auth.GoogleAuth({
+        credentials,
+        scopes,
+      });
+    } catch (error) {
+      console.error('[GoogleSheets] Failed to parse GOOGLE_CREDENTIALS_JSON:', error);
+      throw new Error('Invalid GOOGLE_CREDENTIALS_JSON format');
+    }
   }
 
-  return new google.auth.GoogleAuth({
-    keyFile: credentialsPath,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+  if (credentialsPath) {
+    console.log('[GoogleSheets] Using GOOGLE_CREDENTIALS_PATH (file):', credentialsPath);
+    return new google.auth.GoogleAuth({
+      keyFile: credentialsPath,
+      scopes,
+    });
+  }
+
+  console.error(
+    '[GoogleSheets] Neither GOOGLE_CREDENTIALS_JSON nor GOOGLE_CREDENTIALS_PATH configured!'
+  );
+  throw new Error('Google credentials not configured');
 }
 
 export async function getGoogleSheetsClient() {
