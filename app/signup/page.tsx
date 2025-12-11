@@ -215,7 +215,7 @@ export default function SignupPage() {
             <CardDescription
               className={`text-base text-gray-500 transition-all duration-700 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              Start with a 7-day free trial
+              Join thousands of content creators
             </CardDescription>
           </CardHeader>
 
@@ -376,7 +376,7 @@ export default function SignupPage() {
                   </>
                 ) : (
                   <>
-                    Sign Up Free
+                    Create Account
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </>
                 )}

@@ -59,8 +59,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Get subscription details
-    const subscriptionStatus = subscription.status || 'active';
+    const stripeSubscriptionStatus = subscription.status;
     const priceId = subscription.items?.data?.[0]?.price?.id;
+
+    console.log('[VerifySession] Stripe subscription status:', stripeSubscriptionStatus);
+    console.log('[VerifySession] Price ID:', priceId);
+
+    // For paid subscriptions, we consider them active even if Stripe says 'trialing' or similar
+    // Since we don't have trials, a paid checkout means active subscription
+    const subscriptionStatus =
+      stripeSubscriptionStatus === 'active' || stripeSubscriptionStatus === 'trialing'
+        ? 'active'
+        : stripeSubscriptionStatus || 'active';
+
+    console.log('[VerifySession] Final subscription status to save:', subscriptionStatus);
 
     // Get plan from metadata or lookup by price
     let plan = checkoutSession.metadata?.plan_id;
@@ -69,8 +81,11 @@ export async function POST(request: NextRequest) {
       plan = planData?.id || 'pro';
     }
 
+    console.log('[VerifySession] Plan:', plan);
+    console.log('[VerifySession] User ID:', user.id);
+
     // Update user profile with subscription status
-    const { error: updateError } = await supabaseAdmin
+    const { data: updateData, error: updateError } = await supabaseAdmin
       .from('user_profiles')
       .update({
         subscription_status: subscriptionStatus,
@@ -78,12 +93,17 @@ export async function POST(request: NextRequest) {
         stripe_customer_id: checkoutSession.customer as string,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', user.id);
+      .eq('id', user.id)
+      .select();
+
+    console.log('[VerifySession] Update result:', updateData);
 
     if (updateError) {
-      console.error('Failed to update profile:', updateError);
+      console.error('[VerifySession] Failed to update profile:', updateError);
       return NextResponse.json({ error: 'Failed to update subscription status' }, { status: 500 });
     }
+
+    console.log('[VerifySession] Profile updated successfully');
 
     // Also update/create subscription record
     const periodStart = subscription.current_period_start || Math.floor(Date.now() / 1000);

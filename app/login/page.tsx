@@ -269,7 +269,7 @@ export default function LoginPage() {
                 href="/articles/generate/step-1"
                 className="text-primary font-medium hover:underline"
               >
-                Get started free
+                Get started
               </Link>
             </div>
 

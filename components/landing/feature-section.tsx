@@ -1,21 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { Brain, Globe, Palette, Shield, Sparkles, Zap } from 'lucide-react';
 import { FloatingCard } from './floating-card';
-import {
-  Sparkles,
-  Brain,
-  Zap,
-  Clock,
-  Target,
-  Shield,
-  BarChart3,
-  Palette,
-  Globe,
-  Rocket,
-  Users,
-  Award,
-} from 'lucide-react';
 
 const features = [
   {

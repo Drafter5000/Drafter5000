@@ -1,21 +1,62 @@
 'use client';
 
-import { useEffect, useState, Suspense, useContext } from 'react';
+import React, { useEffect, useState, Suspense, useContext } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { MetricCard } from '@/components/metric-card';
-import { StyleCard } from '@/components/articles/style-card';
 import { Win95Window, Win95Button, Win95Alert } from '@/components/win95';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
-import { FileText, Mail, Sparkles, Plus, ArrowRight, AlertCircle } from 'lucide-react';
+import {
+  FileText,
+  Mail,
+  Sparkles,
+  Plus,
+  ArrowRight,
+  AlertCircle,
+  Trash2,
+  Edit2,
+  Check,
+  X,
+  Loader2,
+  RefreshCw,
+  Globe,
+  Calendar,
+  Eye,
+  ChevronRight,
+  Zap,
+  TrendingUp,
+  Clock,
+  PenTool,
+  BookOpen,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { ArticleStyle } from '@/lib/types';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+// Tabs removed - using custom filter pills instead
+
+interface Topic {
+  rowIndex: number;
+  topic: string;
+  status: string;
+  subject: string;
+  article: string;
+  lastUpdate: string;
+  client: string;
+}
 
 interface TrendData {
   value: number;
@@ -23,10 +64,7 @@ interface TrendData {
 }
 
 interface DashboardData {
-  profile: {
-    display_name: string | null;
-    email: string;
-  };
+  profile: { display_name: string | null; email: string };
   metrics: {
     articles_generated: number;
     articles_sent: number;
@@ -39,11 +77,31 @@ interface DashboardData {
   };
 }
 
+const STATUS_OPTIONS = ['Needs Draft', 'In Progress', 'Review', 'Published', 'Archived'];
+
+const STATUS_COLORS: Record<string, string> = {
+  'Needs Draft':
+    'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400',
+  'In Progress': 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
+  Review:
+    'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
+  Published:
+    'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400',
+  Archived: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400',
+};
+
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  'Needs Draft': <PenTool className="h-3 w-3" />,
+  'In Progress': <Loader2 className="h-3 w-3" />,
+  Review: <Eye className="h-3 w-3" />,
+  Published: <Check className="h-3 w-3" />,
+  Archived: <BookOpen className="h-3 w-3" />,
+};
+
 function DashboardContent() {
   const { user } = useAuth();
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
   const [style, setStyle] = useState<ArticleStyle | null>(null);
@@ -52,17 +110,75 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
+  // Topics state
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(true);
+  const [newTopic, setNewTopic] = useState('');
+  const [addingTopic, setAddingTopic] = useState(false);
+  const [topicError, setTopicError] = useState<string | null>(null);
+  const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+  const [editingTopic, setEditingTopic] = useState('');
+  const [savingTopic, setSavingTopic] = useState(false);
+  const [deletingRowIndex, setDeletingRowIndex] = useState<number | null>(null);
+  const [showAllTopics, setShowAllTopics] = useState(false);
+  const [activeTopicTab, setActiveTopicTab] = useState('all');
+
+  // Refs to prevent duplicate API calls
+  const fetchingRef = React.useRef(false);
+  const topicsFetchedRef = React.useRef(false);
+
   useEffect(() => {
     if (searchParams.get('payment_success') === 'true') {
       setShowPaymentSuccess(true);
-      router.replace('/dashboard', { scroll: false });
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/dashboard');
+      }
     }
-  }, [searchParams, router]);
+  }, [searchParams]);
+
+  const fetchTopics = async (styleData?: ArticleStyle | null) => {
+    if (topicsFetchedRef.current && !styleData) return;
+    try {
+      setTopicsLoading(true);
+      const response = await apiClient.get<{ topics: Topic[]; sheetName?: string }>('/topics');
+      if ((!response.topics || response.topics.length === 0) && styleData?.subjects?.length) {
+        const subjectTopics: Topic[] = styleData.subjects.map((subject, index) => ({
+          rowIndex: index + 2,
+          topic: subject,
+          status: 'Needs Draft',
+          subject: subject,
+          article: '',
+          lastUpdate: new Date().toISOString().split('T')[0],
+          client: styleData.display_name || styleData.name || '',
+        }));
+        setTopics(subjectTopics);
+      } else {
+        setTopics(response.topics || []);
+      }
+      topicsFetchedRef.current = true;
+    } catch (err) {
+      console.error('Failed to fetch topics:', err);
+      if (styleData?.subjects?.length) {
+        const subjectTopics: Topic[] = styleData.subjects.map((subject, index) => ({
+          rowIndex: index + 2,
+          topic: subject,
+          status: 'Needs Draft',
+          subject: subject,
+          article: '',
+          lastUpdate: new Date().toISOString().split('T')[0],
+          client: styleData.display_name || styleData.name || '',
+        }));
+        setTopics(subjectTopics);
+      }
+    } finally {
+      setTopicsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return;
-
+      if (!user || fetchingRef.current) return;
+      fetchingRef.current = true;
       try {
         setLoading(true);
         const [dashboardData, stylesData] = await Promise.all([
@@ -70,31 +186,94 @@ function DashboardContent() {
           apiClient.get<ArticleStyle[]>(`/article-styles?user_id=${user.id}`),
         ]);
         setData(dashboardData);
-        setStyle(stylesData.length > 0 ? stylesData[0] : null);
+        const userStyle = stylesData.length > 0 ? stylesData[0] : null;
+        setStyle(userStyle);
+        await fetchTopics(userStyle);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to load dashboard';
         setError(message);
-        console.error('Dashboard error:', err);
       } finally {
         setLoading(false);
         setStyleLoading(false);
+        fetchingRef.current = false;
       }
     };
-
     fetchData();
   }, [user]);
 
-  const dismissPaymentSuccess = () => {
-    setShowPaymentSuccess(false);
+  const handleAddTopic = async () => {
+    if (!newTopic.trim()) return;
+    setAddingTopic(true);
+    setTopicError(null);
+    try {
+      await apiClient.post('/topics', { topic: newTopic.trim() });
+      setNewTopic('');
+      topicsFetchedRef.current = false;
+      await fetchTopics(style);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes('already exists')) {
+        setTopicError('This topic already exists');
+      } else {
+        setTopicError('Failed to add topic');
+      }
+      setTimeout(() => setTopicError(null), 3000);
+    } finally {
+      setAddingTopic(false);
+    }
   };
 
-  const handleDeleteStyle = async (id: string) => {
-    if (!user) return;
-    await apiClient.delete(`/article-styles/${id}?user_id=${user.id}`);
-    setStyle(null);
+  const handleUpdateTopic = async (rowIndex: number, topic?: string, status?: string) => {
+    setSavingTopic(true);
+    try {
+      await apiClient.put(`/topics/${rowIndex}`, { topic, status });
+      setEditingRowIndex(null);
+      topicsFetchedRef.current = false;
+      await fetchTopics(style);
+    } catch (err) {
+      console.error('Failed to update topic:', err);
+    } finally {
+      setSavingTopic(false);
+    }
   };
 
-  // Win95 Design
+  const handleDeleteTopic = async (rowIndex: number) => {
+    if (!confirm('Are you sure you want to delete this topic?')) return;
+    setDeletingRowIndex(rowIndex);
+    try {
+      await apiClient.delete(`/topics/${rowIndex}`);
+      topicsFetchedRef.current = false;
+      await fetchTopics(style);
+    } catch (err) {
+      console.error('Failed to delete topic:', err);
+    } finally {
+      setDeletingRowIndex(null);
+    }
+  };
+
+  const startEditing = (topic: Topic) => {
+    setEditingRowIndex(topic.rowIndex);
+    setEditingTopic(topic.topic);
+  };
+
+  const cancelEditing = () => {
+    setEditingRowIndex(null);
+    setEditingTopic('');
+  };
+
+  const dismissPaymentSuccess = () => setShowPaymentSuccess(false);
+
+  // Filter topics by status
+  const filteredTopics =
+    activeTopicTab === 'all' ? topics : topics.filter(t => t.status === activeTopicTab);
+  const displayedTopics = showAllTopics ? filteredTopics : filteredTopics.slice(0, 6);
+  const topicCounts = {
+    all: topics.length,
+    'Needs Draft': topics.filter(t => t.status === 'Needs Draft').length,
+    'In Progress': topics.filter(t => t.status === 'In Progress').length,
+    Published: topics.filter(t => t.status === 'Published').length,
+  };
+
+  // Win95 Design - keeping it simple
   if (designMode === 'win95') {
     if (loading) {
       return (
@@ -137,7 +316,6 @@ function DashboardContent() {
         <div className="min-h-screen p-4">
           <div className="max-w-6xl mx-auto">
             <DashboardHeader />
-
             <Win95Window title="Dashboard" icon={<span>📊</span>}>
               <div className="space-y-4">
                 {showPaymentSuccess && (
@@ -149,14 +327,12 @@ function DashboardContent() {
                     Welcome to Drafter Pro! Your subscription is now active.
                   </Win95Alert>
                 )}
-
                 <div className="win95-sunken p-3">
                   <h2 className="text-[14px] font-bold mb-1">Welcome back, {firstName}! 👋</h2>
                   <p className="text-[11px] text-[var(--win95-button-shadow)]">
                     Here's an overview of your article generation system
                   </p>
                 </div>
-
                 <div className="grid md:grid-cols-3 gap-4">
                   <MetricCard
                     title="Articles Generated"
@@ -180,34 +356,32 @@ function DashboardContent() {
                     trend={data.metrics.trends.draft_articles ?? undefined}
                   />
                 </div>
-
-                <div className="win95-sunken p-3">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[14px]">📄</span>
-                    <span className="text-[11px] font-bold">Your Article Style</span>
-                  </div>
-
-                  {styleLoading ? (
-                    <div className="text-center py-4">
-                      <span className="text-[11px] win95-loading">Loading style...</span>
-                    </div>
-                  ) : style ? (
-                    <div className="max-w-[300px]">
-                      <StyleCard style={style} onDelete={handleDeleteStyle} />
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="text-[32px] mb-2">📄</div>
-                      <h3 className="text-[12px] font-bold mb-1">No Article Style Yet</h3>
-                      <p className="text-[10px] text-[var(--win95-button-shadow)] mb-4">
-                        Create your article style to start generating personalized content.
-                      </p>
-                      <Link href="/articles/generate/step-1">
-                        <Win95Button>+ Create Your Style</Win95Button>
+                {style && (
+                  <div className="win95-sunken p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[11px] font-bold">📄 {style.name}</span>
+                      <Link href={`/articles/styles/${style.id}/edit`}>
+                        <Win95Button size="sm">✏️ Edit</Win95Button>
                       </Link>
                     </div>
-                  )}
-                </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="win95-raised p-2">
+                        <span className="text-[10px]">🌐</span>
+                        <p className="text-[11px] font-bold">
+                          {style.preferred_language.toUpperCase()}
+                        </p>
+                      </div>
+                      <div className="win95-raised p-2">
+                        <span className="text-[10px]">📅</span>
+                        <p className="text-[11px] font-bold">{style.delivery_days.length} days</p>
+                      </div>
+                      <div className="win95-raised p-2">
+                        <span className="text-[10px]">✨</span>
+                        <p className="text-[11px] font-bold">{style.subjects.length} topics</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </Win95Window>
           </div>
@@ -216,25 +390,25 @@ function DashboardContent() {
     );
   }
 
-  // Modern Design
+  // Modern Design - Loading State
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
           <DashboardHeader />
-          <main className="pt-10 pb-20 px-6">
+          <main className="pt-8 pb-20 px-4 md:px-6">
             <div className="max-w-7xl mx-auto space-y-8">
-              <div>
-                <Skeleton className="h-10 w-80 mb-2" />
-                <Skeleton className="h-6 w-96" />
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-80" />
+                <Skeleton className="h-5 w-96" />
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
-                  <Card key={i} className="border-2">
+                  <Card key={i} className="border-0 shadow-sm bg-card/50 backdrop-blur">
                     <CardContent className="pt-6">
-                      <Skeleton className="h-4 w-32 mb-4" />
+                      <Skeleton className="h-4 w-24 mb-3" />
                       <Skeleton className="h-8 w-16 mb-2" />
-                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
                     </CardContent>
                   </Card>
                 ))}
@@ -246,17 +420,27 @@ function DashboardContent() {
     );
   }
 
+  // Modern Design - Error State
   if (error || !data) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
           <DashboardHeader />
-          <main className="pt-24 pb-20 px-6">
+          <main className="pt-24 pb-20 px-4 md:px-6">
             <div className="max-w-7xl mx-auto">
-              <div className="flex gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
-                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-                <p>{error || 'Failed to load dashboard'}</p>
-              </div>
+              <Card className="border-destructive/50 bg-destructive/5">
+                <CardContent className="pt-6">
+                  <div className="flex gap-3 items-start">
+                    <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-destructive">Something went wrong</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {error || 'Failed to load dashboard'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </main>
         </div>
@@ -266,125 +450,521 @@ function DashboardContent() {
 
   const firstName = data.profile.display_name?.split(' ')[0] || 'there';
 
+  // Modern Design - Main Dashboard
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
         <DashboardHeader />
 
-        <main className="pt-10 pb-20 px-6">
+        <main className="pt-8 pb-20 px-4 md:px-6">
           <div className="max-w-7xl mx-auto space-y-8">
+            {/* Payment Success Banner */}
             {showPaymentSuccess && (
-              <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-700 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">🎉</span>
-                  <div>
-                    <p className="font-semibold">Payment Successful!</p>
-                    <p className="text-sm">
-                      Welcome to Drafter Pro! Your subscription is now active.
-                    </p>
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 p-6 text-white shadow-lg">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+                <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                      <Zap className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Welcome to Drafter Pro! 🎉</h3>
+                      <p className="text-white/80">
+                        Your subscription is now active. Start creating amazing content!
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={dismissPaymentSuccess}
+                    className="shrink-0"
+                  >
+                    Dismiss
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" onClick={dismissPaymentSuccess}>
-                  Dismiss
-                </Button>
               </div>
             )}
 
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2">Welcome back, {firstName}! 👋</h2>
-              <p className="text-muted-foreground text-lg">
-                Here's an overview of your article generation system
-              </p>
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-primary mb-1">Dashboard</p>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Welcome back, {firstName}! 👋
+                </h1>
+                <p className="text-muted-foreground mt-2">
+                  Here's what's happening with your content today
+                </p>
+              </div>
+              {style && (
+                <Link href="/articles/generate/step-1">
+                  <Button className="gap-2 shadow-lg shadow-primary/25">
+                    <Plus className="h-4 w-4" />
+                    New Article
+                  </Button>
+                </Link>
+              )}
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Articles Generated"
-                value={data.metrics.articles_generated}
-                description="Total articles created"
-                icon={FileText}
-                trend={data.metrics.trends.articles_generated ?? undefined}
-              />
-              <MetricCard
-                title="Articles Sent"
-                value={data.metrics.articles_sent}
-                description="Delivered to your email"
-                icon={Mail}
-                trend={data.metrics.trends.articles_sent ?? undefined}
-              />
-              <MetricCard
-                title="In Draft"
-                value={data.metrics.draft_articles}
-                description="Waiting for review"
-                icon={Sparkles}
-                trend={data.metrics.trends.draft_articles ?? undefined}
-              />
-              <MetricCard
-                title="Article Styles"
-                value={style ? 1 : 0}
-                description="Active writing styles"
-                icon={FileText}
-              />
-            </div>
-
-            <Card className="border-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Your Article Style
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <Link href="/articles/styles">
-                      <Button variant="ghost" size="sm" className="gap-2">
-                        View All <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Link href="/articles/generate/step-1">
-                      <Button size="sm" className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        New Style
-                      </Button>
-                    </Link>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/10 to-blue-500/5 hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Generated</p>
+                      <p className="text-3xl font-bold mt-1">{data.metrics.articles_generated}</p>
+                      {data.metrics.trends.articles_generated && (
+                        <p
+                          className={`text-xs mt-1 flex items-center gap-1 ${data.metrics.trends.articles_generated.isPositive ? 'text-emerald-600' : 'text-red-600'}`}
+                        >
+                          <TrendingUp className="h-3 w-3" />
+                          {data.metrics.trends.articles_generated.value}% this month
+                        </p>
+                      )}
+                    </div>
+                    <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-blue-600" />
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {styleLoading ? (
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[...Array(1)].map((_, i) => (
-                      <Card key={i} className="border">
-                        <CardContent className="pt-6">
-                          <Skeleton className="h-12 w-12 rounded-xl mb-4" />
-                          <Skeleton className="h-5 w-32 mb-2" />
-                          <Skeleton className="h-4 w-24" />
-                        </CardContent>
-                      </Card>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Sent</p>
+                      <p className="text-3xl font-bold mt-1">{data.metrics.articles_sent}</p>
+                      {data.metrics.trends.articles_sent && (
+                        <p
+                          className={`text-xs mt-1 flex items-center gap-1 ${data.metrics.trends.articles_sent.isPositive ? 'text-emerald-600' : 'text-red-600'}`}
+                        >
+                          <TrendingUp className="h-3 w-3" />
+                          {data.metrics.trends.articles_sent.value}% this month
+                        </p>
+                      )}
+                    </div>
+                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-emerald-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/10 to-amber-500/5 hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">In Draft</p>
+                      <p className="text-3xl font-bold mt-1">{data.metrics.draft_articles}</p>
+                      <p className="text-xs mt-1 text-muted-foreground">Awaiting review</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                      <PenTool className="h-6 w-6 text-amber-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-500/10 to-purple-500/5 hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Topics</p>
+                      <p className="text-3xl font-bold mt-1">{topics.length}</p>
+                      <p className="text-xs mt-1 text-muted-foreground">Active topics</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-2xl bg-purple-500/10 flex items-center justify-center">
+                      <Sparkles className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Main Content Grid */}
+            <div className="grid lg:grid-cols-5 gap-6">
+              {/* Article Style Card - Takes 2 columns */}
+              <Card className="border-0 p-0 shadow-lg overflow-hidden lg:col-span-2 group hover:shadow-xl transition-all duration-500">
+                <CardContent className="p-0">
+                  {styleLoading ? (
+                    <div className="p-6 space-y-4">
+                      <Skeleton className="h-6 w-40" />
+                      <Skeleton className="h-24 w-full rounded-xl" />
+                      <div className="grid grid-cols-3 gap-3">
+                        <Skeleton className="h-20 rounded-xl" />
+                        <Skeleton className="h-20 rounded-xl" />
+                        <Skeleton className="h-20 rounded-xl" />
+                      </div>
+                    </div>
+                  ) : style ? (
+                    <div className="relative">
+                      {/* Header Section */}
+                      <div className="p-6 pb-4 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/25 group-hover:scale-110 transition-transform duration-300">
+                              <FileText className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-lg">{style.name}</h3>
+                              <p className="text-sm text-muted-foreground">Your Writing Style</p>
+                            </div>
+                          </div>
+                          <Link href={`/articles/styles/${style.id}/edit`}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="gap-2 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                              Edit
+                            </Button>
+                          </Link>
+                        </div>
+
+                        {/* Stats Row */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="relative overflow-hidden p-3 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur border border-white/20 dark:border-gray-700/30 group/stat hover:scale-105 transition-transform duration-200">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover/stat:opacity-100 transition-opacity" />
+                            <Globe className="h-5 w-5 text-blue-500 mb-2" />
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                              Language
+                            </p>
+                            <p className="font-bold text-lg">
+                              {style.preferred_language.toUpperCase()}
+                            </p>
+                          </div>
+                          <div className="relative overflow-hidden p-3 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur border border-white/20 dark:border-gray-700/30 group/stat hover:scale-105 transition-transform duration-200">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover/stat:opacity-100 transition-opacity" />
+                            <Calendar className="h-5 w-5 text-emerald-500 mb-2" />
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                              Schedule
+                            </p>
+                            <p className="font-bold text-sm">
+                              {style.delivery_days
+                                .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3))
+                                .join(', ')}
+                            </p>
+                          </div>
+                          <div className="relative overflow-hidden p-3 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur border border-white/20 dark:border-gray-700/30 group/stat hover:scale-105 transition-transform duration-200">
+                            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover/stat:opacity-100 transition-opacity" />
+                            <Sparkles className="h-5 w-5 text-purple-500 mb-2" />
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                              Topics
+                            </p>
+                            <p className="font-bold text-lg">{style.subjects.length}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Writing Samples Section */}
+                      {style.style_samples.length > 0 && (
+                        <div className="px-6 pb-6 pt-2">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                            <BookOpen className="h-3.5 w-3.5" />
+                            Writing Samples ({style.style_samples.length})
+                          </p>
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 scrollbar-thin">
+                            {style.style_samples.map((sample, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3 rounded-lg bg-muted/40 border border-border/50 hover:bg-muted/60 transition-colors"
+                              >
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <Badge
+                                    variant="outline"
+                                    className="h-5 px-1.5 text-[10px] font-semibold"
+                                  >
+                                    Sample {idx + 1}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground line-clamp-2 italic">
+                                  "{sample.substring(0, 150)}
+                                  {sample.length > 150 ? '...' : ''}"
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Footer */}
+                      <div className="px-6 pb-6">
+                        <div className="flex gap-2">
+                          <Link href={`/articles/styles/${style.id}`} className="flex-1">
+                            <Button variant="outline" className="w-full gap-2 group/btn">
+                              <Eye className="h-4 w-4" />
+                              View Details
+                              <ArrowRight className="h-3.5 w-3.5 opacity-0 -ml-2 group-hover/btn:opacity-100 group-hover/btn:ml-0 transition-all" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-5">
+                        <FileText className="h-10 w-10 text-purple-500" />
+                      </div>
+                      <h3 className="font-bold text-xl mb-2">Create Your Style</h3>
+                      <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
+                        Define your unique writing voice and start generating personalized content
+                      </p>
+                      <Link href="/articles/generate/step-1">
+                        <Button className="gap-2 shadow-lg shadow-primary/25">
+                          <Plus className="h-4 w-4" />
+                          Get Started
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Topics Section - Takes 3 columns */}
+              <Card className="lg:col-span-3 p-0 border-0 shadow-lg overflow-hidden">
+                <CardContent className="p-0">
+                  {/* Topics Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold">Your Topics</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Manage and track your content
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        topicsFetchedRef.current = false;
+                        fetchTopics(style);
+                      }}
+                      disabled={topicsLoading}
+                      className="gap-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${topicsLoading ? 'animate-spin' : ''}`} />
+                      Sync
+                    </Button>
+                  </div>
+
+                  {/* Add Topic Input */}
+                  <div className="flex gap-3 px-6">
+                    <div className="relative flex-1">
+                      <Input
+                        placeholder="Enter a new topic to write about..."
+                        value={newTopic}
+                        onChange={e => {
+                          setNewTopic(e.target.value);
+                          setTopicError(null);
+                        }}
+                        onKeyDown={e => e.key === 'Enter' && handleAddTopic()}
+                        disabled={addingTopic}
+                        className={`h-10 ${topicError ? 'border-destructive' : ''}`}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleAddTopic}
+                      disabled={addingTopic || !newTopic.trim()}
+                      className="h-10 px-4 gap-2"
+                    >
+                      {addingTopic ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4" /> Add
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {topicError && <p className="text-sm text-destructive px-6">{topicError}</p>}
+
+                  {/* Status Filter Pills */}
+                  <div className="flex flex-wrap gap-2 px-6 pt-4">
+                    {[
+                      {
+                        key: 'all',
+                        label: 'All',
+                        count: topicCounts.all,
+                        color: 'bg-muted hover:bg-muted/80',
+                      },
+                      {
+                        key: 'Needs Draft',
+                        label: 'Needs Draft',
+                        count: topicCounts['Needs Draft'],
+                        color:
+                          'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400',
+                        icon: <PenTool className="h-3 w-3" />,
+                      },
+                      {
+                        key: 'Published',
+                        label: 'Published',
+                        count: topicCounts.Published,
+                        color:
+                          'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400',
+                        icon: <Check className="h-3 w-3" />,
+                      },
+                    ].map(filter => (
+                      <button
+                        key={filter.key}
+                        onClick={() => setActiveTopicTab(filter.key)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                          activeTopicTab === filter.key
+                            ? 'ring-2 ring-primary ring-offset-2 ' + filter.color
+                            : filter.color + ' opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        {filter.icon}
+                        {filter.label}
+                        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-xs">
+                          {filter.count}
+                        </span>
+                      </button>
                     ))}
                   </div>
-                ) : style ? (
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <StyleCard style={style} onDelete={handleDeleteStyle} />
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                      <FileText className="h-8 w-8 text-muted-foreground" />
+
+                  {/* Topics List */}
+                  {topicsLoading ? (
+                    <div className="space-y-2 px-6 pt-4">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
                     </div>
-                    <h3 className="font-semibold mb-2">No Article Style Yet</h3>
-                    <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
-                      Create your article style to start generating personalized content.
-                    </p>
-                    <Link href="/articles/generate/step-1">
-                      <Button className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        Create Your Style
+                  ) : filteredTopics.length === 0 ? (
+                    <div className="text-center py-12 px-6">
+                      <Sparkles className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
+                      <h3 className="font-semibold mb-1">No topics found</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {activeTopicTab === 'all'
+                          ? 'Add your first topic above!'
+                          : `No "${activeTopicTab}" topics yet`}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 px-6 pt-4">
+                      {displayedTopics.map(topic => (
+                        <div
+                          key={topic.rowIndex}
+                          className="group flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          {editingRowIndex === topic.rowIndex ? (
+                            <div className="flex-1 flex gap-2">
+                              <Input
+                                value={editingTopic}
+                                onChange={e => setEditingTopic(e.target.value)}
+                                autoFocus
+                                className="flex-1"
+                                onKeyDown={e =>
+                                  e.key === 'Enter' &&
+                                  handleUpdateTopic(topic.rowIndex, editingTopic)
+                                }
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdateTopic(topic.rowIndex, editingTopic)}
+                                disabled={savingTopic}
+                              >
+                                {savingTopic ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start gap-2 mb-1">
+                                  <p className="font-medium text-sm">{topic.topic}</p>
+                                  <Badge
+                                    variant="outline"
+                                    className={`shrink-0 text-[10px] ${STATUS_COLORS[topic.status]}`}
+                                  >
+                                    {topic.status}
+                                  </Badge>
+                                </div>
+                                {topic.article && (
+                                  <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
+                                    {topic.article}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">{topic.lastUpdate}</p>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => startEditing(topic)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-red-500 hover:text-red-600"
+                                  onClick={() => handleDeleteTopic(topic.rowIndex)}
+                                  disabled={deletingRowIndex === topic.rowIndex}
+                                >
+                                  {deletingRowIndex === topic.rowIndex ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* View More */}
+                  {filteredTopics.length > 6 && (
+                    <div className="px-6 pt-2">
+                      <Button
+                        variant="ghost"
+                        className="w-full gap-2"
+                        onClick={() => setShowAllTopics(!showAllTopics)}
+                      >
+                        {showAllTopics ? (
+                          'Show Less'
+                        ) : (
+                          <>
+                            View All {filteredTopics.length} Topics{' '}
+                            <ChevronRight className="h-4 w-4" />
+                          </>
+                        )}
                       </Button>
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  {topics.length > 0 && (
+                    <div className="flex items-center justify-between text-sm text-muted-foreground px-6 py-4">
+                      <span>
+                        {topics.length} topic{topics.length !== 1 ? 's' : ''}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Synced
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </main>
       </div>
@@ -397,10 +977,10 @@ export default function DashboardPage() {
     <Suspense
       fallback={
         <ProtectedRoute>
-          <div className="min-h-screen p-4">
-            <div className="max-w-6xl mx-auto">
-              <DashboardHeader />
-              <div className="text-center py-8">Loading...</div>
+          <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+            <DashboardHeader />
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           </div>
         </ProtectedRoute>

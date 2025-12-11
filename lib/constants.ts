@@ -28,13 +28,9 @@ export const LANGUAGES: Language[] = [
   { code: 'it', label: 'Italian', flag: '🇮🇹' },
   { code: 'pt', label: 'Portuguese', flag: '🇵🇹' },
   { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
-  { code: 'pl', label: 'Polish', flag: '🇵🇱' },
-  { code: 'ru', label: 'Russian', flag: '🇷🇺' },
   { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
   { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
   { code: 'ko', label: 'Korean', flag: '🇰🇷' },
-  { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
-  { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
 ];
 
 /**

@@ -137,6 +137,17 @@ export async function POST(request: NextRequest) {
     // Ensure Stripe product and price exist (auto-create if needed)
     const { priceId } = await ensureStripeProductAndPrice(plan);
     const supabase = await getServerSupabaseClient();
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Check if user has pending style data from onboarding signup flow
+    // Requirements: 6.2
+    const { data: pendingStyleData } = await supabaseAdmin
+      .from('pending_style_data')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .single();
+
+    const hasPendingStyle = !!pendingStyleData;
 
     // Get or create Stripe customer
     const { data: profileData } = await supabase
@@ -172,6 +183,8 @@ export async function POST(request: NextRequest) {
     const finalCancelUrl = cancel_url || `${baseUrl}/subscribe`;
 
     // Create checkout session - no trial, payment required immediately
+    // Include pending_style flag in metadata for webhook processing
+    // Requirements: 6.2
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -197,6 +210,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         user_id: session.user.id,
         plan_id,
+        pending_style: hasPendingStyle ? 'true' : 'false',
       },
     });
 

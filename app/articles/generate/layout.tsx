@@ -107,6 +107,7 @@ export default function GenerateLayout({ children }: { children: React.ReactNode
             <span className="font-bold text-lg">Drafter</span>
           </Link>
           <div className="flex items-center gap-3">
+            {/* Win95 design toggle - temporarily hidden
             <Button
               variant="outline"
               size="sm"
@@ -116,6 +117,7 @@ export default function GenerateLayout({ children }: { children: React.ReactNode
               <Monitor className="h-4 w-4 mr-1" />
               Win95
             </Button>
+            */}
             <Link href="/login" className="text-sm text-primary hover:underline">
               Already have an account? Sign in
             </Link>

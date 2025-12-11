@@ -31,7 +31,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { PaymentVerification } from '@/components/payment-verification';
 
-// Custom header for subscribe page with logout button
+// Custom header for subscribe page with logout button only
 function SubscribeHeader({ onLogout, loggingOut }: { onLogout: () => void; loggingOut: boolean }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/70 backdrop-blur-xl border-b border-border/50">
@@ -43,12 +43,6 @@ function SubscribeHeader({ onLogout, loggingOut }: { onLogout: () => void; loggi
           <span>Drafter</span>
         </Link>
         <nav className="flex items-center gap-4">
-          <Link
-            href="/pricing"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-secondary"
-          >
-            Pricing
-          </Link>
           <Button
             variant="outline"
             size="sm"
@@ -80,7 +74,6 @@ function SubscribeSkeleton() {
             <Skeleton className="h-6 w-20" />
           </div>
           <div className="flex items-center gap-4">
-            <Skeleton className="h-8 w-16" />
             <Skeleton className="h-8 w-20" />
           </div>
         </div>

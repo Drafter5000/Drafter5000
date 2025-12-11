@@ -18,12 +18,51 @@ const anonymousRoutes = ['/articles/generate'];
 // Routes that require active subscription
 const subscriptionRequiredRoutes = ['/dashboard', '/articles'];
 
+// Onboarding step routes - logged-in users with existing styles cannot start new onboarding
+const onboardingStepRoutes = [
+  '/articles/generate/step-1',
+  '/articles/generate/step-2',
+  '/articles/generate/step-3',
+];
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const searchParams = request.nextUrl.searchParams;
 
   // Skip middleware for API routes - they handle their own auth
   if (pathname.startsWith('/api/')) {
     return NextResponse.next();
+  }
+
+  // Allow access to dashboard with payment_success parameter (just completed payment)
+  // The payment verification flow redirects here after updating subscription status
+  const isPaymentSuccessRedirect =
+    pathname === '/dashboard' && searchParams.get('payment_success') === 'true';
+  if (isPaymentSuccessRedirect) {
+    // Still need to verify user is authenticated
+    const supabaseResponse = NextResponse.next({ request });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              supabaseResponse.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      return supabaseResponse;
+    }
   }
 
   const supabaseResponse = NextResponse.next({
@@ -62,8 +101,9 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single();
 
-      // Only active subscription grants access (no trial)
-      const hasActiveSubscription = profile?.subscription_status === 'active';
+      // Active or trialing subscription grants access (treat trialing as active since no free trial)
+      const hasActiveSubscription =
+        profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
 
       if (hasActiveSubscription) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -77,6 +117,29 @@ export async function middleware(request: NextRequest) {
   // Allow anonymous routes (onboarding flow) for everyone
   const isAnonymousRoute = anonymousRoutes.some(route => pathname.startsWith(route));
   if (isAnonymousRoute) {
+    // Check if logged-in user is trying to access onboarding steps
+    // Logged-in users with existing article styles can only UPDATE, not create new
+    const isOnboardingStep = onboardingStepRoutes.some(route => pathname === route);
+
+    if (user && isOnboardingStep) {
+      // Check if user already has an active article style
+      const { data: existingStyle } = await supabase
+        .from('article_styles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (existingStyle) {
+        // User already has a style - redirect to dashboard
+        // They can update their style from dashboard, not create new via onboarding
+        console.log(
+          '[Middleware] Logged-in user with existing style trying to access onboarding, redirecting to dashboard'
+        );
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
+
     return supabaseResponse;
   }
 
@@ -90,30 +153,63 @@ export async function middleware(request: NextRequest) {
   const isSubscribePage = pathname === '/subscribe';
 
   if (requiresSubscription || isSubscribePage) {
-    // Fetch user profile to check subscription status and onboarding
-    const { data: profile } = await supabase
+    // Fetch user profile to check subscription status
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('subscription_status, onboarding_completed')
+      .select('subscription_status')
       .eq('id', user.id)
       .single();
 
-    // Only active subscription grants access (no trial)
-    const hasActiveSubscription = profile?.subscription_status === 'active';
-    const hasCompletedOnboarding = profile?.onboarding_completed === true;
+    // Log for debugging
+    console.log('[Middleware] User ID:', user.id);
+    console.log('[Middleware] Profile data:', profile);
+    console.log('[Middleware] Profile error:', profileError);
+    console.log('[Middleware] Subscription status:', profile?.subscription_status);
+
+    // Active or trialing subscription grants access (treat trialing as active since no free trial)
+    const hasActiveSubscription =
+      profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
+
+    console.log('[Middleware] Has active subscription:', hasActiveSubscription);
+    console.log('[Middleware] Path:', pathname);
 
     // If on subscribe page but already has subscription, redirect to dashboard
     if (isSubscribePage && hasActiveSubscription) {
+      console.log('[Middleware] Redirecting from subscribe to dashboard (has subscription)');
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
     // If trying to access subscription-required routes without subscription, redirect to subscribe
     if (requiresSubscription && !hasActiveSubscription) {
+      console.log('[Middleware] Redirecting to subscribe (no active subscription)');
       return NextResponse.redirect(new URL('/subscribe', request.url));
     }
 
-    // If trying to access dashboard but onboarding not completed, redirect to step 1
-    if (requiresSubscription && hasActiveSubscription && !hasCompletedOnboarding) {
-      return NextResponse.redirect(new URL('/articles/generate/step-1', request.url));
+    // Check if user has completed onboarding (has an active article style)
+    // Only check for dashboard access, not other subscription routes
+    if (pathname === '/dashboard' && hasActiveSubscription) {
+      const { data: articleStyle, error: styleError } = await supabase
+        .from('article_styles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      console.log('[Middleware] Article style query result:', articleStyle);
+      console.log('[Middleware] Article style query error:', styleError);
+
+      const hasCompletedOnboarding = !!articleStyle;
+      console.log(
+        '[Middleware] Has completed onboarding (has article style):',
+        hasCompletedOnboarding
+      );
+
+      // If no article style and no error, redirect to onboarding
+      // If there's an error, allow access to dashboard (fail open)
+      if (!hasCompletedOnboarding && !styleError) {
+        console.log('[Middleware] Redirecting to step-1 (no article style)');
+        return NextResponse.redirect(new URL('/articles/generate/step-1', request.url));
+      }
     }
   }
 

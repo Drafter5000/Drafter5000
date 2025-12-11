@@ -258,6 +258,7 @@ export interface ArticleStyle {
   delivery_days: string[];
   sheets_config_id: string | null;
   sheets_row_id: string | null;
+  sheets_synced?: boolean; // Flag to prevent duplicate Google Sheets syncs
   is_active: boolean;
   created_at: string;
   updated_at: string;

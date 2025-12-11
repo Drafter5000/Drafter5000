@@ -166,7 +166,7 @@ export default function Home() {
                   <legend className="win95-groupbox-title font-bold">🔗 Quick Links</legend>
                   <div className="flex flex-wrap gap-2 justify-center">
                     <Link href="/articles/generate/step-1">
-                      <Win95Button size="md">✨ Get Started Free</Win95Button>
+                      <Win95Button size="md">✨ Get Started</Win95Button>
                     </Link>
                     <Link href="/login">
                       <Win95Button size="md">🔐 Log In</Win95Button>
@@ -306,7 +306,7 @@ export default function Home() {
                       size="lg"
                       className="gap-2 shadow-2xl shadow-primary/30 text-lg px-8 h-14 rounded-2xl"
                     >
-                      Get Started Free <ArrowRight className="h-5 w-5" />
+                      Get Started <ArrowRight className="h-5 w-5" />
                     </Button>
                   </Link>
                   <Button

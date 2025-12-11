@@ -53,19 +53,29 @@ export async function POST(request: NextRequest) {
         .eq('id', user_id);
     }
 
-    // Sync to Google Sheets (non-blocking)
-    syncStyleToSheets(style).then(async result => {
-      if (result.success && (result.sheetsConfigId || result.sheetsRowId)) {
-        const supabase = await getServerSupabaseClient();
-        await supabase
-          .from('article_styles')
-          .update({
-            sheets_config_id: result.sheetsConfigId,
-            sheets_row_id: result.sheetsRowId,
-          })
-          .eq('id', style.id);
-      }
-    });
+    // Sync to Google Sheets ONLY if not already synced (prevent duplicate syncs)
+    // The sync may also happen in webhook or activate-style API
+    if (!style.sheets_synced) {
+      syncStyleToSheets(style).then(async result => {
+        if (result.success) {
+          const supabase = await getServerSupabaseClient();
+          await supabase
+            .from('article_styles')
+            .update({
+              sheets_config_id: result.sheetsConfigId,
+              sheets_row_id: result.sheetsRowId,
+              sheets_synced: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', style.id);
+          console.log(`[Step3] Style ${style.id} synced to Google Sheets`);
+        } else {
+          console.error(`[Step3] Failed to sync style ${style.id} to Google Sheets:`, result.error);
+        }
+      });
+    } else {
+      console.log(`[Step3] Style ${style.id} already synced to Google Sheets, skipping`);
+    }
 
     return NextResponse.json({ success: true, style, redirectTo: '/dashboard' });
   } catch (error: unknown) {

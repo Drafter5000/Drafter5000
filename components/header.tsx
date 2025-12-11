@@ -35,6 +35,7 @@ export function Header() {
           <span>Drafter</span>
         </Link>
         <nav className="flex items-center gap-4">
+          {/* Win95 design toggle - temporarily hidden
           <Button
             variant="outline"
             size="sm"
@@ -45,6 +46,7 @@ export function Header() {
             <Monitor className="h-4 w-4" />
             <span className="hidden md:inline">Win95</span>
           </Button>
+          */}
           <Link
             href="/pricing"
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-secondary"

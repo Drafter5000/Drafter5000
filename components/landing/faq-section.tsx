@@ -28,7 +28,7 @@ const faqs = [
   {
     question: 'How many articles can I generate per month?',
     answer:
-      'It depends on your plan. The free tier includes 5 articles/month, Pro includes 50 articles/month, and Enterprise offers unlimited generation. Check our pricing page for full details.',
+      'It depends on your plan. Our Starter plan includes 10 articles/month, Pro includes 50 articles/month, and Enterprise offers unlimited generation. Check our pricing page for full details.',
   },
   {
     question: 'Can I cancel my subscription anytime?',

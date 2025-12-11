@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Handle pending style data from onboarding signup flow
-        // Requirements: 4.5, 4.6
+        // Requirements: 7.1, 7.2, 7.3
         // Style data is stored in pending_style_data table (not Stripe metadata due to 500 char limit)
         if (hasPendingStyle && profileId) {
           try {
@@ -127,63 +127,122 @@ export async function POST(request: NextRequest) {
               .single();
 
             if (pendingError || !pendingData) {
+              // Log error but don't fail webhook - payment is already recorded
+              // Requirements: 8.4, 8.5
               console.error('Failed to fetch pending style data:', pendingError);
-              break;
-            }
+              console.error(
+                `MANUAL_RECOVERY_NEEDED: User ${profileId} paid but pending style data not found`
+              );
+              // Don't break - continue processing other webhook logic
+            } else {
+              const styleSamples = pendingData.style_samples || [];
+              const subjects = pendingData.subjects || [];
+              const deliveryDays = pendingData.delivery_days || [];
+              const preferredLanguage = pendingData.preferred_language || 'en';
+              const displayName = pendingData.display_name || '';
+              const job = pendingData.job || '';
 
-            const styleSamples = pendingData.style_samples || [];
-            const subjects = pendingData.subjects || [];
-            const deliveryDays = pendingData.delivery_days || [];
-            const preferredLanguage = pendingData.preferred_language || 'en';
-            const displayName = pendingData.display_name || '';
-            const job = pendingData.job || '';
+              // Get user email from profile
+              const { data: userProfile } = await supabase
+                .from('user_profiles')
+                .select('email')
+                .eq('id', profileId)
+                .single();
 
-            // Get user email from profile
-            const { data: userProfile } = await supabase
-              .from('user_profiles')
-              .select('email')
-              .eq('id', profileId)
-              .single();
+              // Check if article_style already exists for this user (prevent duplicates)
+              const { data: existingStyle } = await supabase
+                .from('article_styles')
+                .select('*')
+                .eq('user_id', profileId)
+                .single();
 
-            // Create article_style record
-            const { data: articleStyle, error: styleError } = await supabase
-              .from('article_styles')
-              .insert({
-                user_id: profileId,
-                name: `${displayName}'s Style`,
-                style_samples: styleSamples,
-                subjects: subjects,
-                email: userProfile?.email || '',
-                display_name: displayName,
-                preferred_language: preferredLanguage,
-                delivery_days: deliveryDays,
-                is_active: true,
-              })
-              .select()
-              .single();
+              let articleStyle = existingStyle as any;
+              let styleError: any = null;
 
-            // Mark onboarding as completed
-            await supabase
-              .from('user_profiles')
-              .update({ onboarding_completed: true })
-              .eq('id', profileId);
+              if (!existingStyle) {
+                // Create article_style record only if it doesn't exist
+                // Requirements: 7.1
+                const { data: newStyle, error: createError } = await supabase
+                  .from('article_styles')
+                  .insert({
+                    user_id: profileId,
+                    name: `${displayName}'s Style`,
+                    style_samples: styleSamples,
+                    subjects: subjects,
+                    email: userProfile?.email || '',
+                    display_name: displayName,
+                    preferred_language: preferredLanguage,
+                    delivery_days: deliveryDays,
+                    is_active: true,
+                    sheets_synced: false, // Will be set to true after sync
+                  })
+                  .select()
+                  .single();
 
-            if (styleError) {
-              console.error('Failed to create article style:', styleError);
-            } else if (articleStyle) {
-              // Sync to Google Sheets with job field
-              const syncResult = await syncStyleToSheets(articleStyle, job);
-              if (!syncResult.success) {
-                console.error('Failed to sync style to Google Sheets:', syncResult.error);
+                articleStyle = newStyle;
+                styleError = createError;
               } else {
-                console.log(`Style synced to Google Sheets for user ${profileId}`);
+                console.log(
+                  `Article style already exists for user ${profileId}, skipping creation`
+                );
               }
 
-              // Clean up pending style data after successful processing
-              await supabase.from('pending_style_data').delete().eq('user_id', profileId);
+              // Mark onboarding as completed
+              await supabase
+                .from('user_profiles')
+                .update({ onboarding_completed: true })
+                .eq('id', profileId);
+
+              if (styleError) {
+                // Log error but don't fail webhook - payment is already recorded
+                // Requirements: 8.5
+                console.error('Failed to create article style:', styleError);
+                console.error(
+                  `MANUAL_RECOVERY_NEEDED: User ${profileId} paid but article style creation failed`
+                );
+              } else if (articleStyle && !articleStyle.sheets_synced) {
+                // Sync to Google Sheets with job field ONLY if not already synced
+                // Requirements: 7.2
+                try {
+                  const syncResult = await syncStyleToSheets(articleStyle, job);
+                  if (!syncResult.success) {
+                    // Log error but don't fail - Google Sheets sync is non-critical
+                    // Requirements: 8.4
+                    console.error('Failed to sync style to Google Sheets:', syncResult.error);
+                    console.error(`GOOGLE_SHEETS_RETRY_NEEDED: User ${profileId} style not synced`);
+                  } else {
+                    // Mark as synced to prevent duplicate syncs
+                    await supabase
+                      .from('article_styles')
+                      .update({ sheets_synced: true, updated_at: new Date().toISOString() })
+                      .eq('id', articleStyle.id);
+                    console.log(`Style synced to Google Sheets for user ${profileId}`);
+                  }
+                } catch (syncError) {
+                  // Google Sheets sync failure should not block user flow
+                  // Requirements: 8.4
+                  console.error('Google Sheets sync error:', syncError);
+                  console.error(`GOOGLE_SHEETS_RETRY_NEEDED: User ${profileId} style not synced`);
+                }
+
+                // Clean up pending style data after successful article style creation
+                // Requirements: 7.3
+                await supabase.from('pending_style_data').delete().eq('user_id', profileId);
+              } else if (articleStyle?.sheets_synced) {
+                console.log(
+                  `Style already synced to Google Sheets for user ${profileId}, skipping`
+                );
+                // Still clean up pending data
+                await supabase.from('pending_style_data').delete().eq('user_id', profileId);
+              }
             }
           } catch (styleProcessError) {
+            // Log error but don't fail webhook - payment is already recorded
+            // Requirements: 8.5
             console.error('Error processing pending style data:', styleProcessError);
+            console.error(
+              `MANUAL_RECOVERY_NEEDED: User ${profileId} paid but style processing failed`
+            );
           }
         }
 

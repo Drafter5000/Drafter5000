@@ -11,7 +11,7 @@ import { mapToUserRole } from '../role-config';
 import type { OrgScopeContext } from './org-scope';
 
 export interface ScopedListParams extends ListParams {
-  organization_id?: string; // Filter by specific org (for Super Admins)
+  organization_id?: string;
 }
 
 /**
@@ -27,12 +27,9 @@ export async function listUsers(
   const page = params.page || 1;
   const pageSize = params.page_size || 10;
   const offset = (page - 1) * pageSize;
-
-  // Determine organization filter based on scope
   let orgFilter: string | null = null;
 
   if (scopeContext) {
-    // Customer Admins can only see users in their organization
     if (!scopeContext.isSuperAdmin && scopeContext.currentOrgId) {
       orgFilter = scopeContext.currentOrgId;
     }

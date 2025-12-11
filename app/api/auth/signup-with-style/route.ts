@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { setupNewUserOrganization } from '@/lib/organization-utils';
 import { UserRoleType } from '@/lib/types';
@@ -11,15 +13,18 @@ const CUSTOMER_DB_FIELDS = mapToDbFields(UserRoleType.CUSTOMER);
 /**
  * POST /api/auth/signup-with-style
  *
- * Creates a new user account and stores pending style data in the database.
- * User must verify email and then purchase a plan to activate the style.
+ * Creates a new user account without email verification and stores pending style data.
+ * After signup, user is automatically signed in and redirected to subscribe page.
+ * Style data is activated after successful payment via webhook.
  *
  * Flow:
- * 1. Create account with pending style
- * 2. Show email verification screen
- * 3. After login, user purchases plan to activate style
+ * 1. Create account (email_confirm: true - no verification needed)
+ * 2. Save user profile immediately
+ * 3. Store style data in pending_style_data table
+ * 4. Sign in user to establish session
+ * 5. Redirect to subscribe page
  *
- * Requirements: 4.3, 4.4
+ * Requirements: 4.3, 4.4, 4.5, 4.6
  */
 export async function POST(request: NextRequest) {
   try {
@@ -40,17 +45,36 @@ export async function POST(request: NextRequest) {
     const validation = validateSignupForm({ name, email, password, confirmPassword, job });
     if (!validation.valid) {
       return NextResponse.json(
-        { error: 'Validation failed', fields: validation.errors },
+        {
+          success: false,
+          error: 'Validation failed',
+          fields: validation.errors,
+          retry: true,
+        },
         { status: 400 }
       );
     }
 
     // Validate style data
     if (!style_samples || style_samples.length === 0) {
-      return NextResponse.json({ error: 'At least one style sample is required' }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'At least one style sample is required',
+          retry: true,
+        },
+        { status: 400 }
+      );
     }
     if (!subjects || subjects.length === 0) {
-      return NextResponse.json({ error: 'At least one topic is required' }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'At least one topic is required',
+          retry: true,
+        },
+        { status: 400 }
+      );
     }
 
     const supabaseAdmin = getSupabaseAdmin();
@@ -64,36 +88,51 @@ export async function POST(request: NextRequest) {
 
     if (existingProfile) {
       return NextResponse.json(
-        { error: 'An account with this email already exists' },
+        {
+          success: false,
+          error: 'An account with this email already exists. Please sign in instead.',
+          retry: false,
+        },
         { status: 409 }
       );
     }
 
-    // Create user account
+    // Create user account with email_confirm: true to skip email verification
+    // Requirements: 4.3
     const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true, // Skip email verification
       user_metadata: {
         display_name: name,
       },
     });
 
-    if (signUpError) throw signUpError;
-    if (!authData.user) {
-      return NextResponse.json({ error: 'Failed to create user' }, { status: 400 });
+    if (signUpError) {
+      console.error('Auth creation error:', signUpError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to create account. Please try again.',
+          retry: true,
+        },
+        { status: 500 }
+      );
     }
 
-    // Send verification email
-    await supabaseAdmin.auth.resend({
-      type: 'signup',
-      email,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
-      },
-    });
+    if (!authData.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to create user account. Please try again.',
+          retry: true,
+        },
+        { status: 400 }
+      );
+    }
 
-    // Create user profile with job field
+    // Create user profile with job field immediately
+    // Requirements: 4.4
     const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
       id: authData.user.id,
       email,
@@ -106,53 +145,122 @@ export async function POST(request: NextRequest) {
     });
 
     if (profileError) {
+      console.error('Profile creation error:', profileError);
       if (profileError.code === '23505') {
         return NextResponse.json(
-          { error: 'An account with this email already exists' },
+          {
+            success: false,
+            error: 'An account with this email already exists. Please sign in instead.',
+            retry: false,
+          },
           { status: 409 }
         );
       }
-      throw profileError;
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to save profile. Please try again.',
+          retry: true,
+        },
+        { status: 500 }
+      );
     }
 
     // Setup organization membership
-    await setupNewUserOrganization(authData.user.id);
+    try {
+      await setupNewUserOrganization(authData.user.id);
+    } catch (orgError) {
+      console.error('Organization setup error:', orgError);
+      // Don't fail signup for org setup issues
+    }
 
-    // Create pending article style in database (status: pending)
-    // This will be activated after user purchases a plan
-    const { error: styleError } = await supabaseAdmin.from('article_styles').insert({
+    // Store style data in pending_style_data table
+    // This will be activated after payment via webhook
+    // Requirements: 4.5
+    const { error: pendingStyleError } = await supabaseAdmin.from('pending_style_data').upsert({
       user_id: authData.user.id,
-      name: 'My Writing Style',
-      email: email,
       display_name: name,
       style_samples: style_samples,
       subjects: subjects,
       preferred_language: preferred_language || 'en',
       delivery_days: delivery_days || [],
-      status: 'pending', // Will be activated after payment
-      is_active: false,
+      job: job,
+      updated_at: new Date().toISOString(),
     });
 
-    if (styleError) {
-      console.error('Failed to create pending style:', styleError);
-      // Don't fail the signup, just log the error
+    if (pendingStyleError) {
+      console.error('Failed to save pending style data:', pendingStyleError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to save style data. Please try again.',
+          retry: true,
+        },
+        { status: 500 }
+      );
     }
 
+    // Sign in the user to establish a session
+    // This allows automatic redirect to subscribe page without requiring login
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      console.error('Auto sign-in error:', signInError);
+      // Don't fail the signup, just log the error
+      // User can still manually log in
+    }
+
+    // Return success with redirect URL to subscribe page
+    // Requirements: 4.6
     return NextResponse.json({
+      success: true,
       user_id: authData.user.id,
-      message: 'Account created successfully. Please verify your email.',
+      redirect_url: '/subscribe',
+      message: 'Account created successfully. Please select a plan to continue.',
     });
   } catch (error: unknown) {
     console.error('Signup with style error:', error);
 
     if (error instanceof Error && error.message?.includes('User already registered')) {
       return NextResponse.json(
-        { error: 'An account with this email already exists' },
+        {
+          success: false,
+          error: 'An account with this email already exists. Please sign in instead.',
+          retry: false,
+        },
         { status: 409 }
       );
     }
 
     const message = error instanceof Error ? error.message : 'Failed to create account';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: message,
+        retry: true,
+      },
+      { status: 500 }
+    );
   }
 }

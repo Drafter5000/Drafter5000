@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
@@ -56,7 +55,6 @@ const INITIAL_STEPS: VerificationStep[] = [
 ];
 
 export function PaymentVerification({ sessionId, onComplete, onError }: PaymentVerificationProps) {
-  const router = useRouter();
   const [steps, setSteps] = useState<VerificationStep[]>(INITIAL_STEPS);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -67,8 +65,12 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
   }, []);
 
   const runVerification = useCallback(async () => {
+    console.log('[PaymentVerification] Starting verification flow...');
+    console.log('[PaymentVerification] Session ID:', sessionId);
+
     try {
       // Step 1: Verify payment
+      console.log('[PaymentVerification] Step 1: Verifying payment...');
       updateStepStatus('verify', 'in-progress');
 
       let verifyResult;
@@ -77,8 +79,9 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
           '/stripe/verify-session',
           { session_id: sessionId }
         );
+        console.log('[PaymentVerification] Verify result:', verifyResult);
       } catch (verifyError) {
-        console.error('Verify session API error:', verifyError);
+        console.error('[PaymentVerification] Verify session API error:', verifyError);
         throw new Error(
           verifyError instanceof Error ? verifyError.message : 'Payment verification failed'
         );
@@ -88,8 +91,10 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
         throw new Error('Payment verification failed - session not successful');
       }
       updateStepStatus('verify', 'complete');
+      console.log('[PaymentVerification] Step 1 complete');
 
       // Step 2: Activate style
+      console.log('[PaymentVerification] Step 2: Activating style...');
       updateStepStatus('activate', 'in-progress');
 
       let activateResult;
@@ -100,8 +105,10 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
           sheetsSync: { success: boolean; error?: string } | null;
           message: string;
         }>('/stripe/activate-style', {});
+        console.log('[PaymentVerification] Activate result:', activateResult);
+        console.log('[PaymentVerification] Sheets sync result:', activateResult.sheetsSync);
       } catch (activateError) {
-        console.error('Activate style API error:', activateError);
+        console.error('[PaymentVerification] Activate style API error:', activateError);
         throw new Error(
           activateError instanceof Error ? activateError.message : 'Style activation failed'
         );
@@ -110,29 +117,53 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
       if (!activateResult.success) {
         throw new Error('Style activation failed');
       }
+
+      // Log sheets sync status
+      if (activateResult.sheetsSync) {
+        if (activateResult.sheetsSync.success) {
+          console.log('[PaymentVerification] Google Sheets sync successful');
+        } else {
+          console.warn(
+            '[PaymentVerification] Google Sheets sync failed:',
+            activateResult.sheetsSync.error
+          );
+        }
+      }
+
       updateStepStatus('activate', 'complete');
+      console.log('[PaymentVerification] Step 2 complete');
 
       // Step 3: Sync complete (already done in activate-style)
+      console.log('[PaymentVerification] Step 3: Sync display...');
       updateStepStatus('sync', 'in-progress');
       await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for UX
       updateStepStatus('sync', 'complete');
+      console.log('[PaymentVerification] Step 3 complete');
 
       // Step 4: Complete
+      console.log('[PaymentVerification] Step 4: Completing...');
       updateStepStatus('complete', 'in-progress');
       await new Promise(resolve => setTimeout(resolve, 300));
       updateStepStatus('complete', 'complete');
+      console.log('[PaymentVerification] Step 4 complete');
 
+      console.log('[PaymentVerification] All steps complete, starting countdown...');
       setIsComplete(true);
       setCountdown(3);
     } catch (err) {
-      console.error('Payment verification flow error:', err);
+      console.error('[PaymentVerification] Verification flow error:', err);
       const message = err instanceof Error ? err.message : 'Verification failed';
       setError(message);
       onError?.(message);
     }
   }, [sessionId, updateStepStatus, onError]);
 
+  // Use ref to prevent duplicate verification runs
+  const verificationStartedRef = React.useRef(false);
+
   useEffect(() => {
+    if (verificationStartedRef.current) return;
+    verificationStartedRef.current = true;
     runVerification();
   }, [runVerification]);
 
@@ -142,7 +173,9 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
 
     if (countdown === 0) {
       onComplete?.();
-      router.replace('/dashboard?payment_success=true');
+      // Use full page redirect to ensure middleware properly evaluates auth state
+      // router.replace() does client-side navigation which can cause race conditions
+      window.location.href = '/dashboard?payment_success=true';
       return;
     }
 
@@ -151,16 +184,18 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown, router, onComplete]);
+  }, [countdown, onComplete]);
 
   const handleRetry = () => {
     setError(null);
     setSteps(INITIAL_STEPS);
+    verificationStartedRef.current = false;
     runVerification();
   };
 
   const handleGoToDashboard = () => {
-    router.replace('/dashboard?payment_success=true');
+    // Use full page redirect to ensure middleware properly evaluates auth state
+    window.location.href = '/dashboard?payment_success=true';
   };
 
   const getStepIcon = (step: VerificationStep) => {
