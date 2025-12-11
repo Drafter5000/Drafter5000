@@ -13,6 +13,7 @@ interface StyleFormStep2Props {
   error?: string | null;
   userId?: string;
   styleSamples?: string[];
+  job?: string;
 }
 
 export function StyleFormStep2(props: StyleFormStep2Props) {

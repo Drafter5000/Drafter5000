@@ -13,7 +13,11 @@ interface StyleFormStep2Win95Props {
   error?: string | null;
   userId?: string;
   styleSamples?: string[];
+  job?: string;
 }
+
+const TOPIC_EXAMPLE =
+  'Why Follow-Ups Fail When Reps Only "Check In"—And a Repeatable Formula for Follow-Ups That Actually Move Deals Forward';
 
 export function StyleFormStep2Win95({
   initialSubjects = [],
@@ -23,6 +27,7 @@ export function StyleFormStep2Win95({
   error = null,
   userId,
   styleSamples,
+  job,
 }: StyleFormStep2Win95Props) {
   const [subjects, setSubjects] = useState<string[]>(initialSubjects);
   const [inputValue, setInputValue] = useState('');
@@ -56,6 +61,7 @@ export function StyleFormStep2Win95({
         user_id: userId,
         existing_topics: subjects,
         style_samples: styleSamples,
+        job: job,
       });
 
       setAiActive(true);
@@ -90,6 +96,12 @@ export function StyleFormStep2Win95({
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px]">Type a topic and press Enter</span>
               {subjects.length > 0 && <Win95Badge>{subjects.length} added</Win95Badge>}
+            </div>
+
+            {/* Topic example */}
+            <div className="win95-sunken p-2 mb-2 text-[10px]">
+              <span className="text-[var(--win95-button-shadow)]">Example: </span>
+              <span className="italic">&quot;{TOPIC_EXAMPLE}&quot;</span>
             </div>
 
             <div className="flex gap-2">

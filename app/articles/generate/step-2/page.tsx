@@ -18,6 +18,7 @@ export default function GenerateStep2Page() {
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const [initialSubjects, setInitialSubjects] = useState<string[]>([]);
   const [styleSamples, setStyleSamples] = useState<string[]>([]);
+  const [job, setJob] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,11 @@ export default function GenerateStep2Page() {
 
     // Store style samples for AI suggestions
     setStyleSamples(draftSession.style_samples);
+
+    // Store job for AI suggestions
+    if (draftSession?.job) {
+      setJob(draftSession.job);
+    }
 
     if (draftSession?.subjects && draftSession.subjects.length > 0) {
       setInitialSubjects(draftSession.subjects);
@@ -99,6 +105,7 @@ export default function GenerateStep2Page() {
           loading={loading}
           error={error}
           styleSamples={styleSamples}
+          job={job}
         />
       </div>
     );
@@ -124,6 +131,7 @@ export default function GenerateStep2Page() {
         loading={loading}
         error={error}
         styleSamples={styleSamples}
+        job={job}
       />
     </div>
   );

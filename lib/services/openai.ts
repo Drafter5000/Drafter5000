@@ -18,12 +18,13 @@ interface OpenAIResponse {
 }
 
 /**
- * Generate topic suggestions based on article style samples
+ * Generate topic suggestions based on job title and existing topics
  */
 export async function generateTopicSuggestions(
   styleSamples: string[],
   existingTopics: string[] = [],
-  count: number = 8
+  count: number = 10,
+  job?: string
 ): Promise<string[]> {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -31,36 +32,39 @@ export async function generateTopicSuggestions(
     throw new Error('OPENAI_API_KEY is not configured');
   }
 
-  // Analyze the style samples to understand the writing style and themes
-  const samplesSummary = styleSamples
-    .map((sample, i) => `Article ${i + 1}:\n${sample.slice(0, 1500)}...`)
-    .join('\n\n');
-
+  // Build the existing topics list for the prompt
   const existingTopicsText =
-    existingTopics.length > 0
-      ? `\n\nThe user has already added these topics (avoid duplicates):\n${existingTopics.map(t => `- ${t}`).join('\n')}`
-      : '';
+    existingTopics.length > 0 ? existingTopics.map(t => `- ${t}`).join('\n') : 'None yet';
+
+  // Use job title if provided, otherwise default to "LinkedIn content creator"
+  const jobTitle = job || 'LinkedIn content creator';
+
+  // Configurable prompt - focuses on job and existing topics, not writing style
+  const systemPrompt = `You're a LinkedIn topic drafter. Your job is to act as a ${jobTitle}, look at the topic ideas already drafted and generate ${count} more like it that are different enough to be novel.
+
+Each topic should be:
+- Specific and actionable
+- Written as a compelling LinkedIn post title
+- Different from the existing topics but in a similar professional domain
+- Formatted like: "Why [Problem/Observation]—And [Solution/Insight]"
+
+Return ONLY a JSON array of topic strings, nothing else.`;
+
+  const userPrompt = `Here are the existing topic ideas:
+${existingTopicsText}
+
+Generate ${count} new topic ideas that are different but related to these themes.
+
+Return only a JSON array of ${count} topic strings.`;
 
   const messages: OpenAIMessage[] = [
     {
       role: 'system',
-      content: `You are a creative content strategist helping writers discover engaging article topics. 
-Analyze the provided writing samples to understand:
-1. The author's writing style and tone
-2. Their areas of expertise and interest
-3. The type of audience they write for
-4. Common themes and patterns in their content
-
-Based on this analysis, suggest relevant, engaging article topics that match their style and expertise.
-Return ONLY a JSON array of topic strings, nothing else. Each topic should be specific and actionable.`,
+      content: systemPrompt,
     },
     {
       role: 'user',
-      content: `Based on these writing samples, suggest ${count} article topic ideas that match this author's style and expertise:
-
-${samplesSummary}${existingTopicsText}
-
-Return only a JSON array of ${count} topic strings.`,
+      content: userPrompt,
     },
   ];
 

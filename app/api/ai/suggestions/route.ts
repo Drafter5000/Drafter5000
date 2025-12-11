@@ -4,9 +4,10 @@ import { getDraft } from '@/lib/services/article-styles';
 
 export async function POST(request: NextRequest) {
   try {
-    const { user_id, existing_topics = [], style_samples } = await request.json();
+    const { user_id, existing_topics = [], style_samples, job } = await request.json();
 
     let samplesToUse: string[] = [];
+    let jobTitle = job;
 
     // If style_samples are provided directly (anonymous flow), use them
     if (style_samples && Array.isArray(style_samples) && style_samples.length > 0) {
@@ -22,6 +23,10 @@ export async function POST(request: NextRequest) {
         );
       }
       samplesToUse = draft.style_samples;
+      // Use job from draft if not provided in request
+      if (!jobTitle && draft.job) {
+        jobTitle = draft.job;
+      }
     } else {
       return NextResponse.json(
         { error: 'Either user_id or style_samples is required' },
@@ -29,8 +34,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate AI suggestions based on style samples
-    const suggestions = await generateTopicSuggestions(samplesToUse, existing_topics, 8);
+    // Generate AI suggestions based on existing topics and job title
+    const suggestions = await generateTopicSuggestions(samplesToUse, existing_topics, 10, jobTitle);
 
     return NextResponse.json({ suggestions });
   } catch (error: unknown) {

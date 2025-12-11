@@ -28,7 +28,11 @@ interface StyleFormStep2ModernProps {
   error?: string | null;
   userId?: string;
   styleSamples?: string[];
+  job?: string;
 }
+
+const TOPIC_EXAMPLE =
+  'Why Follow-Ups Fail When Reps Only "Check In"—And a Repeatable Formula for Follow-Ups That Actually Move Deals Forward';
 
 export function StyleFormStep2Modern({
   initialSubjects = [],
@@ -38,6 +42,7 @@ export function StyleFormStep2Modern({
   error = null,
   userId,
   styleSamples,
+  job,
 }: StyleFormStep2ModernProps) {
   const [subjects, setSubjects] = useState<string[]>(initialSubjects);
   const [inputValue, setInputValue] = useState('');
@@ -71,6 +76,7 @@ export function StyleFormStep2Modern({
         user_id: userId,
         existing_topics: subjects,
         style_samples: styleSamples,
+        job: job,
       });
 
       setAiActive(true);
@@ -120,6 +126,12 @@ export function StyleFormStep2Modern({
             <CardDescription>Type a topic and press Enter or click Add</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Topic example */}
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm">
+              <p className="text-muted-foreground mb-1">Example format:</p>
+              <p className="text-foreground italic">&quot;{TOPIC_EXAMPLE}&quot;</p>
+            </div>
+
             <div className="flex gap-2">
               <Input
                 placeholder="Enter a topic..."

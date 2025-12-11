@@ -30,7 +30,9 @@ import {
   Briefcase,
   Eye,
   EyeOff,
+  Info,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DraftSessionService } from '@/lib/draft-session';
 import { apiClient } from '@/lib/api-client';
 import { validateSignupForm } from '@/lib/onboarding-validation';
@@ -86,6 +88,17 @@ export default function GenerateStep3Page() {
     if (!draftSession?.subjects || draftSession.subjects.length === 0) {
       router.push('/articles/generate/step-2');
       return;
+    }
+
+    // Pre-fill user info from draft session if available
+    if (draftSession.name) setName(draftSession.name);
+    if (draftSession.email) setEmail(draftSession.email);
+    if (draftSession.job) setJob(draftSession.job);
+    if (draftSession.delivery_days && draftSession.delivery_days.length > 0) {
+      setFrequency(draftSession.delivery_days as DayCode[]);
+    }
+    if (draftSession.preferred_language) {
+      setLanguage(draftSession.preferred_language);
     }
 
     setDraftData({
@@ -278,6 +291,14 @@ export default function GenerateStep3Page() {
               <Label htmlFor="job" className="flex items-center gap-2">
                 <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                 Job Title <span className="text-destructive">*</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The AI will draft articles as if it was doing this job</p>
+                  </TooltipContent>
+                </Tooltip>
               </Label>
               <Input
                 id="job"
@@ -288,9 +309,6 @@ export default function GenerateStep3Page() {
                 className={fieldErrors.job ? 'border-destructive' : ''}
               />
               {fieldErrors.job && <p className="text-xs text-destructive">{fieldErrors.job}</p>}
-              <p className="text-xs text-muted-foreground">
-                The AI will draft articles as if it was doing this job
-              </p>
             </div>
           </CardContent>
         </Card>

@@ -18,19 +18,11 @@ export type DayCode = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
 /**
  * Supported languages for article generation
- * Used across step 3 forms and settings pages
+ * Currently limited to English and French only
  */
 export const LANGUAGES: Language[] = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
-  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
   { code: 'fr', label: 'French', flag: '🇫🇷' },
-  { code: 'de', label: 'German', flag: '🇩🇪' },
-  { code: 'it', label: 'Italian', flag: '🇮🇹' },
-  { code: 'pt', label: 'Portuguese', flag: '🇵🇹' },
-  { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
-  { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
-  { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
-  { code: 'ko', label: 'Korean', flag: '🇰🇷' },
 ];
 
 /**
