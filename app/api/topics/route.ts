@@ -57,23 +57,35 @@ export async function GET(request: NextRequest) {
     const sheets = google.sheets({ version: 'v4', auth });
 
     // Fetch all data from the customer sheet (tab) in Customers spreadsheet
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${escapedSheetName}!A2:F`,
-    });
+    try {
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${escapedSheetName}!A2:F`,
+      });
 
-    const rows = response.data.values || [];
-    const topics: Topic[] = rows.map((row, index) => ({
-      rowIndex: index + 2, // +2 because we start from row 2 (1-indexed, skip header)
-      topic: row[0] || '',
-      status: row[1] || 'Needs Draft',
-      subject: row[2] || '',
-      article: row[3] || '',
-      lastUpdate: row[4] || '',
-      client: row[5] || '',
-    }));
+      const rows = response.data.values || [];
+      const topics: Topic[] = rows.map((row, index) => ({
+        rowIndex: index + 2, // +2 because we start from row 2 (1-indexed, skip header)
+        topic: row[0] || '',
+        status: row[1] || 'Needs Draft',
+        subject: row[2] || '',
+        article: row[3] || '',
+        lastUpdate: row[4] || '',
+        client: row[5] || '',
+      }));
 
-    return NextResponse.json({ topics, sheetName });
+      return NextResponse.json({ topics, sheetName });
+    } catch (sheetsError: unknown) {
+      // If sheet doesn't exist, return empty topics array instead of error
+      const errorMessage = sheetsError instanceof Error ? sheetsError.message : '';
+      if (errorMessage.includes('Unable to parse range') || errorMessage.includes('not found')) {
+        console.log(
+          `Sheet "${sheetName}" not found in Customers spreadsheet, returning empty topics`
+        );
+        return NextResponse.json({ topics: [], sheetName, message: 'Sheet not yet created' });
+      }
+      throw sheetsError;
+    }
   } catch (error: unknown) {
     console.error('Failed to fetch topics:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch topics';
