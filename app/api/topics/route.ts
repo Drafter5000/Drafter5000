@@ -167,12 +167,13 @@ export async function POST(request: NextRequest) {
     const clientName = style.display_name || style.name || '';
 
     // Add new topic row to customer sheet (tab) in Customers spreadsheet
+    // Note: Subject column (C) is not populated from code - it should be managed separately
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: `${escapedSheetName}!A2`,
       valueInputOption: 'RAW',
       requestBody: {
-        values: [[topic, 'Needs Draft', topic, '', currentDate, clientName]],
+        values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
       },
     });
 

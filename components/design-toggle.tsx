@@ -35,14 +35,15 @@ export function DesignToggle({ variant = 'inline', className = '' }: DesignToggl
     }
 
     return (
-      <button
-        onClick={toggleAndReload}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border bg-background hover:bg-accent transition-colors ${className}`}
-        title="Switch to Win95 Design"
-      >
-        <Monitor className="h-4 w-4" />
-        <span>Win95</span>
-      </button>
+      <></>
+      // <button
+      //   onClick={toggleAndReload}
+      //   className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border bg-background hover:bg-accent transition-colors ${className}`}
+      //   title="Switch to Win95 Design"
+      // >
+      //   <Monitor className="h-4 w-4" />
+      //   <span>Win95</span>
+      // </button>
     );
   }
 

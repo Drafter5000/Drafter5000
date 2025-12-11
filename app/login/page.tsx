@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, Mail, Lock, AlertCircle, Loader2, ArrowRight, Shield } from 'lucide-react';
 import { getBrowserSupabaseClient } from '@/lib/supabase-browser';
+import { LinkedInLoginButton } from '@/components/linkedin-login-button';
 import Link from 'next/link';
 
 interface FieldErrors {
@@ -262,6 +263,19 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
+
+            {/* Social Login Separator */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">or continue with</span>
+              </div>
+            </div>
+
+            {/* LinkedIn Login Button */}
+            <LinkedInLoginButton disabled={loading} />
 
             <div className="mt-6 text-center text-sm">
               <span className="text-gray-500">{"Don't have an account? "}</span>
