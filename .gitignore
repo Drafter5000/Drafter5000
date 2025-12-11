@@ -66,5 +66,5 @@ docs/
 **/public/workbox-*.js.map
 
 # Credentials
-# credentials/
-# docs/credentials/
+credentials/
+docs/credentials/
