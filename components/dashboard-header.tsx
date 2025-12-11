@@ -79,7 +79,7 @@ export function DashboardHeader() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={toggleAndReload}
@@ -87,7 +87,7 @@ export function DashboardHeader() {
             >
               <Monitor className="h-4 w-4 mr-1" />
               Win95
-            </Button>
+            </Button> */}
             {!isOnDashboard && (
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm">

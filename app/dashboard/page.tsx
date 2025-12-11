@@ -497,14 +497,14 @@ function DashboardContent() {
                   Here's what's happening with your content today
                 </p>
               </div>
-              {style && (
+              {/* {style && (
                 <Link href="/articles/generate/step-1">
                   <Button className="gap-2 shadow-lg shadow-primary/25">
                     <Plus className="h-4 w-4" />
                     New Article
                   </Button>
                 </Link>
-              )}
+              )} */}
             </div>
 
             {/* Stats Grid */}
