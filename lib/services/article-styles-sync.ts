@@ -158,7 +158,6 @@ export async function syncStyleToSheets(
       sheetName: customerSheetName,
       customerName: style.display_name || style.name || style.user_id,
       customerEmail: style.email || '',
-      customerJob: userJob || '',
       language: getLanguageName(style.preferred_language),
       emailMonday: style.delivery_days.includes('mon'),
       emailTuesday: style.delivery_days.includes('tue'),
@@ -173,6 +172,7 @@ export async function syncStyleToSheets(
       article1Example: style.style_samples[0] || '',
       article2Example: style.style_samples[1] || '',
       article3Example: style.style_samples[2] || '',
+      customerJob: userJob || '',
     };
     console.log('Main sheet data:', JSON.stringify(mainSheetData, null, 2));
 
