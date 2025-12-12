@@ -194,10 +194,10 @@ export async function PUT(
         range: `${escapedSheetName}!A${rowNum}`,
         values: [[topic]],
       });
-      updates.push({
-        range: `${escapedSheetName}!C${rowNum}`,
-        values: [[topic]],
-      });
+      // updates.push({
+      //   range: `${escapedSheetName}!C${rowNum}`,
+      //   values: [[topic]],
+      // });
     }
 
     if (status !== undefined) {

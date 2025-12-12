@@ -2,6 +2,12 @@
  * OpenAI service for generating AI-powered content suggestions
  */
 
+import {
+  getPromptConfig,
+  substituteVariables,
+  type PromptVariables,
+} from '@/lib/services/prompt-config';
+
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 interface OpenAIMessage {
@@ -19,6 +25,7 @@ interface OpenAIResponse {
 
 /**
  * Generate topic suggestions based on job title and existing topics
+ * Uses admin-configurable prompts with dynamic variable substitution
  */
 export async function generateTopicSuggestions(
   styleSamples: string[],
@@ -39,23 +46,24 @@ export async function generateTopicSuggestions(
   // Use job title if provided, otherwise default to "LinkedIn content creator"
   const jobTitle = job || 'LinkedIn content creator';
 
-  // Configurable prompt - focuses on job and existing topics, not writing style
-  const systemPrompt = `You're a LinkedIn topic drafter. Your job is to act as a ${jobTitle}, look at the topic ideas already drafted and generate ${count} more like it that are different enough to be novel.
+  // Build style samples text
+  const styleSamplesText =
+    styleSamples.length > 0 ? styleSamples.join('\n\n') : 'No style samples provided';
 
-Each topic should be:
-- Specific and actionable
-- Written as a compelling LinkedIn post title
-- Different from the existing topics but in a similar professional domain
-- Formatted like: "Why [Problem/Observation]—And [Solution/Insight]"
+  // Fetch custom prompts from database (falls back to defaults if not configured)
+  const promptConfig = await getPromptConfig();
 
-Return ONLY a JSON array of topic strings, nothing else.`;
+  // Prepare variables for substitution
+  const variables: PromptVariables = {
+    job_title: jobTitle,
+    existing_topics: existingTopicsText,
+    count: count,
+    style_samples: styleSamplesText,
+  };
 
-  const userPrompt = `Here are the existing topic ideas:
-${existingTopicsText}
-
-Generate ${count} new topic ideas that are different but related to these themes.
-
-Return only a JSON array of ${count} topic strings.`;
+  // Apply variable substitution to prompts
+  const systemPrompt = substituteVariables(promptConfig.systemPrompt, variables);
+  const userPrompt = substituteVariables(promptConfig.userPrompt, variables);
 
   const messages: OpenAIMessage[] = [
     {

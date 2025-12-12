@@ -13,6 +13,7 @@ import {
   CreditCard,
   BarChart3,
   Receipt,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AdminSession } from '@/lib/types';
@@ -59,6 +60,12 @@ const navItems: NavItem[] = [
     title: 'Plans',
     href: '/admin/plans',
     icon: CreditCard,
+    superAdminOnly: true,
+  },
+  {
+    title: 'AI Prompts',
+    href: '/admin/prompts',
+    icon: Sparkles,
     superAdminOnly: true,
   },
   {
