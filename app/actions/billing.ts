@@ -1,7 +1,8 @@
 'use server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-client';
-import { getStripeClient, SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
+import { getStripeClient } from '@/lib/stripe-client';
+import { getActivePlans } from '@/lib/plan-utils';
 import type { UserProfile } from '@/lib/types';
 
 export async function createCheckoutSession(userId: string, planId: 'pro' | 'enterprise') {
@@ -154,8 +155,14 @@ export async function getUsageStats(userId: string) {
       .eq('id', userId)
       .single();
 
-    const plan = profile?.subscription_plan || 'free';
-    const planDetails = SUBSCRIPTION_PLANS[plan as keyof typeof SUBSCRIPTION_PLANS];
+    const planName = profile?.subscription_plan || 'free';
+
+    // Fetch plans from database
+    const plans = await getActivePlans(true);
+    const planDetails = plans.find(p => p.name.toLowerCase() === planName.toLowerCase());
+
+    // Default to 2 articles per month if plan not found (free tier)
+    const articlesLimit = planDetails?.articles_per_month ?? 2;
 
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -168,11 +175,11 @@ export async function getUsageStats(userId: string) {
       .gte('created_at', startOfMonth.toISOString());
 
     return {
-      plan,
+      plan: planName,
       articles_used: articlesUsed || 0,
-      articles_limit: planDetails.articles_per_month,
-      percentage_used: Math.round(((articlesUsed || 0) / planDetails.articles_per_month) * 100),
-      can_generate: (articlesUsed || 0) < planDetails.articles_per_month,
+      articles_limit: articlesLimit,
+      percentage_used: Math.round(((articlesUsed || 0) / articlesLimit) * 100),
+      can_generate: (articlesUsed || 0) < articlesLimit,
     };
   } catch (error) {
     console.error('[Billing] Usage stats error:', error);

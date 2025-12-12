@@ -1,5 +1,18 @@
 import { getServerSupabaseClient } from '@/lib/supabase-client';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getGoogleAuth } from '@/lib/google-sheets';
+import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
+
+interface Topic {
+  rowIndex: number;
+  topic: string;
+  status: string;
+  subject: string;
+  article: string;
+  lastUpdate: string;
+  client: string;
+}
 
 /**
  * Calculate percentage change between two values
@@ -22,6 +35,62 @@ function calculatePercentageChange(
     value: Math.abs(Math.round(change)),
     isPositive: change >= 0,
   };
+}
+
+/**
+ * Fetch topics from Google Sheets for a user
+ */
+async function fetchTopicsFromSheets(userId: string): Promise<Topic[]> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Get user's article style to find their sheet name
+    const { data: style, error: styleError } = await supabaseAdmin
+      .from('article_styles')
+      .select('display_name, name, user_id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (styleError || !style) {
+      return [];
+    }
+
+    const sheetName = style.display_name || style.name || userId;
+    const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
+
+    if (!spreadsheetId) {
+      return [];
+    }
+
+    // Escape sheet name for use in ranges
+    const escapedSheetName =
+      sheetName.includes(' ') || sheetName.includes("'")
+        ? `'${sheetName.replace(/'/g, "''")}'`
+        : sheetName;
+
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${escapedSheetName}!A2:F`,
+    });
+
+    const rows = response.data.values || [];
+    return rows.map((row, index) => ({
+      rowIndex: index + 2,
+      topic: row[0] || '',
+      status: row[1] || 'Needs Draft',
+      subject: row[2] || '',
+      article: row[3] || '',
+      lastUpdate: row[4] || '',
+      client: row[5] || '',
+    }));
+  } catch (error) {
+    console.error('Failed to fetch topics from sheets:', error);
+    return [];
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -61,32 +130,41 @@ export async function GET(request: NextRequest) {
 
     const articles = allArticles || [];
 
+    // Fetch topics from Google Sheets to get accurate sent count
+    const topics = await fetchTopicsFromSheets(userId);
+    const topicsSentCount = topics.filter(t => t.status.toLowerCase() === 'sent').length;
+    const topicsDraftCount = topics.filter(
+      t => t.status === 'Needs Draft' || t.status.toLowerCase() === 'draft'
+    ).length;
+
     // Calculate current month metrics
     const currentMonthArticles = articles.filter(
       a => new Date(a.generated_at) >= currentMonthStart
     );
     const currentGenerated = currentMonthArticles.length;
-    const currentSent = currentMonthArticles.filter(a => a.status === 'sent').length;
-    const currentDrafts = currentMonthArticles.filter(a => a.status === 'draft').length;
+    // Use topics sent count for current month (topics don't have timestamps, so use total)
+    const currentSent = topicsSentCount;
+    const currentDrafts = topicsDraftCount;
 
-    // Calculate previous month metrics
+    // Calculate previous month metrics (for articles only, topics don't have timestamps)
     const previousMonthArticles = articles.filter(a => {
       const date = new Date(a.generated_at);
       return date >= previousMonthStart && date <= previousMonthEnd;
     });
     const previousGenerated = previousMonthArticles.length;
-    const previousSent = previousMonthArticles.filter(a => a.status === 'sent').length;
-    const previousDrafts = previousMonthArticles.filter(a => a.status === 'draft').length;
+    // Previous month sent/drafts - we don't have historical topic data, so set to 0
+    const previousSent = 0;
+    const previousDrafts = 0;
 
     // Calculate trends
     const generatedTrend = calculatePercentageChange(currentGenerated, previousGenerated);
     const sentTrend = calculatePercentageChange(currentSent, previousSent);
     const draftsTrend = calculatePercentageChange(currentDrafts, previousDrafts);
 
-    // Total metrics (all time)
+    // Total metrics - use topics for sent/draft counts (source of truth)
     const totalGenerated = articles.length;
-    const totalSent = articles.filter(a => a.status === 'sent').length;
-    const totalDrafts = articles.filter(a => a.status === 'draft').length;
+    const totalSent = topicsSentCount;
+    const totalDrafts = topicsDraftCount;
 
     const metrics = {
       articles_generated: totalGenerated,
@@ -107,11 +185,9 @@ export async function GET(request: NextRequest) {
       metrics,
       recentArticles,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Dashboard metrics error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch metrics' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : 'Failed to fetch metrics';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

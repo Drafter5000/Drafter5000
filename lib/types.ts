@@ -260,6 +260,7 @@ export interface ArticleStyle {
   sheets_row_id: string | null;
   sheets_synced?: boolean; // Flag to prevent duplicate Google Sheets syncs
   is_active: boolean;
+  job: string | null; // User's job title for AI suggestions
   created_at: string;
   updated_at: string;
 }
