@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
 import {
   CreditCard,
@@ -254,9 +255,96 @@ export default function BillingPage() {
           <DashboardHeader />
           <main className="pt-8 pb-20 px-6">
             <div className="max-w-4xl mx-auto">
-              <div className="text-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground mt-2">Loading billing data...</p>
+              {/* Header Skeleton */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-7 w-40" />
+                    <Skeleton className="h-4 w-56" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 w-40 rounded-md" />
+                  <Skeleton className="h-10 w-24 rounded-md" />
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Current Plan Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-5 w-5 rounded" />
+                          <Skeleton className="h-6 w-28" />
+                        </div>
+                        <Skeleton className="h-4 w-48" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <Skeleton className="h-10 w-20" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-lg bg-secondary/50 border space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded" />
+                          <Skeleton className="h-4 w-28" />
+                        </div>
+                        <Skeleton className="h-5 w-36" />
+                      </div>
+                      <div className="p-4 rounded-lg bg-secondary/50 border space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <Skeleton className="h-5 w-28" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Usage Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-5 rounded" />
+                      <Skeleton className="h-6 w-36" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-2">
+                      <Skeleton className="h-5 w-36" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <Skeleton className="h-3 w-full rounded-full" />
+                    <Skeleton className="h-4 w-40 mt-2" />
+                  </CardContent>
+                </Card>
+
+                {/* Upgrade Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-44" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {[1, 2].map(i => (
+                        <div key={i} className="p-6 rounded-lg border text-center space-y-3">
+                          <Skeleton className="h-5 w-24 mx-auto" />
+                          <Skeleton className="h-9 w-28 mx-auto" />
+                          <Skeleton className="h-4 w-36 mx-auto" />
+                          <Skeleton className="h-10 w-full rounded-md" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </main>

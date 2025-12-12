@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -257,9 +258,67 @@ export default function SettingsPage() {
             )}
 
             {initialLoading ? (
-              <div className="text-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground mt-2">Loading settings...</p>
+              <div className="space-y-6">
+                {/* Account Information Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-5 rounded" />
+                      <Skeleton className="h-6 w-40" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-10 w-full rounded-md" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-10 w-full rounded-md" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Delivery Preferences Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-5 rounded" />
+                      <Skeleton className="h-6 w-44" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Skeleton className="h-4 w-36 mb-3" />
+                      <div className="space-y-3">
+                        <Skeleton className="h-12 w-full rounded-lg" />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {[...Array(7)].map((_, i) => (
+                            <Skeleton key={i} className="h-10 rounded-lg" />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Language Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-5 rounded" />
+                      <Skeleton className="h-6 w-36" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-10 w-full rounded-md" />
+                  </CardContent>
+                </Card>
+
+                {/* Save Button Skeleton */}
+                <div className="flex justify-end">
+                  <Skeleton className="h-11 w-32 rounded-md" />
+                </div>
               </div>
             ) : (
               <div className="space-y-6">
