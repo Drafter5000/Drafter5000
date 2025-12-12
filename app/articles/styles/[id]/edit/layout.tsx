@@ -186,9 +186,48 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
             <div className="max-w-4xl mx-auto">
               {loading ? (
                 <div className="space-y-6">
-                  <Skeleton className="h-10 w-64" />
-                  <Skeleton className="h-2 w-full" />
-                  <Skeleton className="h-[400px] w-full rounded-lg" />
+                  {/* Header Skeleton */}
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-7 w-48" />
+                    </div>
+                  </div>
+
+                  {/* Progress Skeleton */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Skeleton className="h-2 w-full rounded-full" />
+                    <div className="flex justify-between">
+                      {[1, 2, 3].map(num => (
+                        <div key={num} className="flex items-center gap-2">
+                          <Skeleton className="h-6 w-6 rounded-full" />
+                          <Skeleton className="h-4 w-24 hidden sm:block" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Content Skeleton */}
+                  <div className="bg-card rounded-lg border p-6 space-y-6">
+                    <div className="text-center space-y-4">
+                      <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+                      <Skeleton className="h-8 w-56 mx-auto" />
+                      <Skeleton className="h-5 w-72 mx-auto" />
+                    </div>
+                    <div className="space-y-4">
+                      <Skeleton className="h-12 w-full rounded-lg" />
+                      <Skeleton className="h-48 w-full rounded-lg" />
+                      <div className="flex justify-between">
+                        <Skeleton className="h-10 w-24 rounded-md" />
+                        <Skeleton className="h-10 w-32 rounded-md" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">

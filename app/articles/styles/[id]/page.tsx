@@ -6,7 +6,7 @@ import { useAuth } from '@/components/auth-provider';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { DeleteDialog } from '@/components/articles/delete-dialog';
+
 import { Win95Window, Win95Button, Win95Badge } from '@/components/win95';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +18,6 @@ import type { ArticleStyle } from '@/lib/types';
 import {
   ArrowLeft,
   Edit2,
-  Trash2,
   FileText,
   Mail,
   User,
@@ -85,8 +84,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const [style, setStyle] = useState<ArticleStyle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchStyle = async () => {
@@ -103,17 +100,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
     };
     fetchStyle();
   }, [user, id, router]);
-
-  const handleDelete = async () => {
-    if (!user || !style) return;
-    setDeleting(true);
-    try {
-      await apiClient.delete(`/article-styles/${id}?user_id=${user.id}`);
-      router.push('/dashboard');
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   // Win95 Design
   if (designMode === 'win95') {
@@ -151,9 +137,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
                     <Link href={`/articles/styles/${id}/edit`}>
                       <Win95Button size="sm">✏️ Edit</Win95Button>
                     </Link>
-                    <Win95Button size="sm" onClick={() => setDeleteOpen(true)}>
-                      🗑️ Delete
-                    </Win95Button>
                   </div>
                 </div>
                 <div className="win95-sunken p-3">
@@ -205,14 +188,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
             </Win95Window>
           </div>
         </div>
-        <DeleteDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          onConfirm={handleDelete}
-          loading={deleting}
-          title="Delete Style"
-          description={`Delete "${style.name}"? This cannot be undone.`}
-        />
       </ProtectedRoute>
     );
   }
@@ -290,13 +265,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
                     <Edit2 className="h-4 w-4" /> Edit
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  className="gap-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4" /> Delete
-                </Button>
               </div>
             </div>
 
@@ -459,15 +427,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </main>
       </div>
-
-      <DeleteDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        onConfirm={handleDelete}
-        loading={deleting}
-        title="Delete Style"
-        description={`Are you sure you want to delete "${style.name}"? This action cannot be undone.`}
-      />
     </ProtectedRoute>
   );
 }

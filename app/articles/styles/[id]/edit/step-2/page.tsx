@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Win95Button, Win95Input, Win95Badge, Win95Alert } from '@/components/win95';
 import {
   Lightbulb,
@@ -132,8 +133,77 @@ export default function EditStep2Page() {
 
   if (editContext?.loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="text-center space-y-4">
+          <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+          <Skeleton className="h-8 w-48 mx-auto" />
+          <Skeleton className="h-5 w-72 mx-auto" />
+        </div>
+
+        {/* Two Column Grid Skeleton */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Your Topics Card Skeleton */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-64 mt-2" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Skeleton className="h-10 flex-1 rounded-md" />
+                <Skeleton className="h-10 w-10 rounded-md" />
+              </div>
+              <div className="space-y-2">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3 rounded-xl"
+                    style={{ opacity: 1 - i * 0.2 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Suggestions Card Skeleton */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-5 w-20" />
+                </div>
+                <Skeleton className="h-9 w-28 rounded-md" />
+              </div>
+              <Skeleton className="h-4 w-56 mt-2" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-10">
+                <Skeleton className="h-12 w-12 rounded-full mb-3" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Footer Skeleton */}
+        <div className="flex items-center justify-between pt-4">
+          <Skeleton className="h-10 w-24 rounded-md" />
+          <Skeleton className="h-11 w-36 rounded-md" />
+        </div>
       </div>
     );
   }
@@ -321,7 +391,7 @@ export default function EditStep2Page() {
                 {subjects.map((subject, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-accent/30 transition-colors group"
+                    className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-accent/30 transition-colors group cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <Badge

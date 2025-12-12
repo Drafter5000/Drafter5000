@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Win95Button, Win95Textarea, Win95Badge, Win95Alert } from '@/components/win95';
 import {
   FileText,
@@ -88,8 +89,66 @@ export default function EditStep1Page() {
 
   if (editContext?.loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="text-center space-y-4">
+          <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+          <Skeleton className="h-8 w-64 mx-auto" />
+          <Skeleton className="h-5 w-80 mx-auto" />
+        </div>
+
+        {/* Progress Card Skeleton */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-3">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <Skeleton className="h-2 w-full rounded-full" />
+            <div className="flex justify-between mt-3">
+              {[1, 2, 3].map(num => (
+                <div key={num} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabs Skeleton */}
+        <Card>
+          <div className="px-6 pt-4">
+            <div className="flex gap-2">
+              {[1, 2, 3].map(num => (
+                <Skeleton key={num} className="h-10 w-28 rounded-md" />
+              ))}
+            </div>
+          </div>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-[280px] w-full rounded-md" />
+            <div className="flex items-center justify-between">
+              <div className="flex gap-4">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Footer Skeleton */}
+        <div className="flex items-center justify-between pt-4">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-11 w-32 rounded-md" />
+        </div>
       </div>
     );
   }

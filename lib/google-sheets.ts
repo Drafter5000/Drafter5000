@@ -58,7 +58,6 @@ export interface MainSheetRowData {
   sheetName: string;
   customerName: string;
   customerEmail: string;
-  customerJob: string;
   language: string;
   emailMonday: boolean;
   emailTuesday: boolean;
@@ -73,6 +72,7 @@ export interface MainSheetRowData {
   article1Example: string;
   article2Example: string;
   article3Example: string;
+  customerJob: string;
 }
 
 // Customers sheet columns (6 columns: A-F)
@@ -83,6 +83,16 @@ export interface CustomersSheetRowData {
   article: string;
   lastUpdate: string;
   client: string;
+}
+
+// Onboarding customer data (6 columns: A-F)
+export interface OnboardingCustomerRowData {
+  email: string;
+  display_name: string;
+  created_at: string;
+  preferred_language: string;
+  delivery_days: string;
+  status: string;
 }
 
 // Main Sheet name - can be configured via env var
@@ -169,7 +179,6 @@ export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRo
     data.sheetName,
     data.customerName,
     data.customerEmail,
-    data.customerJob,
     data.language,
     data.emailMonday ? 'x' : '',
     data.emailTuesday ? 'x' : '',
@@ -184,6 +193,7 @@ export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRo
     data.article1Example,
     data.article2Example,
     data.article3Example,
+    data.customerJob,
   ];
   console.log('[GoogleSheets] Row values:', JSON.stringify(rowValues));
 
@@ -224,6 +234,36 @@ export async function appendToCustomersSheet(spreadsheetId: string, data: Custom
     requestBody: {
       values: [
         [data.question, data.status, data.subject, data.article, data.lastUpdate, data.client],
+      ],
+    },
+  });
+
+  return result;
+}
+
+// Append onboarding customer to sheet (6 columns)
+export async function appendOnboardingCustomer(
+  spreadsheetId: string,
+  sheetName: string,
+  data: OnboardingCustomerRowData
+) {
+  const sheets = await getGoogleSheetsClient();
+  const sheetRef = sheetName.includes(' ') ? `'${sheetName}'` : sheetName;
+
+  const result = await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `${sheetRef}!A:F`,
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [
+        [
+          data.email,
+          data.display_name,
+          data.created_at,
+          data.preferred_language,
+          data.delivery_days,
+          data.status,
+        ],
       ],
     },
   });

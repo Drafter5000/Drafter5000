@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -203,8 +204,90 @@ export default function GenerateStep3Page() {
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="text-center space-y-4">
+          <Skeleton className="h-16 w-16 rounded-2xl mx-auto" />
+          <Skeleton className="h-8 w-52 mx-auto" />
+          <Skeleton className="h-5 w-96 mx-auto" />
+        </div>
+
+        {/* Form Grid Skeleton */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Account Info Card Skeleton */}
+          <Card className="border-2 pt-0 pb-6">
+            <CardHeader className="py-4 bg-blue-500/5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-40" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Password Card Skeleton */}
+          <Card className="border-2 pt-0 pb-6">
+            <CardHeader className="py-4 bg-purple-500/5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-28" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {[1, 2].map(i => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Delivery Days Card Skeleton */}
+          <Card className="border-2 pt-0 pb-6">
+            <CardHeader className="py-4 bg-green-500/5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-28" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <div className="grid grid-cols-2 gap-2">
+                {[...Array(7)].map((_, i) => (
+                  <Skeleton key={i} className="h-10 rounded-lg" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Language Card Skeleton */}
+          <Card className="border-2 pt-0 pb-6">
+            <CardHeader className="py-4 bg-amber-500/5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-20 w-full rounded-lg" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Footer Skeleton */}
+        <div className="flex justify-between items-center pt-6 border-t">
+          <Skeleton className="h-10 w-24 rounded-md" />
+          <Skeleton className="h-11 w-52 rounded-md" />
+        </div>
       </div>
     );
   }

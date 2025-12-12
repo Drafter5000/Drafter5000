@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { DeleteDialog } from '@/components/articles/delete-dialog';
 // Tabs removed - using custom filter pills instead
 
 interface Topic {
@@ -119,6 +120,8 @@ function DashboardContent() {
   const [editingTopic, setEditingTopic] = useState('');
   const [savingTopic, setSavingTopic] = useState(false);
   const [deletingRowIndex, setDeletingRowIndex] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
   const [showAllTopics, setShowAllTopics] = useState(false);
   const [activeTopicTab, setActiveTopicTab] = useState('all');
 
@@ -235,13 +238,20 @@ function DashboardContent() {
     }
   };
 
-  const handleDeleteTopic = async (rowIndex: number) => {
-    if (!confirm('Are you sure you want to delete this topic?')) return;
-    setDeletingRowIndex(rowIndex);
+  const openDeleteDialog = (topic: Topic) => {
+    setTopicToDelete(topic);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteTopic = async () => {
+    if (!topicToDelete) return;
+    setDeletingRowIndex(topicToDelete.rowIndex);
     try {
-      await apiClient.delete(`/topics/${rowIndex}`);
+      await apiClient.delete(`/topics/${topicToDelete.rowIndex}`);
       topicsFetchedRef.current = false;
       await fetchTopics(style);
+      setDeleteDialogOpen(false);
+      setTopicToDelete(null);
     } catch (err) {
       console.error('Failed to delete topic:', err);
     } finally {
@@ -272,7 +282,7 @@ function DashboardContent() {
   const topicCounts = {
     all: topics.length,
     'Needs Draft': topics.filter(t => t.status === 'Needs Draft').length,
-    'In Progress': topics.filter(t => t.status === 'In Progress').length,
+    'Needs to be sent': topics.filter(t => t.status === 'Needs to be sent').length,
     Sent: topics.filter(t => t.status.toLowerCase() === 'sent').length,
   };
 
@@ -380,7 +390,7 @@ function DashboardContent() {
                       </div>
                       <div className="win95-raised p-2">
                         <span className="text-[10px]">✨</span>
-                        <p className="text-[11px] font-bold">{style.subjects.length} topics</p>
+                        <p className="text-[11px] font-bold">{topics.length} topics</p>
                       </div>
                     </div>
                   </div>
@@ -401,20 +411,128 @@ function DashboardContent() {
           <DashboardHeader />
           <main className="pt-8 pb-20 px-4 md:px-6">
             <div className="max-w-7xl mx-auto space-y-8">
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-80" />
-                <Skeleton className="h-5 w-96" />
+              {/* Header Skeleton */}
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-80" />
+                  <Skeleton className="h-5 w-96" />
+                </div>
               </div>
+
+              {/* Stats Grid Skeleton */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <Card key={i} className="border-0 shadow-sm bg-card/50 backdrop-blur">
+                {[
+                  'from-blue-500/10 to-blue-500/5',
+                  'from-emerald-500/10 to-emerald-500/5',
+                  'from-amber-500/10 to-amber-500/5',
+                  'from-purple-500/10 to-purple-500/5',
+                ].map((gradient, i) => (
+                  <Card
+                    key={i}
+                    className={`border-0 shadow-sm bg-gradient-to-br ${gradient} animate-pulse`}
+                  >
                     <CardContent className="pt-6">
-                      <Skeleton className="h-4 w-24 mb-3" />
-                      <Skeleton className="h-8 w-16 mb-2" />
-                      <Skeleton className="h-3 w-20" />
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-3">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-9 w-12" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                        <Skeleton className="h-12 w-12 rounded-2xl" />
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+
+              {/* Main Content Grid Skeleton */}
+              <div className="grid lg:grid-cols-5 gap-6">
+                {/* Style Card Skeleton */}
+                <Card className="border-0 p-0 shadow-lg overflow-hidden lg:col-span-2">
+                  <CardContent className="p-0">
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-12 w-12 rounded-2xl" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-5 w-32" />
+                            <Skeleton className="h-4 w-24" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-8 w-16 rounded-md" />
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <Skeleton className="h-20 rounded-xl" />
+                        <Skeleton className="h-20 rounded-xl" />
+                        <Skeleton className="h-20 rounded-xl" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-16 rounded-lg" />
+                        <Skeleton className="h-16 rounded-lg" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Topics Section Skeleton */}
+                <Card className="lg:col-span-3 p-0 border-0 shadow-lg overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="p-6 space-y-4">
+                      {/* Topics Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-10 w-10 rounded-xl" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-5 w-28" />
+                            <Skeleton className="h-4 w-40" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-8 w-16 rounded-md" />
+                      </div>
+
+                      {/* Add Topic Input Skeleton */}
+                      <div className="flex gap-3">
+                        <Skeleton className="h-10 flex-1 rounded-md" />
+                        <Skeleton className="h-10 w-16 rounded-md" />
+                      </div>
+
+                      {/* Filter Pills Skeleton */}
+                      <div className="flex gap-2">
+                        <Skeleton className="h-8 w-16 rounded-full" />
+                        <Skeleton className="h-8 w-28 rounded-full" />
+                        <Skeleton className="h-8 w-24 rounded-full" />
+                        <Skeleton className="h-8 w-16 rounded-full" />
+                      </div>
+
+                      {/* Topics List Skeleton */}
+                      <div className="space-y-2">
+                        {[...Array(5)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-3 p-3 rounded-lg"
+                            style={{ opacity: 1 - i * 0.15 }}
+                          >
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-4 w-48" />
+                                <Skeleton className="h-5 w-20 rounded-full" />
+                              </div>
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer Skeleton */}
+                      <div className="flex items-center justify-between pt-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </main>
@@ -577,7 +695,16 @@ function DashboardContent() {
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Topics</p>
                       <p className="text-3xl font-bold mt-1">{topics.length}</p>
-                      <p className="text-xs mt-1 text-muted-foreground">Active topics</p>
+                      <p className="text-xs mt-1 text-muted-foreground flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          {topicCounts['Needs Draft']} draft
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          {topicCounts.Sent} sent
+                        </span>
+                      </p>
                     </div>
                     <div className="h-12 w-12 rounded-2xl bg-purple-500/10 flex items-center justify-center">
                       <Sparkles className="h-6 w-6 text-purple-600" />
@@ -658,7 +785,7 @@ function DashboardContent() {
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                               Topics
                             </p>
-                            <p className="font-bold text-lg">{style.subjects.length}</p>
+                            <p className="font-bold text-lg">{topics.length}</p>
                           </div>
                         </div>
                       </div>
@@ -807,6 +934,14 @@ function DashboardContent() {
                         icon: <PenTool className="h-3 w-3" />,
                       },
                       {
+                        key: 'Needs to be sent',
+                        label: 'Needs to be sent',
+                        count: topicCounts['Needs to be sent'],
+                        color:
+                          'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
+                        icon: <Loader2 className="h-3 w-3" />,
+                      },
+                      {
                         key: 'Sent',
                         label: 'Sent',
                         count: topicCounts.Sent,
@@ -818,7 +953,7 @@ function DashboardContent() {
                       <button
                         key={filter.key}
                         onClick={() => setActiveTopicTab(filter.key)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        className={`inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                           activeTopicTab === filter.key
                             ? 'ring-2 ring-primary ring-offset-2 ' + filter.color
                             : filter.color + ' opacity-70 hover:opacity-100'
@@ -916,7 +1051,7 @@ function DashboardContent() {
                                   size="icon"
                                   variant="ghost"
                                   className="h-8 w-8 text-red-500 hover:text-red-600"
-                                  onClick={() => handleDeleteTopic(topic.rowIndex)}
+                                  onClick={() => openDeleteDialog(topic)}
                                   disabled={deletingRowIndex === topic.rowIndex}
                                 >
                                   {deletingRowIndex === topic.rowIndex ? (
@@ -971,6 +1106,15 @@ function DashboardContent() {
           </div>
         </main>
       </div>
+
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteTopic}
+        loading={deletingRowIndex !== null}
+        title="Delete Topic"
+        description={`Are you sure you want to delete "${topicToDelete?.topic}"? This action cannot be undone.`}
+      />
     </ProtectedRoute>
   );
 }

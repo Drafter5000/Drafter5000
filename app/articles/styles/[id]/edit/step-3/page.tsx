@@ -4,12 +4,16 @@ import { useState, useContext, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { EditStyleContext } from '../layout';
+import { useAuth } from '@/components/auth-provider';
+import { apiClient } from '@/lib/api-client';
+import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -30,7 +34,7 @@ import {
   Globe,
   User,
   Mail,
-  FileText,
+  Briefcase,
   ArrowLeft,
   Loader2,
   AlertCircle,
@@ -50,6 +54,7 @@ export default function EditStep3Page() {
   const router = useRouter();
   const params = useParams();
   const styleId = params.id as string;
+  const { user } = useAuth();
   const editContext = useContext(EditStyleContext);
   const designContext = useContext(DesignContext);
   const designMode: DesignMode = designContext?.designMode ?? 'modern';
@@ -58,6 +63,7 @@ export default function EditStep3Page() {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [job, setJob] = useState('');
   const [frequency, setFrequency] = useState<DayCode[]>([]);
   const [language, setLanguage] = useState('en');
   const [loading, setLoading] = useState(false);
@@ -65,23 +71,47 @@ export default function EditStep3Page() {
   const [success, setSuccess] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
-  // Initialize from style data
+  // Initialize from style data and user profile
   useEffect(() => {
-    if (editContext?.style && !initialized) {
-      const style = editContext.style;
-      setName(style.name || '');
-      setEmail(style.email || '');
-      setFrequency((style.delivery_days || []) as DayCode[]);
-      setLanguage(style.preferred_language || 'en');
+    const initializeData = async () => {
+      if (editContext?.style && !initialized) {
+        const style = editContext.style;
+        setName(style.name || '');
+        setEmail(style.email || '');
+        setFrequency((style.delivery_days || []) as DayCode[]);
+        setLanguage(style.preferred_language || 'en');
 
-      if (style.display_name) {
-        const parts = style.display_name.trim().split(/\s+/);
-        setFirstName(parts[0] || '');
-        setLastName(parts.slice(1).join(' ') || '');
+        if (style.display_name) {
+          const parts = style.display_name.trim().split(/\s+/);
+          setFirstName(parts[0] || '');
+          setLastName(parts.slice(1).join(' ') || '');
+        }
+
+        // Fetch user profile to get job
+        if (user) {
+          try {
+            const profile = await apiClient.get<UserProfile>(`/users/${user.id}/profile`);
+            setJob(profile.job || '');
+            // Also set email and name from profile if not in style
+            if (!style.email && profile.email) {
+              setEmail(profile.email);
+            }
+            if (!style.display_name && profile.display_name) {
+              const parts = profile.display_name.trim().split(/\s+/);
+              setFirstName(parts[0] || '');
+              setLastName(parts.slice(1).join(' ') || '');
+            }
+          } catch (err) {
+            console.error('Failed to fetch user profile:', err);
+          }
+        }
+
+        setInitialized(true);
       }
-      setInitialized(true);
-    }
-  }, [editContext?.style, initialized]);
+    };
+
+    initializeData();
+  }, [editContext?.style, initialized, user]);
 
   const handleToggleDay = (dayId: DayCode) => {
     setFrequency(prev => toggleDayUtil(prev, dayId));
@@ -144,8 +174,85 @@ export default function EditStep3Page() {
 
   if (editContext?.loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="text-center space-y-4">
+          <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+          <Skeleton className="h-8 w-40 mx-auto" />
+          <Skeleton className="h-5 w-64 mx-auto" />
+        </div>
+
+        {/* Settings Grid Skeleton */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Personal Info Card Skeleton */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-5 w-40" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Delivery Days Card Skeleton */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-5 w-36" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-12 w-full rounded-xl" />
+              <div className="grid grid-cols-2 gap-2">
+                {[...Array(7)].map((_, i) => (
+                  <Skeleton key={i} className="h-10 rounded-lg" />
+                ))}
+              </div>
+              <Skeleton className="h-4 w-32" />
+            </CardContent>
+          </Card>
+
+          {/* Language Card Skeleton */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-20 w-full rounded-lg" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Footer Skeleton */}
+        <div className="flex items-center justify-between pt-4">
+          <Skeleton className="h-10 w-24 rounded-md" />
+          <Skeleton className="h-11 w-36 rounded-md" />
+        </div>
       </div>
     );
   }
@@ -176,38 +283,18 @@ export default function EditStep3Page() {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="win95-sunken p-3">
             <div className="text-[11px] font-bold mb-3">📄 Style Name</div>
-            <Win95Input
-              label="Name *"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              disabled={loading}
-            />
+            <Win95Input label="Name" value={name} disabled={true} />
           </div>
 
           <div className="win95-sunken p-3">
             <div className="text-[11px] font-bold mb-3">👤 Your Info</div>
             <div className="space-y-2">
-              <Win95Input
-                label="Email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                disabled={loading}
-              />
+              <Win95Input label="Email" type="email" value={email} disabled={true} />
               <div className="grid grid-cols-2 gap-2">
-                <Win95Input
-                  label="First Name"
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  disabled={loading}
-                />
-                <Win95Input
-                  label="Last Name"
-                  value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  disabled={loading}
-                />
+                <Win95Input label="First Name" value={firstName} disabled={true} />
+                <Win95Input label="Last Name" value={lastName} disabled={true} />
               </div>
+              <Win95Input label="Job Title" value={job} disabled={true} />
             </div>
           </div>
 
@@ -283,28 +370,6 @@ export default function EditStep3Page() {
       )}
 
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Style Info */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Style Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>
-                Style Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                disabled={loading}
-                placeholder="My Writing Style"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Personal Info */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
@@ -320,28 +385,31 @@ export default function EditStep3Page() {
               <Input
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
-                disabled={loading}
+                disabled={true}
                 placeholder="you@example.com"
+                className="bg-muted"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>First Name</Label>
-                <Input
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  disabled={loading}
-                />
+                <Input value={firstName} disabled={true} className="bg-muted" />
               </div>
               <div className="space-y-2">
                 <Label>Last Name</Label>
-                <Input
-                  value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  disabled={loading}
-                />
+                <Input value={lastName} disabled={true} className="bg-muted" />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Briefcase className="h-3 w-3" /> Job Title
+              </Label>
+              <Input
+                value={job}
+                disabled={true}
+                placeholder="Your job title"
+                className="bg-muted"
+              />
             </div>
           </CardContent>
         </Card>

@@ -6,6 +6,7 @@ import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { StyleFormStep2 } from '@/components/articles/style-form-step2';
 import { DraftSessionService } from '@/lib/draft-session';
 import { isSubjectListValid } from '@/lib/onboarding-validation';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Lightbulb } from 'lucide-react';
 
 /**
@@ -75,13 +76,58 @@ export default function GenerateStep2Page() {
   };
 
   if (initialLoading) {
+    if (designMode === 'win95') {
+      return (
+        <div className="text-center py-8">
+          <span className="text-[11px] win95-loading">Loading...</span>
+        </div>
+      );
+    }
+
     return (
-      <div className="text-center py-8">
-        <span
-          className={designMode === 'win95' ? 'text-[11px] win95-loading' : 'text-muted-foreground'}
-        >
-          Loading...
-        </span>
+      <div className="space-y-6">
+        <div className="text-center space-y-4">
+          <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+          <Skeleton className="h-8 w-52 mx-auto" />
+          <Skeleton className="h-5 w-96 mx-auto" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Topics Card Skeleton */}
+          <div className="space-y-4 p-6 rounded-lg border">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-28" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 flex-1 rounded-md" />
+              <Skeleton className="h-10 w-10 rounded-md" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => (
+                <Skeleton
+                  key={i}
+                  className="h-14 w-full rounded-xl"
+                  style={{ opacity: 1 - (i - 1) * 0.25 }}
+                />
+              ))}
+            </div>
+          </div>
+          {/* AI Card Skeleton */}
+          <div className="space-y-4 p-6 rounded-lg border">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-9 w-28 rounded-md" />
+            </div>
+            <div className="flex flex-col items-center py-10">
+              <Skeleton className="h-12 w-12 rounded-full mb-3" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-between pt-4">
+          <Skeleton className="h-10 w-24 rounded-md" />
+          <Skeleton className="h-11 w-32 rounded-md" />
+        </div>
       </div>
     );
   }

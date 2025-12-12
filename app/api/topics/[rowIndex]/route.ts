@@ -106,7 +106,7 @@ export async function PUT(
 
 /**
  * DELETE /api/topics/[rowIndex]
- * Delete a topic from the user's Google Sheet
+ * Delete a topic from the user's Google Sheet and sync with article_styles subjects
  */
 export async function DELETE(
   request: NextRequest,
@@ -129,7 +129,7 @@ export async function DELETE(
     // Get user's article style
     const { data: style, error: styleError } = await supabaseAdmin
       .from('article_styles')
-      .select('display_name, name, subjects')
+      .select('id, display_name, name, subjects')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .single();
@@ -146,10 +146,27 @@ export async function DELETE(
       return NextResponse.json({ error: 'Google Sheets not configured' }, { status: 500 });
     }
 
+    const escapedSheetName =
+      sheetName.includes(' ') || sheetName.includes("'")
+        ? `'${sheetName.replace(/'/g, "''")}'`
+        : sheetName;
+
     const auth = getGoogleAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // First, get the sheet ID
+    // First, get the topic text from the row before deleting (for syncing with subjects)
+    let topicToDelete: string | null = null;
+    try {
+      const rowData = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${escapedSheetName}!A${rowNum}`,
+      });
+      topicToDelete = rowData.data.values?.[0]?.[0] || null;
+    } catch {
+      // Continue even if we can't get the topic text
+    }
+
+    // Get the sheet ID for deletion
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets.properties',
@@ -160,7 +177,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Sheet not found' }, { status: 404 });
     }
 
-    // Delete the row
+    // Delete the row from Google Sheets
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -178,6 +195,25 @@ export async function DELETE(
         ],
       },
     });
+
+    // Sync: Remove the topic from article_styles subjects array
+    if (topicToDelete && style.subjects?.length) {
+      const updatedSubjects = style.subjects.filter(
+        (s: string) => s.toLowerCase() !== topicToDelete!.toLowerCase()
+      );
+
+      // Only update if subjects actually changed
+      if (updatedSubjects.length !== style.subjects.length) {
+        await supabaseAdmin
+          .from('article_styles')
+          .update({
+            subjects: updatedSubjects,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', style.id)
+          .eq('user_id', user.id);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

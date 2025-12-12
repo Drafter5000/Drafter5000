@@ -257,7 +257,7 @@ export async function syncStyleToSheets(
             const topicRows = newSubjects.map((subject: string) => [
               subject, // Topic - the topic/subject text
               'Needs Draft', // Status - default status enum value
-              subject, // Subject - same as topic initially
+              '', // Subject - '' initially
               '', // Article - empty until article is drafted
               currentDate, // Last Update - current date
               clientName, // Client - customer name
@@ -341,10 +341,70 @@ export async function deleteStyleFromSheets(styleId: string): Promise<SyncResult
 
 export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResult> {
   try {
-    // For updates, we would need to find and update the specific row
-    // This is complex with Google Sheets API, so we log for now
-    console.log(`Style ${style.id} updated. Sheets sync for updates not yet implemented.`);
+    const customersSpreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
 
+    if (!customersSpreadsheetId) {
+      console.warn('GOOGLE_SHEETS_CUSTOMER_CONFIG_ID not configured, skipping sync');
+      return { success: true };
+    }
+
+    const customerSheetName = style.display_name || style.name || style.user_id;
+    const escapedSheetName =
+      customerSheetName.includes(' ') || customerSheetName.includes("'")
+        ? `'${customerSheetName.replace(/'/g, "''")}'`
+        : customerSheetName;
+
+    const auth = getGoogleAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Get existing topics from the sheet
+    let existingTopics: string[] = [];
+    try {
+      const existingData = await sheets.spreadsheets.values.get({
+        spreadsheetId: customersSpreadsheetId,
+        range: `${escapedSheetName}!A:A`,
+      });
+      existingTopics = (existingData.data.values || [])
+        .flat()
+        .filter((t: string) => t && t !== 'Topic') // Filter out header
+        .map((t: string) => t?.toLowerCase?.() || '');
+    } catch {
+      console.log('Could not fetch existing topics from sheet');
+    }
+
+    // Find new subjects that don't exist in the sheet
+    if (style.subjects && style.subjects.length > 0) {
+      const clientName = style.display_name || style.name || '';
+      const currentDate = formatDate(new Date());
+
+      const newSubjects = style.subjects.filter(
+        (subject: string) => !existingTopics.includes(subject.toLowerCase())
+      );
+
+      if (newSubjects.length > 0) {
+        const topicRows = newSubjects.map((subject: string) => [
+          subject,
+          'Needs Draft',
+          '',
+          '',
+          currentDate,
+          clientName,
+        ]);
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: customersSpreadsheetId,
+          range: `${escapedSheetName}!A2`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: topicRows,
+          },
+        });
+
+        console.log(`Added ${newSubjects.length} new topics to sheet: ${customerSheetName}`);
+      }
+    }
+
+    console.log(`Style ${style.id} synced to Google Sheets`);
     return { success: true };
   } catch (error) {
     console.error('Failed to update style in Google Sheets:', error);
