@@ -226,13 +226,22 @@ function DashboardContent() {
 
   const handleUpdateTopic = async (rowIndex: number, topic?: string, status?: string) => {
     setSavingTopic(true);
+    setTopicError(null);
     try {
       await apiClient.put(`/topics/${rowIndex}`, { topic, status });
       setEditingRowIndex(null);
       topicsFetchedRef.current = false;
       await fetchTopics(style);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to update topic:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update topic';
+      // Check if it's a limit reached error
+      if (errorMessage.includes('limit reached') || errorMessage.includes('monthly limit')) {
+        setTopicError(errorMessage);
+      } else {
+        setTopicError('Failed to update topic');
+      }
+      setTimeout(() => setTopicError(null), 5000);
     } finally {
       setSavingTopic(false);
     }

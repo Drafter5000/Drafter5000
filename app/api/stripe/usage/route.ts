@@ -1,4 +1,5 @@
 import { getServerSupabaseSession, getServerSupabaseClient } from '@/lib/supabase-client';
+import { getSentArticlesCount } from '@/lib/usage-limits';
 import { type NextRequest, NextResponse } from 'next/server';
 
 // Default plan limits as fallback
@@ -35,23 +36,16 @@ export async function GET(request: NextRequest) {
 
     const articlesLimit = planDetails?.articles_per_month ?? DEFAULT_PLAN_LIMITS[plan] ?? 2;
 
-    // Get current month's article count
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { count: articlesUsed } = await supabase
-      .from('articles')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
-      .gte('created_at', startOfMonth.toISOString());
+    // Get sent articles count from Google Sheets (topics with "Sent" status)
+    // "Sent" = article generated, so this is the usage metric
+    const articlesUsed = await getSentArticlesCount(session.user.id);
 
     return NextResponse.json({
       plan,
-      articles_used: articlesUsed || 0,
+      articles_used: articlesUsed,
       articles_limit: articlesLimit,
-      percentage_used: Math.round(((articlesUsed || 0) / articlesLimit) * 100),
-      can_generate: (articlesUsed || 0) < articlesLimit,
+      percentage_used: Math.round((articlesUsed / articlesLimit) * 100),
+      can_generate: articlesUsed < articlesLimit,
     });
   } catch (error: any) {
     console.error('Usage fetch error:', error);

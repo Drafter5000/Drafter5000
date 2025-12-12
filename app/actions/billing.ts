@@ -3,6 +3,7 @@
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { getStripeClient } from '@/lib/stripe-client';
 import { getActivePlans } from '@/lib/plan-utils';
+import { getSentArticlesCount } from '@/lib/usage-limits';
 import type { UserProfile } from '@/lib/types';
 
 export async function createCheckoutSession(userId: string, planId: 'pro' | 'enterprise') {
@@ -164,22 +165,16 @@ export async function getUsageStats(userId: string) {
     // Default to 2 articles per month if plan not found (free tier)
     const articlesLimit = planDetails?.articles_per_month ?? 2;
 
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { count: articlesUsed } = await supabase
-      .from('articles')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth.toISOString());
+    // Get sent articles count from Google Sheets (topics with "Sent" status)
+    // "Sent" = article generated, so this is the usage metric
+    const articlesUsed = await getSentArticlesCount(userId);
 
     return {
       plan: planName,
-      articles_used: articlesUsed || 0,
+      articles_used: articlesUsed,
       articles_limit: articlesLimit,
-      percentage_used: Math.round(((articlesUsed || 0) / articlesLimit) * 100),
-      can_generate: (articlesUsed || 0) < articlesLimit,
+      percentage_used: Math.round((articlesUsed / articlesLimit) * 100),
+      can_generate: articlesUsed < articlesLimit,
     };
   } catch (error) {
     console.error('[Billing] Usage stats error:', error);
