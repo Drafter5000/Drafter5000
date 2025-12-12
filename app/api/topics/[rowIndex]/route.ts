@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getGoogleAuth } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
+import { checkSubscriptionAccess } from '@/lib/subscription-utils';
 
 // Default plan limits as fallback
 const DEFAULT_PLAN_LIMITS: Record<string, number> = {
@@ -111,6 +112,26 @@ export async function PUT(
     const user = await getServerSupabaseUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check subscription status before allowing topic update
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single();
+
+    const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+    if (!subscriptionCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Subscription required',
+          message: subscriptionCheck.message,
+          subscription_status: subscriptionCheck.status,
+        },
+        { status: 403 }
+      );
     }
 
     const { rowIndex } = await params;
@@ -243,6 +264,26 @@ export async function DELETE(
     const user = await getServerSupabaseUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check subscription status before allowing topic deletion
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single();
+
+    const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+    if (!subscriptionCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Subscription required',
+          message: subscriptionCheck.message,
+          subscription_status: subscriptionCheck.status,
+        },
+        { status: 403 }
+      );
     }
 
     const { rowIndex } = await params;

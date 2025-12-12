@@ -19,6 +19,8 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
+import { SubscriptionExpirationBanner } from '@/components/subscription-expiration-banner';
+import { isSubscriptionExpired, formatExpirationDate } from '@/lib/subscription-utils';
 import {
   CreditCard,
   Calendar,
@@ -27,6 +29,8 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  RefreshCw,
+  XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { SubscriptionPlanWithFeatures } from '@/lib/types';
@@ -46,6 +50,8 @@ interface SubscriptionData {
   current_period_end?: number;
   cancel_at_period_end?: boolean;
   canceled_at?: number;
+  is_expired?: boolean;
+  expiration_date?: string;
 }
 
 interface PlansResponse {
@@ -107,6 +113,14 @@ export default function BillingPage() {
       }
     : { name: 'Free', price: 0, articles_per_month: 2, features: [] };
 
+  // Check if subscription is expired - Requirements: 1.2, 5.4
+  const subscriptionExpired = subscription ? isSubscriptionExpired(subscription.status) : false;
+  const expirationDate = subscription?.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : subscription?.expiration_date
+      ? new Date(subscription.expiration_date)
+      : null;
+
   // Win95 Design
   if (designMode === 'win95') {
     if (loading) {
@@ -134,6 +148,15 @@ export default function BillingPage() {
 
             <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
               <div className="space-y-4">
+                {/* Subscription Expiration Banner - Requirements: 1.2, 4.2 */}
+                {subscriptionExpired && (
+                  <SubscriptionExpirationBanner
+                    expirationDate={expirationDate}
+                    onRenewClick={handleManageSubscription}
+                    isRenewing={portalLoading}
+                    status={subscription?.status === 'past_due' ? 'past_due' : 'canceled'}
+                  />
+                )}
                 <div className="flex items-center justify-between">
                   <div className="win95-sunken p-2 flex items-center gap-2">
                     <span className="text-[16px]">💳</span>
@@ -144,10 +167,17 @@ export default function BillingPage() {
                       </p>
                     </div>
                   </div>
-                  {usage?.plan !== 'free' && (
+                  {/* Show Renew button for expired, Manage for active - Requirements: 4.2 */}
+                  {subscriptionExpired ? (
                     <Win95Button onClick={handleManageSubscription} disabled={portalLoading}>
-                      {portalLoading ? 'Loading...' : '💳 Manage Subscription'}
+                      {portalLoading ? 'Loading...' : '🔄 Renew Subscription'}
                     </Win95Button>
+                  ) : (
+                    usage?.plan !== 'free' && (
+                      <Win95Button onClick={handleManageSubscription} disabled={portalLoading}>
+                        {portalLoading ? 'Loading...' : '💳 Manage Subscription'}
+                      </Win95Button>
+                    )
                   )}
                 </div>
 
@@ -158,18 +188,32 @@ export default function BillingPage() {
                       <div>
                         <h3 className="text-[14px] font-bold">{planDetails.name} Plan</h3>
                         <p className="text-[10px] text-[var(--win95-button-shadow)]">
-                          {usage?.plan === 'free'
-                            ? 'Get started with basic features'
-                            : 'Your current subscription'}
+                          {subscriptionExpired
+                            ? `Expired${expirationDate ? ` on ${formatExpirationDate(expirationDate)}` : ''}`
+                            : usage?.plan === 'free'
+                              ? 'Get started with basic features'
+                              : 'Your current subscription'}
                         </p>
                       </div>
-                      <Win95Badge
-                        variant={subscription?.status === 'active' ? 'default' : 'secondary'}
-                      >
-                        {subscription?.status === 'active'
-                          ? '✓ Active'
-                          : subscription?.status || 'Active'}
-                      </Win95Badge>
+                      {/* Status badge with expiration handling - Requirements: 1.2 */}
+                      <div className="flex gap-2">
+                        <Win95Badge
+                          variant={subscription?.status === 'active' ? 'default' : 'secondary'}
+                          className={subscriptionExpired ? 'text-red-600' : ''}
+                        >
+                          {subscriptionExpired
+                            ? '⚠️ Expired'
+                            : subscription?.status === 'active'
+                              ? '✓ Active'
+                              : subscription?.status || 'Active'}
+                        </Win95Badge>
+                        {/* Show limit reached badge when usage limit is exhausted */}
+                        {!subscriptionExpired && usage && !usage.can_generate && (
+                          <Win95Badge variant="secondary" className="text-amber-600">
+                            ⚠️ Limit Reached
+                          </Win95Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="win95-sunken p-2 mb-3">
                       <span className="text-[24px] font-bold">${planDetails.price / 100}</span>
@@ -182,11 +226,12 @@ export default function BillingPage() {
                   <div className="win95-groupbox">
                     <fieldset className="border border-[var(--win95-button-shadow)] p-3">
                       <legend className="win95-groupbox-title font-bold">
-                        ⚡ Usage This Month
+                        ⚡ Usage {subscriptionExpired ? '(Last Billing Period)' : 'This Month'}
                       </legend>
                       <div className="mb-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[11px] font-bold">Articles Generated</span>
+                          {/* Show 0 remaining for expired subscriptions - Requirements: 6.2 */}
                           <span className="text-[11px]">
                             {usage.articles_used} / {usage.articles_limit}
                           </span>
@@ -359,6 +404,16 @@ export default function BillingPage() {
         <DashboardHeader />
         <main className="pt-8 pb-20 px-6">
           <div className="max-w-4xl mx-auto">
+            {/* Subscription Expiration Banner - Requirements: 1.2, 4.2 */}
+            {subscriptionExpired && (
+              <SubscriptionExpirationBanner
+                expirationDate={expirationDate}
+                onRenewClick={handleManageSubscription}
+                isRenewing={portalLoading}
+                status={subscription?.status === 'past_due' ? 'past_due' : 'canceled'}
+              />
+            )}
+
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -372,7 +427,8 @@ export default function BillingPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {usage?.plan !== 'free' && (
+                {/* Show Renew button for expired, Manage for active - Requirements: 4.2 */}
+                {subscriptionExpired ? (
                   <Button onClick={handleManageSubscription} disabled={portalLoading}>
                     {portalLoading ? (
                       <>
@@ -380,9 +436,25 @@ export default function BillingPage() {
                         Loading...
                       </>
                     ) : (
-                      'Manage Subscription'
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Renew Subscription
+                      </>
                     )}
                   </Button>
+                ) : (
+                  usage?.plan !== 'free' && (
+                    <Button onClick={handleManageSubscription} disabled={portalLoading}>
+                      {portalLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Manage Subscription'
+                      )}
+                    </Button>
+                  )
                 )}
                 <Link href="/dashboard">
                   <Button variant="outline" className="gap-2">
@@ -403,21 +475,46 @@ export default function BillingPage() {
                         Current Plan
                       </CardTitle>
                       <CardDescription>
-                        {usage?.plan === 'free'
-                          ? 'Get started with basic features'
-                          : 'Your current subscription'}
+                        {subscriptionExpired
+                          ? `Expired${expirationDate ? ` on ${formatExpirationDate(expirationDate)}` : ''}`
+                          : usage?.plan === 'free'
+                            ? 'Get started with basic features'
+                            : 'Your current subscription'}
                       </CardDescription>
                     </div>
-                    <Badge variant={subscription?.status === 'active' ? 'default' : 'secondary'}>
-                      {subscription?.status === 'active' ? (
-                        <>
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Active
-                        </>
-                      ) : (
-                        subscription?.status || 'Active'
+                    {/* Status badge with expiration handling - Requirements: 1.2 */}
+                    <div className="flex gap-2">
+                      <Badge
+                        variant={
+                          subscriptionExpired
+                            ? 'destructive'
+                            : subscription?.status === 'active'
+                              ? 'default'
+                              : 'secondary'
+                        }
+                      >
+                        {subscriptionExpired ? (
+                          <>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Expired
+                          </>
+                        ) : subscription?.status === 'active' ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          subscription?.status || 'Active'
+                        )}
+                      </Badge>
+                      {/* Show limit reached badge when usage limit is exhausted */}
+                      {!subscriptionExpired && usage && !usage.can_generate && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Limit Reached
+                        </Badge>
                       )}
-                    </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -452,25 +549,34 @@ export default function BillingPage() {
               </Card>
 
               {usage && (
-                <Card>
+                <Card className={subscriptionExpired ? 'opacity-75' : ''}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Zap className="h-5 w-5 text-amber-500" />
-                      Usage This Month
+                      {/* Show billing period context for expired - Requirements: 6.3 */}
+                      Usage {subscriptionExpired ? '(Last Billing Period)' : 'This Month'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">Articles Generated</span>
+                      {/* Show 0 remaining for expired subscriptions - Requirements: 6.2 */}
                       <span className="text-muted-foreground">
-                        {usage.articles_used} / {usage.articles_limit}
+                        {subscriptionExpired
+                          ? `${usage.articles_used} / 0`
+                          : `${usage.articles_used} / ${usage.articles_limit}`}
                       </span>
                     </div>
-                    <Progress value={usage.percentage_used} className="h-3" />
+                    <Progress
+                      value={subscriptionExpired ? 100 : usage.percentage_used}
+                      className="h-3"
+                    />
                     <p className="text-sm text-muted-foreground mt-2">
-                      {usage.can_generate
-                        ? `${usage.articles_limit - usage.articles_used} articles remaining`
-                        : "You've reached your monthly limit"}
+                      {subscriptionExpired
+                        ? '0 articles remaining - Please renew your subscription'
+                        : usage.can_generate
+                          ? `${usage.articles_limit - usage.articles_used} articles remaining`
+                          : "You've reached your monthly limit"}
                     </p>
                     {!usage.can_generate && usage.plan === 'free' && (
                       <Alert className="mt-4">

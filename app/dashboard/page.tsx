@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense, useContext } from 'react';
+import React, { useEffect, useState, Suspense, useContext, useCallback } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { ProtectedRoute } from '@/components/protected-route';
@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
+import { SubscriptionExpirationBanner } from '@/components/subscription-expiration-banner';
+import { useSubscriptionStatus } from '@/lib/hooks/use-subscription-status';
 import {
   FileText,
   Mail,
@@ -78,6 +80,13 @@ interface DashboardData {
   };
 }
 
+interface UsageData {
+  articles_used: number;
+  articles_limit: number;
+  can_generate: boolean;
+  plan: string;
+}
+
 const STATUS_OPTIONS = ['Needs Draft', 'In Progress', 'Review', 'Sent', 'Archived'];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -109,6 +118,33 @@ function DashboardContent() {
   const [styleLoading, setStyleLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+
+  // Subscription status for expiration handling - Requirements: 1.1, 4.3
+  const {
+    isExpired,
+    expirationDate,
+    status: subscriptionStatus,
+    canAccessFeatures,
+  } = useSubscriptionStatus();
+  const [isRenewing, setIsRenewing] = useState(false);
+
+  // Usage limits state
+  const [usage, setUsage] = useState<UsageData | null>(null);
+
+  // Determine if features should be disabled (expired OR no active subscription OR usage limit reached)
+  const usageLimitReached = usage ? !usage.can_generate : false;
+  const featuresDisabled = !canAccessFeatures || usageLimitReached;
+
+  const handleRenewSubscription = useCallback(async () => {
+    try {
+      setIsRenewing(true);
+      const { url } = await apiClient.post<{ url: string }>('/stripe/portal', {});
+      window.location.href = url;
+    } catch (err) {
+      console.error('Portal redirect error:', err);
+      setIsRenewing(false);
+    }
+  }, []);
 
   // Topics state
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -183,11 +219,13 @@ function DashboardContent() {
       fetchingRef.current = true;
       try {
         setLoading(true);
-        const [dashboardData, stylesData] = await Promise.all([
+        const [dashboardData, stylesData, usageData] = await Promise.all([
           apiClient.get<DashboardData>(`/dashboard/metrics?user_id=${user.id}`),
           apiClient.get<ArticleStyle[]>(`/article-styles?user_id=${user.id}`),
+          apiClient.get<UsageData>('/stripe/usage'),
         ]);
         setData(dashboardData);
+        setUsage(usageData);
         const userStyle = stylesData.length > 0 ? stylesData[0] : null;
         setStyle(userStyle);
         await fetchTopics(userStyle);
@@ -340,6 +378,34 @@ function DashboardContent() {
             <DashboardHeader />
             <Win95Window title="Dashboard" icon={<span>📊</span>}>
               <div className="space-y-4">
+                {/* Subscription Expiration/Required Banner - Requirements: 1.1, 4.3 */}
+                {!canAccessFeatures && (
+                  <SubscriptionExpirationBanner
+                    expirationDate={expirationDate}
+                    onRenewClick={handleRenewSubscription}
+                    isRenewing={isRenewing}
+                    status={
+                      subscriptionStatus === 'past_due'
+                        ? 'past_due'
+                        : subscriptionStatus === 'incomplete'
+                          ? 'incomplete'
+                          : 'canceled'
+                    }
+                  />
+                )}
+                {/* Usage Limit Reached Banner */}
+                {canAccessFeatures && usageLimitReached && usage && (
+                  <Win95Alert type="warning" title="⚠️ Monthly Limit Reached">
+                    You've used {usage.articles_used} of {usage.articles_limit} articles this month.
+                    <Win95Button
+                      onClick={handleRenewSubscription}
+                      disabled={isRenewing}
+                      className="ml-2"
+                    >
+                      {isRenewing ? 'Loading...' : '📈 Upgrade Plan'}
+                    </Win95Button>
+                  </Win95Alert>
+                )}
                 {showPaymentSuccess && (
                   <Win95Alert
                     type="success"
@@ -382,9 +448,15 @@ function DashboardContent() {
                   <div className="win95-sunken p-3">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[11px] font-bold">📄 {style.name}</span>
-                      <Link href={`/articles/styles/${style.id}/edit`}>
-                        <Win95Button size="sm">✏️ Edit</Win95Button>
-                      </Link>
+                      {!featuresDisabled ? (
+                        <Link href={`/articles/styles/${style.id}/edit`}>
+                          <Win95Button size="sm">✏️ Edit</Win95Button>
+                        </Link>
+                      ) : (
+                        <Win95Button size="sm" disabled title="Active subscription required">
+                          ✏️ Edit
+                        </Win95Button>
+                      )}
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="win95-raised p-2">
@@ -588,6 +660,52 @@ function DashboardContent() {
 
         <main className="pt-8 pb-20 px-4 md:px-6">
           <div className="max-w-7xl mx-auto space-y-8">
+            {/* Subscription Expiration/Required Banner - Requirements: 1.1, 4.3 */}
+            {!canAccessFeatures && (
+              <SubscriptionExpirationBanner
+                expirationDate={expirationDate}
+                onRenewClick={handleRenewSubscription}
+                isRenewing={isRenewing}
+                status={
+                  subscriptionStatus === 'past_due'
+                    ? 'past_due'
+                    : subscriptionStatus === 'incomplete'
+                      ? 'incomplete'
+                      : 'canceled'
+                }
+              />
+            )}
+
+            {/* Usage Limit Reached Banner */}
+            {canAccessFeatures && usageLimitReached && usage && (
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white shadow-lg">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+                <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                      <AlertCircle className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Monthly Limit Reached</h3>
+                      <p className="text-white/80">
+                        You've used {usage.articles_used} of {usage.articles_limit} articles this
+                        month. Upgrade your plan for more articles.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleRenewSubscription}
+                    disabled={isRenewing}
+                    className="shrink-0"
+                  >
+                    {isRenewing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Upgrade Plan'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Payment Success Banner */}
             {showPaymentSuccess && (
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 p-6 text-white shadow-lg">
@@ -752,16 +870,29 @@ function DashboardContent() {
                               <p className="text-sm text-muted-foreground">Your Writing Style</p>
                             </div>
                           </div>
-                          <Link href={`/articles/styles/${style.id}/edit`}>
+                          {!featuresDisabled ? (
+                            <Link href={`/articles/styles/${style.id}/edit`}>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="gap-2 shadow-sm hover:shadow-md transition-shadow"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                                Edit
+                              </Button>
+                            </Link>
+                          ) : (
                             <Button
                               size="sm"
                               variant="secondary"
-                              className="gap-2 shadow-sm hover:shadow-md transition-shadow"
+                              disabled
+                              className="gap-2"
+                              title="Active subscription required to edit style"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                               Edit
                             </Button>
-                          </Link>
+                          )}
                         </div>
 
                         {/* Stats Row */}
@@ -894,25 +1025,38 @@ function DashboardContent() {
                     </Button>
                   </div>
 
-                  {/* Add Topic Input */}
+                  {/* Add Topic Input - Disabled when subscription not active or usage limit reached */}
                   <div className="flex gap-3 px-6">
                     <div className="relative flex-1">
                       <Input
-                        placeholder="Enter a new topic to write about..."
+                        placeholder={
+                          usageLimitReached
+                            ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
+                            : featuresDisabled
+                              ? 'Active subscription required to add topics'
+                              : 'Enter a new topic to write about...'
+                        }
                         value={newTopic}
                         onChange={e => {
                           setNewTopic(e.target.value);
                           setTopicError(null);
                         }}
-                        onKeyDown={e => e.key === 'Enter' && handleAddTopic()}
-                        disabled={addingTopic}
+                        onKeyDown={e => e.key === 'Enter' && !featuresDisabled && handleAddTopic()}
+                        disabled={addingTopic || featuresDisabled}
                         className={`h-10 ${topicError ? 'border-destructive' : ''}`}
                       />
                     </div>
                     <Button
                       onClick={handleAddTopic}
-                      disabled={addingTopic || !newTopic.trim()}
+                      disabled={addingTopic || !newTopic.trim() || featuresDisabled}
                       className="h-10 px-4 gap-2"
+                      title={
+                        usageLimitReached
+                          ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
+                          : featuresDisabled
+                            ? 'Active subscription required to add topics'
+                            : undefined
+                      }
                     >
                       {addingTopic ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1047,29 +1191,32 @@ function DashboardContent() {
                                 )}
                                 <p className="text-xs text-muted-foreground">{topic.lastUpdate}</p>
                               </div>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={() => startEditing(topic)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 text-red-500 hover:text-red-600"
-                                  onClick={() => openDeleteDialog(topic)}
-                                  disabled={deletingRowIndex === topic.rowIndex}
-                                >
-                                  {deletingRowIndex === topic.rowIndex ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
+                              {/* Edit/Delete buttons - Hidden when subscription not active */}
+                              {!featuresDisabled && (
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8"
+                                    onClick={() => startEditing(topic)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-red-500 hover:text-red-600"
+                                    onClick={() => openDeleteDialog(topic)}
+                                    disabled={deletingRowIndex === topic.rowIndex}
+                                  >
+                                    {deletingRowIndex === topic.rowIndex ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
                             </>
                           )}
                         </div>

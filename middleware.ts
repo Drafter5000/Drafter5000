@@ -179,10 +179,21 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    // If trying to access subscription-required routes without subscription, redirect to subscribe
+    // If trying to access subscription-required routes without subscription
+    // Allow access to dashboard for expired subscriptions (read-only mode with renewal banner)
+    // But redirect incomplete subscriptions to subscribe page
     if (requiresSubscription && !hasActiveSubscription) {
-      console.log('[Middleware] Redirecting to subscribe (no active subscription)');
-      return NextResponse.redirect(new URL('/subscribe', request.url));
+      const isExpiredSubscription =
+        profile?.subscription_status === 'past_due' || profile?.subscription_status === 'canceled';
+
+      // Allow expired subscriptions to access dashboard (read-only mode)
+      if (isExpiredSubscription && pathname.startsWith('/dashboard')) {
+        console.log('[Middleware] Allowing expired subscription to access dashboard (read-only)');
+        // Continue to dashboard - UI will show expiration banner and disable features
+      } else {
+        console.log('[Middleware] Redirecting to subscribe (no active subscription)');
+        return NextResponse.redirect(new URL('/subscribe', request.url));
+      }
     }
 
     // Check if user has completed onboarding (has an active article style)

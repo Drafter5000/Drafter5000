@@ -1,8 +1,10 @@
-import { getServerSupabaseUser } from '@/lib/supabase-client';
+import { getServerSupabaseUser, getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getGoogleAuth } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
+import { checkSubscriptionAccess } from '@/lib/subscription-utils';
+import { checkUsageLimit } from '@/lib/usage-limits';
 
 export interface Topic {
   rowIndex: number;
@@ -102,6 +104,40 @@ export async function POST(request: NextRequest) {
     const user = await getServerSupabaseUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check subscription status before allowing topic creation
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single();
+
+    const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+    if (!subscriptionCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Subscription required',
+          message: subscriptionCheck.message,
+          subscription_status: subscriptionCheck.status,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check usage limits before allowing topic creation
+    const usageCheck = await checkUsageLimit(user.id);
+    if (!usageCheck.canGenerate) {
+      return NextResponse.json(
+        {
+          error: 'Usage limit reached',
+          message: `You've reached your monthly limit of ${usageCheck.articlesLimit} articles. Please upgrade your plan to add more topics.`,
+          articles_used: usageCheck.articlesUsed,
+          articles_limit: usageCheck.articlesLimit,
+        },
+        { status: 403 }
+      );
     }
 
     const { topic } = await request.json();

@@ -334,11 +334,12 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_succeeded': {
+        // Requirements: 5.3 - Update subscription status to active on successful payment (renewal)
         const invoice = event.data.object;
         const customerId = invoice.customer;
 
         // Update subscription status to active on successful payment
-        await supabase
+        const { error: updateError } = await supabase
           .from('user_profiles')
           .update({
             subscription_status: 'active',
@@ -346,21 +347,34 @@ export async function POST(request: NextRequest) {
           })
           .eq('stripe_customer_id', customerId as string);
 
+        if (updateError) {
+          console.error('Failed to update subscription status on payment success:', updateError);
+        } else {
+          console.log(`Subscription renewed: customer=${customerId}, status=active`);
+        }
+
         break;
       }
 
       case 'invoice.payment_failed': {
+        // Requirements: 5.1 - Update subscription status to past_due on payment failure
         const invoice = event.data.object;
         const customerId = invoice.customer;
 
         // Update subscription status to past_due
-        await supabase
+        const { error: updateError } = await supabase
           .from('user_profiles')
           .update({
             subscription_status: 'past_due',
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_customer_id', customerId as string);
+
+        if (updateError) {
+          console.error('Failed to update subscription status on payment failure:', updateError);
+        } else {
+          console.log(`Subscription payment failed: customer=${customerId}, status=past_due`);
+        }
 
         break;
       }

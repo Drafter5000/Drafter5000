@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
+import { FeatureGate } from '@/components/feature-gate';
 import { CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react';
 import type { ArticleStyle } from '@/lib/types';
 
@@ -164,7 +165,15 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
                       </div>
                     </div>
 
-                    <div className="win95-sunken p-4">{children}</div>
+                    {/* Content - Wrapped with FeatureGate for subscription check - Requirements: 2.2, 2.4 */}
+                    <div className="win95-sunken p-4">
+                      <FeatureGate
+                        showTooltip={true}
+                        tooltipMessage="Active subscription required to edit your writing style"
+                      >
+                        {children}
+                      </FeatureGate>
+                    </div>
                   </div>
                 )}
               </Win95Window>
@@ -291,8 +300,15 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
                     </div>
                   </div>
 
-                  {/* Content */}
-                  <div className="bg-card rounded-lg border p-6">{children}</div>
+                  {/* Content - Wrapped with FeatureGate for subscription check - Requirements: 2.2, 2.4 */}
+                  <div className="bg-card rounded-lg border p-6">
+                    <FeatureGate
+                      showTooltip={true}
+                      tooltipMessage="Active subscription required to edit your writing style"
+                    >
+                      {children}
+                    </FeatureGate>
+                  </div>
                 </div>
               )}
             </div>

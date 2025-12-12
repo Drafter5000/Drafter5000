@@ -1,10 +1,34 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { generateTopicSuggestions } from '@/lib/services/openai';
 import { getDraft } from '@/lib/services/article-styles';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
+import { checkSubscriptionAccess } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   try {
     const { user_id, existing_topics = [], style_samples, job } = await request.json();
+
+    // Check subscription status for authenticated users
+    if (user_id) {
+      const supabase = await getServerSupabaseClient();
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('subscription_status')
+        .eq('id', user_id)
+        .single();
+
+      const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+      if (!subscriptionCheck.hasAccess) {
+        return NextResponse.json(
+          {
+            error: 'Subscription required',
+            message: subscriptionCheck.message,
+            subscription_status: subscriptionCheck.status,
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     let samplesToUse: string[] = [];
     let jobTitle = job;

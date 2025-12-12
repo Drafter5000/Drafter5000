@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { listArticleStyles, createArticleStyle } from '@/lib/services/article-styles';
 import { syncStyleToSheets } from '@/lib/services/article-styles-sync';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
+import { checkSubscriptionAccess } from '@/lib/subscription-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,6 +38,26 @@ export async function POST(request: NextRequest) {
 
     if (!user_id) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
+    }
+
+    // Check subscription status before allowing style creation
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_status')
+      .eq('id', user_id)
+      .single();
+
+    const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+    if (!subscriptionCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Subscription required',
+          message: subscriptionCheck.message,
+          subscription_status: subscriptionCheck.status,
+        },
+        { status: 403 }
+      );
     }
 
     if (!name || typeof name !== 'string') {

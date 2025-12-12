@@ -1,10 +1,6 @@
 export type UserRole = 'free' | 'pro' | 'enterprise';
 export type OrgRole = 'super_admin' | 'admin' | 'member' | 'viewer';
 
-// ===========================================
-// USER ROLE TYPE ENUM (Simplified 3-role system)
-// ===========================================
-
 export enum UserRoleType {
   CUSTOMER = 'customer',
   CUSTOMER_ADMIN = 'customer_admin',

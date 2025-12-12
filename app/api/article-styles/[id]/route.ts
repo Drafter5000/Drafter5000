@@ -5,6 +5,8 @@ import {
   deleteArticleStyle,
 } from '@/lib/services/article-styles';
 import { updateStyleInSheets, deleteStyleFromSheets } from '@/lib/services/article-styles-sync';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
+import { checkSubscriptionAccess } from '@/lib/subscription-utils';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -44,6 +46,26 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
     }
 
+    // Check subscription status before allowing style update
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_status')
+      .eq('id', user_id)
+      .single();
+
+    const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+    if (!subscriptionCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Subscription required',
+          message: subscriptionCheck.message,
+          subscription_status: subscriptionCheck.status,
+        },
+        { status: 403 }
+      );
+    }
+
     // Verify style exists and belongs to user
     const existing = await getArticleStyle(id, user_id);
     if (!existing) {
@@ -73,6 +95,26 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (!userId) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
+    }
+
+    // Check subscription status before allowing style deletion
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_status')
+      .eq('id', userId)
+      .single();
+
+    const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+    if (!subscriptionCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Subscription required',
+          message: subscriptionCheck.message,
+          subscription_status: subscriptionCheck.status,
+        },
+        { status: 403 }
+      );
     }
 
     // Verify style exists and belongs to user
