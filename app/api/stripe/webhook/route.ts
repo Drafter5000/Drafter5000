@@ -256,6 +256,7 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.created': {
         const subscription = event.data.object as any;
         const customerId = subscription.customer;
+        const isCreated = event.type === 'customer.subscription.created';
 
         // Determine plan from price using database lookup
         const priceId = subscription.items?.data?.[0]?.price?.id;
@@ -270,7 +271,7 @@ export async function POST(request: NextRequest) {
           })
           .eq('stripe_customer_id', customerId as string);
 
-        // Update subscription record
+        // Get user profile
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('id')
@@ -278,6 +279,50 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (profile && subscription.current_period_start && subscription.current_period_end) {
+          // Get current subscription to check for plan changes
+          const { data: currentSub } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', profile.id)
+            .single();
+
+          // Check if this is a plan change (upgrade/downgrade)
+          const isPlanChange = currentSub && currentSub.plan !== plan && !isCreated;
+
+          // Save history for plan changes
+          if (isPlanChange && currentSub) {
+            const eventType = plan > currentSub.plan ? 'upgraded' : 'downgraded';
+            await supabase.from('subscription_history').insert({
+              user_id: profile.id,
+              stripe_subscription_id: subscription.id,
+              stripe_price_id: currentSub.stripe_price_id,
+              plan: currentSub.plan,
+              status: currentSub.status,
+              period_start: currentSub.current_period_start,
+              period_end: currentSub.current_period_end,
+              event_type: eventType,
+            });
+            console.log(
+              `Subscription ${eventType}: user=${profile.id}, from=${currentSub.plan} to=${plan}`
+            );
+          }
+
+          // Save history for new subscriptions
+          if (isCreated) {
+            await supabase.from('subscription_history').insert({
+              user_id: profile.id,
+              stripe_subscription_id: subscription.id,
+              stripe_price_id: priceId || '',
+              plan,
+              status: subscription.status,
+              period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+              period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              event_type: 'created',
+            });
+            console.log(`Subscription created: user=${profile.id}, plan=${plan}`);
+          }
+
+          // Update subscription record
           await supabase.from('subscriptions').upsert({
             user_id: profile.id,
             stripe_subscription_id: subscription.id,
@@ -300,19 +345,10 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
+        const subscription = event.data.object as any;
         const customerId = subscription.customer;
 
-        await supabase
-          .from('user_profiles')
-          .update({
-            subscription_status: 'canceled',
-            subscription_plan: 'free',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_customer_id', customerId as string);
-
-        // Update subscription record
+        // Get user profile
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('id')
@@ -320,6 +356,31 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (profile) {
+          // Get current subscription to save to history
+          const { data: currentSub } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', profile.id)
+            .single();
+
+          // Save to history before updating
+          if (currentSub) {
+            await supabase.from('subscription_history').insert({
+              user_id: profile.id,
+              stripe_subscription_id: subscription.id,
+              stripe_price_id: currentSub.stripe_price_id,
+              plan: currentSub.plan,
+              status: 'canceled',
+              period_start: currentSub.current_period_start,
+              period_end: currentSub.current_period_end,
+              event_type: 'canceled',
+            });
+            console.log(
+              `Subscription canceled and saved to history: user=${profile.id}, plan=${currentSub.plan}`
+            );
+          }
+
+          // Update subscription record
           await supabase
             .from('subscriptions')
             .update({
@@ -330,13 +391,39 @@ export async function POST(request: NextRequest) {
             .eq('user_id', profile.id);
         }
 
+        // Update user profile
+        await supabase
+          .from('user_profiles')
+          .update({
+            subscription_status: 'canceled',
+            subscription_plan: 'free',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_customer_id', customerId as string);
+
         break;
       }
 
       case 'invoice.payment_succeeded': {
         // Requirements: 5.3 - Update subscription status to active on successful payment (renewal)
-        const invoice = event.data.object;
+        const invoice = event.data.object as any;
         const customerId = invoice.customer;
+        const subscriptionId = invoice.subscription;
+        const invoiceId = invoice.id;
+        const amountPaid = invoice.amount_paid;
+        const currency = invoice.currency;
+
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id, subscription_plan')
+          .eq('stripe_customer_id', customerId as string)
+          .single();
+
+        if (!profile) {
+          console.error(`No profile found for customer ${customerId}`);
+          break;
+        }
 
         // Update subscription status to active on successful payment
         const { error: updateError } = await supabase
@@ -349,8 +436,75 @@ export async function POST(request: NextRequest) {
 
         if (updateError) {
           console.error('Failed to update subscription status on payment success:', updateError);
+        }
+
+        // If this is a subscription invoice (renewal), update subscription period and save history
+        if (subscriptionId) {
+          try {
+            // Retrieve the updated subscription from Stripe to get new period dates
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId as string);
+            const priceId = subscription.items?.data?.[0]?.price?.id;
+            const plan = await mapPriceIdToPlan(priceId);
+
+            const periodStart = subscription.current_period_start;
+            const periodEnd = subscription.current_period_end;
+
+            // Get current subscription record to check if this is a renewal
+            const { data: currentSub } = await supabase
+              .from('subscriptions')
+              .select('*')
+              .eq('user_id', profile.id)
+              .single();
+
+            // Determine if this is a renewal (existing subscription with different period)
+            const isRenewal =
+              currentSub &&
+              currentSub.current_period_start &&
+              new Date(currentSub.current_period_start).getTime() !==
+                new Date(periodStart * 1000).getTime();
+
+            // Save to subscription history before updating (preserve old period)
+            if (currentSub && isRenewal) {
+              await supabase.from('subscription_history').insert({
+                user_id: profile.id,
+                stripe_subscription_id: subscriptionId as string,
+                stripe_price_id: currentSub.stripe_price_id,
+                plan: currentSub.plan,
+                status: 'renewed',
+                period_start: currentSub.current_period_start,
+                period_end: currentSub.current_period_end,
+                amount_paid_cents: amountPaid,
+                currency: currency,
+                invoice_id: invoiceId,
+                event_type: 'renewed',
+              });
+              console.log(
+                `Subscription history saved for renewal: user=${profile.id}, period=${currentSub.current_period_start} to ${currentSub.current_period_end}`
+              );
+            }
+
+            // Update subscription record with new period dates
+            await supabase.from('subscriptions').upsert({
+              user_id: profile.id,
+              stripe_subscription_id: subscriptionId as string,
+              stripe_price_id: priceId || '',
+              plan,
+              status: 'active',
+              current_period_start: new Date(periodStart * 1000).toISOString(),
+              current_period_end: new Date(periodEnd * 1000).toISOString(),
+              cancel_at: null,
+              canceled_at: null,
+              updated_at: new Date().toISOString(),
+            });
+
+            console.log(
+              `Subscription ${isRenewal ? 'renewed' : 'payment succeeded'}: customer=${customerId}, user=${profile.id}, period=${new Date(periodStart * 1000).toISOString()} to ${new Date(periodEnd * 1000).toISOString()}`
+            );
+          } catch (subError) {
+            console.error('Failed to update subscription on payment success:', subError);
+          }
         } else {
-          console.log(`Subscription renewed: customer=${customerId}, status=active`);
+          console.log(`Payment succeeded (non-subscription): customer=${customerId}`);
         }
 
         break;
@@ -358,8 +512,16 @@ export async function POST(request: NextRequest) {
 
       case 'invoice.payment_failed': {
         // Requirements: 5.1 - Update subscription status to past_due on payment failure
-        const invoice = event.data.object;
+        const invoice = event.data.object as any;
         const customerId = invoice.customer;
+        const subscriptionId = invoice.subscription;
+
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('stripe_customer_id', customerId as string)
+          .single();
 
         // Update subscription status to past_due
         const { error: updateError } = await supabase
@@ -372,6 +534,21 @@ export async function POST(request: NextRequest) {
 
         if (updateError) {
           console.error('Failed to update subscription status on payment failure:', updateError);
+        }
+
+        // Update subscription record status
+        if (profile && subscriptionId) {
+          await supabase
+            .from('subscriptions')
+            .update({
+              status: 'past_due',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', profile.id);
+
+          console.log(
+            `Subscription payment failed: customer=${customerId}, user=${profile.id}, status=past_due`
+          );
         } else {
           console.log(`Subscription payment failed: customer=${customerId}, status=past_due`);
         }

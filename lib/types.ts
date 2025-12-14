@@ -261,6 +261,28 @@ export interface ArticleStyle {
   updated_at: string;
 }
 
+// ===========================================
+// SUBSCRIPTION HISTORY TYPES
+// ===========================================
+
+export type SubscriptionEventType = 'created' | 'renewed' | 'upgraded' | 'downgraded' | 'canceled';
+
+export interface SubscriptionHistory {
+  id: string;
+  user_id: string;
+  stripe_subscription_id: string;
+  stripe_price_id: string | null;
+  plan: string;
+  status: string;
+  period_start: string;
+  period_end: string;
+  amount_paid_cents: number | null;
+  currency: string;
+  invoice_id: string | null;
+  event_type: SubscriptionEventType;
+  created_at: string;
+}
+
 export interface CreateArticleStyleInput {
   user_id: string;
   name: string;
