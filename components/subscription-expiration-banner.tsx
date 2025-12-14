@@ -49,7 +49,7 @@ export function SubscriptionExpirationBanner({
       ? `You've used ${usageData.articles_used} of ${usageData.articles_limit} articles this month. Upgrade your plan for more articles.`
       : "You've reached your monthly article limit. Upgrade your plan for more articles.";
     buttonText = 'Upgrade Plan';
-    variant = 'warning';
+    variant = 'error';
   } else if (status === 'past_due') {
     title = 'Payment Failed';
     message = dateStr
@@ -71,23 +71,29 @@ export function SubscriptionExpirationBanner({
 
   // Win95 Design
   if (designMode === 'win95') {
+    const isLimitReached = type === 'limit_reached';
+    const isExpired = type === 'expired';
+    const showUrgentStyling = isExpired || isLimitReached;
     return (
-      <div className="mb-4">
-        <Win95Alert type={variant}>
-          <div className="flex items-start justify-between gap-4">
+      <div className={`mb-4 ${showUrgentStyling ? 'animate-pulse' : ''}`}>
+        <Win95Alert type="error">
+          <div className="flex items-start justify-between gap-4 bg-red-100 border-2 border-red-600 p-2 -m-1">
             <div className="flex items-start gap-2">
-              <span className="text-[16px]">{type === 'limit_reached' ? '📊' : '⚠️'}</span>
+              <span className="text-[16px] animate-bounce">{isLimitReached ? '🚫' : '🚨'}</span>
               <div>
-                <p className="text-[12px] font-bold">{title}</p>
-                <p className="text-[11px] mt-1">{message}</p>
+                <p className="text-[12px] font-bold text-red-700">
+                  {isLimitReached ? '🚫 ' : '⚠️ '}
+                  {title}
+                </p>
+                <p className="text-[11px] mt-1 text-red-600">{message}</p>
               </div>
             </div>
-            <Win95Button onClick={onRenewClick} disabled={isRenewing} className="shrink-0">
-              {isRenewing
-                ? 'Loading...'
-                : type === 'limit_reached'
-                  ? `📈 ${buttonText}`
-                  : `🔄 ${buttonText}`}
+            <Win95Button
+              onClick={onRenewClick}
+              disabled={isRenewing}
+              className="shrink-0 bg-red-600 text-white"
+            >
+              {isRenewing ? 'Loading...' : isLimitReached ? `📈 ${buttonText}` : `🔄 ${buttonText}`}
             </Win95Button>
           </div>
         </Win95Alert>
@@ -96,37 +102,34 @@ export function SubscriptionExpirationBanner({
   }
 
   // Modern Design
-  const isWarning = type === 'limit_reached';
+  const isLimitReached = type === 'limit_reached';
+  const isExpired = type === 'expired';
+  const showUrgentStyling = isExpired || isLimitReached;
 
   return (
     <Alert
-      variant={isWarning ? 'default' : 'destructive'}
-      className={`mb-6 ${isWarning ? 'border-amber-500/50 bg-amber-500/10' : 'border-destructive/50 bg-destructive/10'}`}
+      variant="destructive"
+      className={`mb-6 border-red-500 bg-red-50 dark:bg-red-950/50 shadow-lg shadow-red-500/20 ring-1 ring-red-500/30 ${
+        showUrgentStyling ? 'animate-pulse' : ''
+      }`}
     >
-      {isWarning ? (
-        <AlertCircle className="h-5 w-5 text-amber-600" />
-      ) : (
-        <AlertCircle className="h-5 w-5" />
-      )}
+      <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-500 animate-pulse" />
       <div className="flex flex-1 items-start justify-between gap-4">
         <div>
-          <AlertTitle
-            className={`font-semibold ${isWarning ? 'text-amber-700 dark:text-amber-500' : 'text-destructive'}`}
-          >
+          <AlertTitle className="font-bold text-base text-red-700 dark:text-red-400">
+            {isLimitReached ? '🚫 ' : '⚠️ '}
             {title}
           </AlertTitle>
-          <AlertDescription
-            className={`mt-1 ${isWarning ? 'text-amber-600/90 dark:text-amber-400/90' : 'text-destructive/90'}`}
-          >
+          <AlertDescription className="mt-1 text-red-600 dark:text-red-300">
             {message}
           </AlertDescription>
         </div>
         <Button
           onClick={onRenewClick}
           disabled={isRenewing}
-          className="shrink-0"
+          className="shrink-0 bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all"
           size="sm"
-          variant={isWarning ? 'default' : 'destructive'}
+          variant="destructive"
         >
           {isRenewing ? (
             <>
@@ -135,7 +138,11 @@ export function SubscriptionExpirationBanner({
             </>
           ) : (
             <>
-              {isWarning ? <TrendingUp className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+              {isLimitReached ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
               {buttonText}
             </>
           )}
