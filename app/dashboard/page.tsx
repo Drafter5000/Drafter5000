@@ -135,15 +135,10 @@ function DashboardContent() {
   const usageLimitReached = usage ? !usage.can_generate : false;
   const featuresDisabled = !canAccessFeatures || usageLimitReached;
 
-  const handleRenewSubscription = useCallback(async () => {
-    try {
-      setIsRenewing(true);
-      const { url } = await apiClient.post<{ url: string }>('/stripe/portal', {});
-      window.location.href = url;
-    } catch (err) {
-      console.error('Portal redirect error:', err);
-      setIsRenewing(false);
-    }
+  // Navigate to pricing page for renewal/upgrade
+  const handleRenewSubscription = useCallback(() => {
+    setIsRenewing(true);
+    window.location.href = '/pricing';
   }, []);
 
   // Topics state
@@ -391,20 +386,20 @@ function DashboardContent() {
                           ? 'incomplete'
                           : 'canceled'
                     }
+                    type="expired"
                   />
                 )}
                 {/* Usage Limit Reached Banner */}
                 {canAccessFeatures && usageLimitReached && usage && (
-                  <Win95Alert type="warning" title="⚠️ Monthly Limit Reached">
-                    You've used {usage.articles_used} of {usage.articles_limit} articles this month.
-                    <Win95Button
-                      onClick={handleRenewSubscription}
-                      disabled={isRenewing}
-                      className="ml-2"
-                    >
-                      {isRenewing ? 'Loading...' : '📈 Upgrade Plan'}
-                    </Win95Button>
-                  </Win95Alert>
+                  <SubscriptionExpirationBanner
+                    onRenewClick={handleRenewSubscription}
+                    isRenewing={isRenewing}
+                    type="limit_reached"
+                    usageData={{
+                      articles_used: usage.articles_used,
+                      articles_limit: usage.articles_limit,
+                    }}
+                  />
                 )}
                 {showPaymentSuccess && (
                   <Win95Alert
@@ -673,37 +668,21 @@ function DashboardContent() {
                       ? 'incomplete'
                       : 'canceled'
                 }
+                type="expired"
               />
             )}
 
             {/* Usage Limit Reached Banner */}
             {canAccessFeatures && usageLimitReached && usage && (
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white shadow-lg">
-                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                      <AlertCircle className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg">Monthly Limit Reached</h3>
-                      <p className="text-white/80">
-                        You've used {usage.articles_used} of {usage.articles_limit} articles this
-                        month. Upgrade your plan for more articles.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleRenewSubscription}
-                    disabled={isRenewing}
-                    className="shrink-0"
-                  >
-                    {isRenewing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Upgrade Plan'}
-                  </Button>
-                </div>
-              </div>
+              <SubscriptionExpirationBanner
+                onRenewClick={handleRenewSubscription}
+                isRenewing={isRenewing}
+                type="limit_reached"
+                usageData={{
+                  articles_used: usage.articles_used,
+                  articles_limit: usage.articles_limit,
+                }}
+              />
             )}
 
             {/* Payment Success Banner */}
@@ -937,8 +916,8 @@ function DashboardContent() {
                             <BookOpen className="h-3.5 w-3.5" />
                             Writing Samples ({style.style_samples.length})
                           </p>
-                          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 scrollbar-thin">
-                            {style.style_samples.map((sample, idx) => (
+                          <div className="space-y-2">
+                            {style.style_samples.slice(0, 3).map((sample, idx) => (
                               <div
                                 key={idx}
                                 className="p-3 rounded-lg bg-muted/40 border border-border/50 hover:bg-muted/60 transition-colors"
@@ -952,11 +931,16 @@ function DashboardContent() {
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-muted-foreground line-clamp-2 italic">
-                                  "{sample.substring(0, 150)}
-                                  {sample.length > 150 ? '...' : ''}"
+                                  "{sample.substring(0, 120)}
+                                  {sample.length > 120 ? '...' : ''}"
                                 </p>
                               </div>
                             ))}
+                            {style.style_samples.length > 3 && (
+                              <p className="text-xs text-muted-foreground text-center pt-1">
+                                +{style.style_samples.length - 3} more samples
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -964,13 +948,25 @@ function DashboardContent() {
                       {/* Footer */}
                       <div className="px-6 pb-6">
                         <div className="flex gap-2">
-                          <Link href={`/articles/styles/${style.id}`} className="flex-1">
-                            <Button variant="outline" className="w-full gap-2 group/btn">
+                          {featuresDisabled ? (
+                            <Button
+                              variant="outline"
+                              className="w-full gap-2"
+                              disabled
+                              title="Active subscription required"
+                            >
                               <Eye className="h-4 w-4" />
                               View Details
-                              <ArrowRight className="h-3.5 w-3.5 opacity-0 -ml-2 group-hover/btn:opacity-100 group-hover/btn:ml-0 transition-all" />
                             </Button>
-                          </Link>
+                          ) : (
+                            <Link href={`/articles/styles/${style.id}`} className="flex-1">
+                              <Button variant="outline" className="w-full gap-2 group/btn">
+                                <Eye className="h-4 w-4" />
+                                View Details
+                                <ArrowRight className="h-3.5 w-3.5 opacity-0 -ml-2 group-hover/btn:opacity-100 group-hover/btn:ml-0 transition-all" />
+                              </Button>
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </div>

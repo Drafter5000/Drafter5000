@@ -18,6 +18,7 @@ export function Header() {
 
   const isLoginPage = pathname === '/login';
   const isSignupPage = pathname === '/signup';
+  const isPricingPage = pathname === '/pricing';
 
   useEffect(() => {
     setMounted(true);
@@ -47,18 +48,22 @@ export function Header() {
             <span className="hidden md:inline">Win95</span>
           </Button>
           */}
-          <Link
-            href="/pricing"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-secondary"
-          >
-            Pricing
-          </Link>
-          <a
-            href="#features"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-secondary"
-          >
-            Features
-          </a>
+          {!isPricingPage && (
+            <>
+              <Link
+                href="/pricing"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-secondary"
+              >
+                Pricing
+              </Link>
+              <a
+                href="#features"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-secondary"
+              >
+                Features
+              </a>
+            </>
+          )}
           {!loading && (
             <>
               {user ? (

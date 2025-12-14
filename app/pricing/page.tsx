@@ -277,27 +277,6 @@ function PricingContent() {
               ))
             )}
           </div>
-
-          <div className="mt-20 max-w-3xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Flexible Plans</CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  Choose a plan that fits your needs. Upgrade or downgrade anytime.
-                </CardContent>
-              </Card>
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Money-Back Guarantee</CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  30-day guarantee. If you're not happy, we'll refund you completely.
-                </CardContent>
-              </Card>
-            </div>
-          </div>
         </div>
       </main>
     </div>

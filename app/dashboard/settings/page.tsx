@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext } from 'react';
+import { useContext, useCallback } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { ProtectedRoute } from '@/components/protected-route';
@@ -31,7 +31,16 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { Settings, User, Calendar, Globe, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { LANGUAGES, DAYS } from '@/lib/constants';
+import { LANGUAGES, DAYS, DEFAULT_DELIVERY_DAYS } from '@/lib/constants';
+import { SubscriptionExpirationBanner } from '@/components/subscription-expiration-banner';
+import { useSubscriptionStatus } from '@/lib/hooks/use-subscription-status';
+
+interface UsageData {
+  articles_used: number;
+  articles_limit: number;
+  can_generate: boolean;
+  plan: string;
+}
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -39,24 +48,54 @@ export default function SettingsPage() {
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const [displayName, setDisplayName] = useState('');
   const [language, setLanguage] = useState('en');
-  const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
+  const [deliveryDays, setDeliveryDays] = useState<string[]>([...DEFAULT_DELIVERY_DAYS]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [success, setSuccess] = useState(false);
+
+  // Subscription status for expiration handling
+  const {
+    isExpired,
+    expirationDate,
+    status: subscriptionStatus,
+    canAccessFeatures,
+  } = useSubscriptionStatus();
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [usage, setUsage] = useState<UsageData | null>(null);
+
+  // Check if usage limit is reached
+  const usageLimitReached = usage ? !usage.can_generate : false;
+
+  // Navigate to pricing page for renewal/upgrade
+  const handleRenewSubscription = useCallback(() => {
+    setIsRenewing(true);
+    window.location.href = '/pricing';
+  }, []);
 
   useEffect(() => {
     const loadSettings = async () => {
       if (!user) return;
       try {
-        const data = await apiClient.get<{
-          display_name: string | null;
-          preferred_language: string;
-          delivery_days: string[];
-        }>(`/dashboard/settings?user_id=${user.id}`);
+        const [settingsData, usageData] = await Promise.all([
+          apiClient.get<{
+            display_name: string | null;
+            preferred_language: string;
+            delivery_days: string[];
+          }>(`/dashboard/settings?user_id=${user.id}`),
+          apiClient.get<UsageData>('/stripe/usage'),
+        ]);
 
-        if (data.display_name) setDisplayName(data.display_name);
-        if (data.preferred_language) setLanguage(data.preferred_language);
-        if (data.delivery_days?.length > 0) setDeliveryDays(data.delivery_days);
+        if (settingsData.display_name) setDisplayName(settingsData.display_name);
+        if (settingsData.preferred_language) setLanguage(settingsData.preferred_language);
+        // Only override default delivery days if user has explicitly saved settings
+        if (settingsData.delivery_days !== undefined && settingsData.delivery_days !== null) {
+          setDeliveryDays(
+            settingsData.delivery_days.length > 0
+              ? settingsData.delivery_days
+              : [...DEFAULT_DELIVERY_DAYS]
+          );
+        }
+        setUsage(usageData);
       } catch (error) {
         console.error('Error loading settings:', error);
       } finally {
@@ -113,6 +152,34 @@ export default function SettingsPage() {
 
             <Win95Window title="Settings" icon={<span>⚙️</span>}>
               <div className="space-y-4">
+                {/* Subscription Expiration Banner */}
+                {!canAccessFeatures && (
+                  <SubscriptionExpirationBanner
+                    expirationDate={expirationDate}
+                    onRenewClick={handleRenewSubscription}
+                    isRenewing={isRenewing}
+                    status={
+                      subscriptionStatus === 'past_due'
+                        ? 'past_due'
+                        : subscriptionStatus === 'incomplete'
+                          ? 'incomplete'
+                          : 'canceled'
+                    }
+                    type="expired"
+                  />
+                )}
+                {/* Usage Limit Reached Banner */}
+                {canAccessFeatures && usageLimitReached && usage && (
+                  <SubscriptionExpirationBanner
+                    onRenewClick={handleRenewSubscription}
+                    isRenewing={isRenewing}
+                    type="limit_reached"
+                    usageData={{
+                      articles_used: usage.articles_used,
+                      articles_limit: usage.articles_limit,
+                    }}
+                  />
+                )}
                 <div className="flex items-center justify-between">
                   <div className="win95-sunken p-2 flex items-center gap-2">
                     <span className="text-[16px]">⚙️</span>
@@ -230,6 +297,35 @@ export default function SettingsPage() {
         <DashboardHeader />
         <main className="pt-8 pb-20 px-6">
           <div className="max-w-3xl mx-auto">
+            {/* Subscription Expiration Banner */}
+            {!canAccessFeatures && (
+              <SubscriptionExpirationBanner
+                expirationDate={expirationDate}
+                onRenewClick={handleRenewSubscription}
+                isRenewing={isRenewing}
+                status={
+                  subscriptionStatus === 'past_due'
+                    ? 'past_due'
+                    : subscriptionStatus === 'incomplete'
+                      ? 'incomplete'
+                      : 'canceled'
+                }
+                type="expired"
+              />
+            )}
+            {/* Usage Limit Reached Banner */}
+            {canAccessFeatures && usageLimitReached && usage && (
+              <SubscriptionExpirationBanner
+                onRenewClick={handleRenewSubscription}
+                isRenewing={isRenewing}
+                type="limit_reached"
+                usageData={{
+                  articles_used: usage.articles_used,
+                  articles_limit: usage.articles_limit,
+                }}
+              />
+            )}
+
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">

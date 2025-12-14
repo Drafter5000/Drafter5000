@@ -39,6 +39,11 @@ export const DAYS: Day[] = [
 ];
 
 /**
+ * Default delivery days (weekdays) for new users
+ */
+export const DEFAULT_DELIVERY_DAYS: DayCode[] = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
+/**
  * Get language info by code
  */
 export function getLanguageByCode(code: string): Language | undefined {

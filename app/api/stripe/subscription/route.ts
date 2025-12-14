@@ -23,7 +23,9 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (!profile?.stripe_customer_id) {
-      const status = profile?.subscription_status || 'active';
+      // Default to 'incomplete' if no subscription status is set
+      // This ensures users without a subscription see the subscription required banner
+      const status = profile?.subscription_status || 'incomplete';
       return NextResponse.json({
         plan: 'free',
         status,
@@ -44,7 +46,9 @@ export async function GET(request: NextRequest) {
     const subscription = subscriptions.data[0];
 
     if (!subscription) {
-      const status = profile.subscription_status || 'active';
+      // Default to 'incomplete' if no subscription status is set
+      // This ensures users without a subscription see the subscription required banner
+      const status = profile.subscription_status || 'incomplete';
       return NextResponse.json({
         plan: profile.subscription_plan || 'free',
         status,
@@ -55,7 +59,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const status = subscription.status || profile.subscription_status;
+    // Determine the effective status
+    // If database says expired (past_due/canceled), use that even if Stripe says active
+    // This handles cases where webhook updated DB but Stripe hasn't synced yet
+    const dbStatus = profile.subscription_status || 'incomplete';
+    const stripeStatus = subscription.status;
+    const dbIsExpired = isSubscriptionExpired(dbStatus);
+
+    // Use database status if it indicates expired, otherwise use Stripe status
+    const status = dbIsExpired ? dbStatus : stripeStatus || dbStatus;
+
     const expirationDate = subscription.current_period_end
       ? new Date(subscription.current_period_end * 1000).toISOString()
       : null;

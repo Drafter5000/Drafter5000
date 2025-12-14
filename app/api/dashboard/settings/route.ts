@@ -1,5 +1,6 @@
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { type NextRequest, NextResponse } from 'next/server';
+import { DEFAULT_DELIVERY_DAYS } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,7 +39,10 @@ export async function GET(request: NextRequest) {
       display_name: onboardingData?.display_name || profileData?.display_name || null,
       email: onboardingData?.email || profileData?.email || null,
       preferred_language: onboardingData?.preferred_language || 'en',
-      delivery_days: onboardingData?.delivery_days || [],
+      delivery_days:
+        onboardingData?.delivery_days?.length > 0
+          ? onboardingData.delivery_days
+          : [...DEFAULT_DELIVERY_DAYS],
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch settings';
