@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { StyleFormStep2 } from '@/components/articles/style-form-step2';
 import { DraftSessionService } from '@/lib/draft-session';
@@ -15,6 +15,7 @@ import { Lightbulb } from 'lucide-react';
  */
 export default function GenerateStep2Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const [initialSubjects, setInitialSubjects] = useState<string[]>([]);
@@ -24,11 +25,14 @@ export default function GenerateStep2Page() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Preserve provider parameter for LinkedIn users
+  const providerParam = searchParams.get('provider') === 'linkedin' ? '?provider=linkedin' : '';
+
   useEffect(() => {
     const draftSession = DraftSessionService.load();
 
     if (!draftSession?.style_samples || draftSession.style_samples.length === 0) {
-      router.push('/articles/generate/step-1');
+      router.push(`/articles/generate/step-1${providerParam}`);
       return;
     }
 
@@ -44,7 +48,7 @@ export default function GenerateStep2Page() {
       setInitialSubjects(draftSession.subjects);
     }
     setInitialLoading(false);
-  }, [router]);
+  }, [router, providerParam]);
 
   const handleSubmit = async (subjects: string[]) => {
     setLoading(true);
@@ -62,7 +66,7 @@ export default function GenerateStep2Page() {
         current_step: 3,
       });
 
-      router.push('/articles/generate/step-3');
+      router.push(`/articles/generate/step-3${providerParam}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save subjects';
       setError(message);
@@ -72,7 +76,7 @@ export default function GenerateStep2Page() {
   };
 
   const handleBack = () => {
-    router.push('/articles/generate/step-1');
+    router.push(`/articles/generate/step-1${providerParam}`);
   };
 
   if (initialLoading) {

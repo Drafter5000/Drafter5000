@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { StyleFormStep1 } from '@/components/articles/style-form-step1';
 import { DraftSessionService } from '@/lib/draft-session';
@@ -15,12 +15,16 @@ import { FileText } from 'lucide-react';
  */
 export default function GenerateStep1Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const [initialArticles, setInitialArticles] = useState<string[]>(['', '', '']);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Preserve provider parameter for LinkedIn users
+  const providerParam = searchParams.get('provider') === 'linkedin' ? '?provider=linkedin' : '';
 
   useEffect(() => {
     const draftSession = DraftSessionService.load();
@@ -47,7 +51,7 @@ export default function GenerateStep1Page() {
         current_step: 2,
       });
 
-      router.push('/articles/generate/step-2');
+      router.push(`/articles/generate/step-2${providerParam}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save articles';
       setError(message);

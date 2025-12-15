@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useContext } from 'react';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
@@ -8,6 +8,7 @@ import { Win95Window, Win95Progress, Win95Button } from '@/components/win95';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Monitor } from 'lucide-react';
+import { useAuth } from '@/components/auth-provider';
 
 const STEPS = [
   { path: '/articles/generate/step-1', label: 'Writing Style', number: 1 },
@@ -21,12 +22,17 @@ const STEPS = [
  */
 export default function GenerateLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const toggleAndReload = context?.toggleAndReload;
+  const { user } = useAuth();
   const currentStepIndex = STEPS.findIndex(s => pathname.startsWith(s.path));
   const currentStep = currentStepIndex >= 0 ? currentStepIndex + 1 : 1;
   const progressValue = (currentStep / STEPS.length) * 100;
+
+  // Check if user is authenticated (LinkedIn OAuth user)
+  const isLinkedInUser = searchParams.get('provider') === 'linkedin' || !!user;
 
   // Win95 Design
   if (designMode === 'win95') {
@@ -42,9 +48,11 @@ export default function GenerateLayout({ children }: { children: React.ReactNode
               <Win95Button size="sm" onClick={toggleAndReload} title="Switch to Modern Design">
                 🎨 Modern
               </Win95Button>
-              <Link href="/login" className="text-[11px] text-[var(--win95-link)] underline">
-                Already have an account? Sign in
-              </Link>
+              {!isLinkedInUser && (
+                <Link href="/login" className="text-[11px] text-[var(--win95-link)] underline">
+                  Already have an account? Sign in
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -118,9 +126,11 @@ export default function GenerateLayout({ children }: { children: React.ReactNode
               Win95
             </Button>
             */}
-            <Link href="/login" className="text-sm text-primary hover:underline">
-              Already have an account? Sign in
-            </Link>
+            {!isLinkedInUser && (
+              <Link href="/login" className="text-sm text-primary hover:underline">
+                Already have an account? Sign in
+              </Link>
+            )}
           </div>
         </div>
 

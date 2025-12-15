@@ -1,7 +1,7 @@
 'use server';
 
-import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { appendOnboardingCustomer, createCustomerSheet } from '@/lib/google-sheets';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { OnboardingData } from '@/lib/types';
 
 export async function saveOnboardingStep1(userId: string, styleSamples: string[]) {

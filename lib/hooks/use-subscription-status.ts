@@ -1,19 +1,17 @@
 /**
  * Hook for managing subscription status state
- * Requirements: 1.1, 2.1, 5.4
  */
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
 import {
-  type SubscriptionStatus,
   type SubscriptionData,
   type SubscriptionState,
+  type SubscriptionStatus,
   getSubscriptionState,
-  isSubscriptionExpired,
 } from '@/lib/subscription-utils';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface UseSubscriptionStatusReturn {
   status: SubscriptionStatus;

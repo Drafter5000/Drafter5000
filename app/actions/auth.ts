@@ -1,9 +1,9 @@
 'use server';
 
-import { getServerSupabaseClient } from '@/lib/supabase-client';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { setupNewUserOrganization, setupSuperAdmin } from '@/lib/organization-utils';
 import { getStripeClient } from '@/lib/stripe-client';
-import { setupSuperAdmin, setupNewUserOrganization } from '@/lib/organization-utils';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { UserProfile } from '@/lib/types';
 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';

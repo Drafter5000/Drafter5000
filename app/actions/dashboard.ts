@@ -1,10 +1,10 @@
 'use server';
 
-import { getServerSupabaseClient } from '@/lib/supabase-client';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getGoogleAuth } from '@/lib/google-sheets';
-import { google } from 'googleapis';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { Article } from '@/lib/types';
+import { google } from 'googleapis';
 
 interface Topic {
   rowIndex: number;

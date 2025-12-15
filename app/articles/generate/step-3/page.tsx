@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,7 +36,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DraftSessionService } from '@/lib/draft-session';
 import { apiClient } from '@/lib/api-client';
-import { validateSignupForm } from '@/lib/onboarding-validation';
+import { validateSignupForm, validateLinkedInSignupForm } from '@/lib/onboarding-validation';
 import {
   toggleDay as toggleDayUtil,
   toggleAllDays,
@@ -44,6 +44,7 @@ import {
   DayCode,
 } from '@/lib/day-selection';
 import { LANGUAGES, DAYS } from '@/lib/constants';
+import { useAuth } from '@/components/auth-provider';
 
 interface SignupResponse {
   success: boolean;
@@ -55,16 +56,28 @@ interface SignupResponse {
   retry?: boolean;
 }
 
+interface UserProfile {
+  email: string;
+  display_name: string;
+  job?: string;
+}
+
 export default function GenerateStep3Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(true);
+  const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
   const [draftData, setDraftData] = useState<{
     style_samples: string[];
     subjects: string[];
   } | null>(null);
+
+  // Check if user is a LinkedIn OAuth user
+  const isLinkedInUser = searchParams.get('provider') === 'linkedin' || !!user;
 
   // Form state
   const [name, setName] = useState('');
@@ -78,23 +91,50 @@ export default function GenerateStep3Page() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Fetch LinkedIn user profile data
   useEffect(() => {
+    const fetchLinkedInProfile = async () => {
+      if (!isLinkedInUser || !user) return;
+
+      try {
+        const profile = await apiClient.get<UserProfile>('/auth/profile');
+        if (profile) {
+          if (profile.display_name) setName(profile.display_name);
+          if (profile.email) setEmail(profile.email);
+          if (profile.job) setJob(profile.job);
+        }
+      } catch (err) {
+        console.error('Failed to fetch LinkedIn profile:', err);
+      }
+    };
+
+    fetchLinkedInProfile();
+  }, [isLinkedInUser, user]);
+
+  useEffect(() => {
+    // Skip redirect check if submission was successful (we're navigating away)
+    if (isSubmitSuccess) return;
+
     const draftSession = DraftSessionService.load();
 
     if (!draftSession?.style_samples || draftSession.style_samples.length === 0) {
-      router.push('/articles/generate/step-1');
+      const providerParam = isLinkedInUser ? '?provider=linkedin' : '';
+      router.push(`/articles/generate/step-1${providerParam}`);
       return;
     }
 
     if (!draftSession?.subjects || draftSession.subjects.length === 0) {
-      router.push('/articles/generate/step-2');
+      const providerParam = isLinkedInUser ? '?provider=linkedin' : '';
+      router.push(`/articles/generate/step-2${providerParam}`);
       return;
     }
 
-    // Pre-fill user info from draft session if available
-    if (draftSession.name) setName(draftSession.name);
-    if (draftSession.email) setEmail(draftSession.email);
-    if (draftSession.job) setJob(draftSession.job);
+    // Pre-fill user info from draft session if available (for non-LinkedIn users)
+    if (!isLinkedInUser) {
+      if (draftSession.name) setName(draftSession.name);
+      if (draftSession.email) setEmail(draftSession.email);
+      if (draftSession.job) setJob(draftSession.job);
+    }
     if (draftSession.delivery_days && draftSession.delivery_days.length > 0) {
       setFrequency(draftSession.delivery_days as DayCode[]);
     }
@@ -107,7 +147,7 @@ export default function GenerateStep3Page() {
       subjects: draftSession.subjects,
     });
     setInitialLoading(false);
-  }, [router]);
+  }, [router, isLinkedInUser, isSubmitSuccess]);
 
   const handleToggleDay = (dayId: DayCode) => {
     setFrequency(prev => toggleDayUtil(prev, dayId));
@@ -119,7 +159,10 @@ export default function GenerateStep3Page() {
     setFrequency(prev => toggleAllDays(prev));
   };
 
-  const validation = validateSignupForm({ name, email, password, confirmPassword, job });
+  // Use different validation for LinkedIn users (no password required)
+  const validation = isLinkedInUser
+    ? validateLinkedInSignupForm({ name, email, job })
+    : validateSignupForm({ name, email, password, confirmPassword, job });
   const isValid = validation.valid && frequency.length > 0;
   const selectedLanguage = LANGUAGES.find(l => l.code === language);
 
@@ -129,7 +172,11 @@ export default function GenerateStep3Page() {
       return;
     }
 
-    const result = validateSignupForm({ name, email, password, confirmPassword, job });
+    // Use different validation for LinkedIn users
+    const result = isLinkedInUser
+      ? validateLinkedInSignupForm({ name, email, job })
+      : validateSignupForm({ name, email, password, confirmPassword, job });
+
     if (!result.valid) {
       setFieldErrors(result.errors);
       return;
@@ -148,35 +195,54 @@ export default function GenerateStep3Page() {
     setCanRetry(true);
 
     try {
-      const response = await apiClient.post<SignupResponse>('/auth/signup-with-style', {
-        name,
-        email,
-        password,
-        confirmPassword,
-        job,
-        style_samples: draftData.style_samples,
-        subjects: draftData.subjects,
-        preferred_language: language,
-        delivery_days: frequency,
-      });
+      // Use different endpoint for LinkedIn users
+      const endpoint = isLinkedInUser
+        ? '/auth/complete-linkedin-onboarding'
+        : '/auth/signup-with-style';
+      const payload = isLinkedInUser
+        ? {
+            job,
+            style_samples: draftData.style_samples,
+            subjects: draftData.subjects,
+            preferred_language: language,
+            delivery_days: frequency,
+          }
+        : {
+            name,
+            email,
+            password,
+            confirmPassword,
+            job,
+            style_samples: draftData.style_samples,
+            subjects: draftData.subjects,
+            preferred_language: language,
+            delivery_days: frequency,
+          };
+
+      const response = await apiClient.post<SignupResponse>(endpoint, payload);
 
       if (response.success) {
+        // Mark submission as successful to prevent useEffect from redirecting
+        setIsSubmitSuccess(true);
+
         // Clear draft data on successful signup
         DraftSessionService.clear();
 
         // Use full page redirect to ensure auth cookies are properly read
-        // router.push() does client-side navigation which doesn't refresh auth state
         window.location.href = '/subscribe';
+        return;
       } else {
         // Handle error response
-        setError(response.error || 'Failed to create account');
+        setError(response.error || 'Failed to save profile');
         setCanRetry(response.retry !== false);
         if (response.fields) {
           setFieldErrors(response.fields);
         }
       }
     } catch (err: unknown) {
-      let errorMessage = 'Failed to create account. Please try again.';
+      let errorMessage = isLinkedInUser
+        ? 'Failed to save profile. Please try again.'
+        : 'Failed to create account. Please try again.';
       let retry = true;
 
       if (err instanceof Error) {
@@ -199,8 +265,27 @@ export default function GenerateStep3Page() {
   };
 
   const handleBack = () => {
-    router.push('/articles/generate/step-2');
+    const providerParam = isLinkedInUser ? '?provider=linkedin' : '';
+    router.push(`/articles/generate/step-2${providerParam}`);
   };
+
+  // Show redirecting state when submission was successful
+  if (isSubmitSuccess) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-4 py-12">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-green-500/20 border border-green-500/30 mx-auto">
+            <CheckCircle2 className="h-8 w-8 text-green-500" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Profile Saved!</h2>
+            <p className="text-muted-foreground mt-2">Redirecting to subscription plans...</p>
+          </div>
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   if (initialLoading) {
     return (
@@ -300,11 +385,28 @@ export default function GenerateStep3Page() {
           <Rocket className="h-8 w-8 text-green-500" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold">Create Your Account</h2>
+          <h2 className="text-2xl font-bold">
+            {isLinkedInUser ? 'Complete Your Profile' : 'Create Your Account'}
+          </h2>
           <p className="text-muted-foreground mt-2">
-            Final step! Sign up to choose your plan and start receiving articles
+            {isLinkedInUser
+              ? 'Final step! Complete your profile to choose your plan and start receiving articles'
+              : 'Final step! Sign up to choose your plan and start receiving articles'}
           </p>
         </div>
+        {isLinkedInUser && (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] text-sm font-medium">
+            <svg
+              className="h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+            </svg>
+            Signed in with LinkedIn
+          </div>
+        )}
       </div>
 
       {error && (
@@ -335,20 +437,25 @@ export default function GenerateStep3Page() {
             <CardTitle className="text-lg flex items-center gap-2">
               <User className="h-5 w-5 text-blue-500" />
               Account Information
+              {isLinkedInUser && (
+                <span className="text-xs font-normal text-muted-foreground ml-auto">
+                  From LinkedIn
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center gap-2">
-                Full Name <span className="text-destructive">*</span>
+                Full Name {!isLinkedInUser && <span className="text-destructive">*</span>}
               </Label>
               <Input
                 id="name"
                 placeholder="John Doe"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                disabled={loading}
-                className={fieldErrors.name ? 'border-destructive' : ''}
+                disabled={loading || isLinkedInUser}
+                className={`${fieldErrors.name ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
               />
               {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
             </div>
@@ -356,7 +463,7 @@ export default function GenerateStep3Page() {
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                Email Address <span className="text-destructive">*</span>
+                Email Address {!isLinkedInUser && <span className="text-destructive">*</span>}
               </Label>
               <Input
                 id="email"
@@ -364,8 +471,8 @@ export default function GenerateStep3Page() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                disabled={loading}
-                className={fieldErrors.email ? 'border-destructive' : ''}
+                disabled={loading || isLinkedInUser}
+                className={`${fieldErrors.email ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
               />
               {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
             </div>
@@ -392,81 +499,88 @@ export default function GenerateStep3Page() {
                 className={fieldErrors.job ? 'border-destructive' : ''}
               />
               {fieldErrors.job && <p className="text-xs text-destructive">{fieldErrors.job}</p>}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Password Card */}
-        <Card className="border-2 pt-0 pb-6">
-          <CardHeader className="py-4 bg-purple-500/5">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Lock className="h-5 w-5 text-purple-500" />
-              Set Password
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">
-                Password <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  disabled={loading}
-                  className={`pr-10 ${fieldErrors.password ? 'border-destructive' : ''}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {fieldErrors.password && (
-                <p className="text-xs text-destructive">{fieldErrors.password}</p>
-              )}
-              <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">
-                Confirm Password <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  disabled={loading}
-                  className={`pr-10 ${fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {fieldErrors.confirmPassword && (
-                <p className="text-xs text-destructive">{fieldErrors.confirmPassword}</p>
+              {isLinkedInUser && !job && (
+                <p className="text-xs text-muted-foreground">
+                  Please enter your job title to help personalize your articles
+                </p>
               )}
             </div>
           </CardContent>
         </Card>
+
+        {/* Password Card - Only show for non-LinkedIn users */}
+        {!isLinkedInUser && (
+          <Card className="border-2 pt-0 pb-6">
+            <CardHeader className="py-4 bg-purple-500/5">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Lock className="h-5 w-5 text-purple-500" />
+                Set Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    disabled={loading}
+                    className={`pr-10 ${fieldErrors.password ? 'border-destructive' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {fieldErrors.password && (
+                  <p className="text-xs text-destructive">{fieldErrors.password}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  Confirm Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    disabled={loading}
+                    className={`pr-10 ${fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {fieldErrors.confirmPassword && (
+                  <p className="text-xs text-destructive">{fieldErrors.confirmPassword}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Delivery Days Card */}
         <Card className="border-2 pt-0 pb-6">
@@ -608,12 +722,12 @@ export default function GenerateStep3Page() {
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Creating Account...
+              {isLinkedInUser ? 'Saving Profile...' : 'Creating Account...'}
             </>
           ) : (
             <>
               <Rocket className="h-4 w-4 mr-2" />
-              Create Account & Choose Plan
+              {isLinkedInUser ? 'Continue & Choose Plan' : 'Create Account & Choose Plan'}
             </>
           )}
         </Button>

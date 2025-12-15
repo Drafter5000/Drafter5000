@@ -215,10 +215,25 @@ export async function middleware(request: NextRequest) {
         hasCompletedOnboarding
       );
 
-      // If no article style and no error, redirect to onboarding
-      // If there's an error, allow access to dashboard (fail open)
+      // If no article style, check for pending style data
+      // Users with pending style data have completed onboarding but payment webhook hasn't processed yet
       if (!hasCompletedOnboarding && !styleError) {
-        console.log('[Middleware] Redirecting to step-1 (no article style)');
+        const { data: pendingStyle } = await supabase
+          .from('pending_style_data')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        console.log('[Middleware] Pending style data:', pendingStyle);
+
+        if (pendingStyle) {
+          // User has pending style data - allow access to dashboard
+          // The webhook should process this data, or we can trigger it manually
+          console.log('[Middleware] User has pending style data, allowing dashboard access');
+          return supabaseResponse;
+        }
+
+        console.log('[Middleware] Redirecting to step-1 (no article style or pending data)');
         return NextResponse.redirect(new URL('/articles/generate/step-1', request.url));
       }
     }

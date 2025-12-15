@@ -1,10 +1,9 @@
 'use server';
 
-import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { getStripeClient } from '@/lib/stripe-client';
-import { getActivePlans } from '@/lib/plan-utils';
-import { getSentArticlesCount } from '@/lib/usage-limits';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { UserProfile } from '@/lib/types';
+import { checkUsageLimit } from '@/lib/usage-limits';
 
 export async function createCheckoutSession(userId: string, planId: 'pro' | 'enterprise') {
   try {
@@ -148,33 +147,18 @@ export async function reactivateSubscription(userId: string) {
 
 export async function getUsageStats(userId: string) {
   try {
-    const supabase = await getServerSupabaseClient();
-
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('subscription_plan')
-      .eq('id', userId)
-      .single();
-
-    const planName = profile?.subscription_plan || 'free';
-
-    // Fetch plans from database
-    const plans = await getActivePlans(true);
-    const planDetails = plans.find(p => p.name.toLowerCase() === planName.toLowerCase());
-
-    // Default to 2 articles per month if plan not found (free tier)
-    const articlesLimit = planDetails?.articles_per_month ?? 2;
-
-    // Get sent articles count from Google Sheets (topics with "Sent" status)
-    // "Sent" = article generated, so this is the usage metric
-    const articlesUsed = await getSentArticlesCount(userId);
+    // Get usage from database
+    const usage = await checkUsageLimit(userId);
 
     return {
-      plan: planName,
-      articles_used: articlesUsed,
-      articles_limit: articlesLimit,
-      percentage_used: Math.round((articlesUsed / articlesLimit) * 100),
-      can_generate: articlesUsed < articlesLimit,
+      plan: usage.plan,
+      articles_used: usage.articlesUsed,
+      articles_limit: usage.articlesLimit,
+      percentage_used:
+        usage.articlesLimit > 0 ? Math.round((usage.articlesUsed / usage.articlesLimit) * 100) : 0,
+      can_generate: usage.canGenerate,
+      usage_reset_at: usage.usageResetAt,
+      period_end: usage.periodEnd,
     };
   } catch (error) {
     console.error('[Billing] Usage stats error:', error);

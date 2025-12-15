@@ -25,7 +25,7 @@ export interface UserProfile {
   display_name: string;
   created_at: string;
   updated_at: string;
-  subscription_status: 'active' | 'canceled' | 'past_due' | 'incomplete';
+  subscription_status: 'active' | 'trialing' | 'canceled' | 'past_due' | 'incomplete';
   subscription_plan: UserRole;
   stripe_customer_id: string | null;
   current_organization_id: string | null;
@@ -261,10 +261,6 @@ export interface ArticleStyle {
   updated_at: string;
 }
 
-// ===========================================
-// SUBSCRIPTION HISTORY TYPES
-// ===========================================
-
 export type SubscriptionEventType = 'created' | 'renewed' | 'upgraded' | 'downgraded' | 'canceled';
 
 export interface SubscriptionHistory {
@@ -338,4 +334,67 @@ export interface ArticleStyleDraft {
   display_name?: string;
   preferred_language?: string;
   delivery_days?: string[];
+}
+
+// ===========================================
+// PAYMENT TYPES
+// ===========================================
+
+export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded' | 'canceled';
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  stripe_payment_intent_id: string | null;
+  stripe_invoice_id: string | null;
+  stripe_charge_id: string | null;
+  stripe_subscription_id: string | null;
+  amount_cents: number;
+  currency: string;
+  status: PaymentStatus;
+  payment_method_type: string | null;
+  payment_method_last4: string | null;
+  payment_method_brand: string | null;
+  description: string | null;
+  failure_reason: string | null;
+  refund_reason: string | null;
+  metadata: Record<string, unknown>;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentListResponse {
+  payments: Payment[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// ===========================================
+// USAGE TRACKING TYPES
+// ===========================================
+
+export interface SubscriptionUsage {
+  articles_used: number;
+  articles_limit: number;
+  usage_reset_at: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+}
+
+export interface UsageLimitResult {
+  canGenerate: boolean;
+  articlesUsed: number;
+  articlesLimit: number;
+  plan: string;
+  usageResetAt: string | null;
+  periodEnd: string | null;
+}
+
+export interface IncrementUsageResult {
+  success: boolean;
+  articlesUsed: number;
+  articlesLimit: number;
+  canGenerate: boolean;
 }

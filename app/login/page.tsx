@@ -2,18 +2,18 @@
 
 import type React from 'react';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { Header } from '@/components/header';
+import { LinkedInLoginButton } from '@/components/linkedin-login-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, Mail, Lock, AlertCircle, Loader2, ArrowRight, Shield } from 'lucide-react';
 import { getBrowserSupabaseClient } from '@/lib/supabase-browser';
-import { LinkedInLoginButton } from '@/components/linkedin-login-button';
+import { AlertCircle, ArrowRight, Loader2, Lock, LogIn, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface FieldErrors {
   email?: string;

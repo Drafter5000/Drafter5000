@@ -4,101 +4,7 @@ import { getGoogleAuth } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
 import { checkSubscriptionAccess } from '@/lib/subscription-utils';
-
-// Default plan limits as fallback
-const DEFAULT_PLAN_LIMITS: Record<string, number> = {
-  free: 2,
-  pro: 20,
-  enterprise: 100,
-};
-
-/**
- * Check if user can generate more articles based on their plan limit
- */
-async function checkArticleLimit(
-  userId: string,
-  sheetName: string
-): Promise<{
-  canGenerate: boolean;
-  articlesUsed: number;
-  articlesLimit: number;
-}> {
-  const supabase = await getServerSupabaseClient();
-  const supabaseAdmin = getSupabaseAdmin();
-
-  // Get user's current plan
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('subscription_plan')
-    .eq('id', userId)
-    .single();
-
-  const plan = profile?.subscription_plan || 'free';
-
-  // Get plan details from database
-  const { data: planDetails } = await supabase
-    .from('subscription_plans')
-    .select('articles_per_month')
-    .eq('id', plan)
-    .single();
-
-  const articlesLimit = planDetails?.articles_per_month ?? DEFAULT_PLAN_LIMITS[plan] ?? 2;
-
-  // Count current "Sent" articles from Google Sheets for this billing period
-  const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
-  if (!spreadsheetId) {
-    return { canGenerate: false, articlesUsed: 0, articlesLimit };
-  }
-
-  const escapedSheetName =
-    sheetName.includes(' ') || sheetName.includes("'")
-      ? `'${sheetName.replace(/'/g, "''")}'`
-      : sheetName;
-
-  const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
-  const sheets = google.sheets({ version: 'v4', auth });
-
-  try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${escapedSheetName}!A2:E`,
-    });
-
-    const rows = response.data.values || [];
-
-    // Get current billing period (start of month)
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    // Count topics with "Sent" status that were updated this month
-    let sentCount = 0;
-    for (const row of rows) {
-      const status = (row[1] || '').toLowerCase();
-      const lastUpdate = row[4] || '';
-
-      if (status === 'sent') {
-        if (lastUpdate) {
-          const updateDate = new Date(lastUpdate);
-          if (updateDate >= startOfMonth) {
-            sentCount++;
-          }
-        } else {
-          sentCount++;
-        }
-      }
-    }
-
-    return {
-      canGenerate: sentCount < articlesLimit,
-      articlesUsed: sentCount,
-      articlesLimit,
-    };
-  } catch (error) {
-    console.error('Failed to check article limit:', error);
-    return { canGenerate: false, articlesUsed: 0, articlesLimit };
-  }
-}
+import { checkUsageLimitAdmin, incrementUsage } from '@/lib/usage-limits';
 
 /**
  * PUT /api/topics/[rowIndex]
@@ -172,6 +78,9 @@ export async function PUT(
     const auth = getGoogleAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
+    // Track if we need to increment usage after successful update
+    let shouldIncrementUsage = false;
+
     // If changing status to "Sent", check if user has reached their article limit
     if (status !== undefined && status.toLowerCase() === 'sent') {
       // First, check the current status of this topic to avoid double-counting
@@ -184,7 +93,8 @@ export async function PUT(
 
         // Only check limit if the topic is not already "Sent"
         if (currentStatus !== 'sent') {
-          const limitCheck = await checkArticleLimit(user.id, sheetName);
+          // Use database-based usage tracking
+          const limitCheck = await checkUsageLimitAdmin(user.id);
 
           if (!limitCheck.canGenerate) {
             return NextResponse.json(
@@ -197,6 +107,9 @@ export async function PUT(
               { status: 403 }
             );
           }
+
+          // Mark that we need to increment usage after successful update
+          shouldIncrementUsage = true;
         }
       } catch (error) {
         console.error('Failed to check current status:', error);
@@ -243,6 +156,18 @@ export async function PUT(
         data: updates,
       },
     });
+
+    // Increment usage in database after successful status change to "Sent"
+    if (shouldIncrementUsage) {
+      const usageResult = await incrementUsage(user.id);
+      if (!usageResult.success) {
+        console.error('Failed to increment usage for user:', user.id);
+      } else {
+        console.log(
+          `Usage incremented for user ${user.id}: ${usageResult.articlesUsed}/${usageResult.articlesLimit}`
+        );
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

@@ -2,6 +2,7 @@ import { getStripeClient } from '@/lib/stripe-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getPlanByPriceIdAdmin } from '@/lib/plan-utils';
 import { syncStyleToSheets } from '@/lib/services/article-styles-sync';
+import { setUsageLimit, resetUsage } from '@/lib/usage-limits';
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -102,6 +103,10 @@ export async function POST(request: NextRequest) {
           const periodEnd =
             subscription.current_period_end || Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
 
+          // Get articles limit from plan
+          const planData = await getPlanByPriceIdAdmin(priceId || '');
+          const articlesLimit = planData?.articles_per_month ?? 2;
+
           await supabase.from('subscriptions').upsert({
             user_id: profileId,
             stripe_subscription_id: subscriptionId as string,
@@ -110,8 +115,68 @@ export async function POST(request: NextRequest) {
             status: subscriptionStatus,
             current_period_start: new Date(periodStart * 1000).toISOString(),
             current_period_end: new Date(periodEnd * 1000).toISOString(),
+            articles_used: 0,
+            articles_limit: articlesLimit,
+            usage_reset_at: new Date(periodStart * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           });
+
+          // Record initial payment from checkout session
+          const amountTotal = session.amount_total || 0;
+          const currency = session.currency || 'usd';
+          const paymentIntentId = session.payment_intent;
+
+          if (amountTotal > 0 && paymentIntentId) {
+            try {
+              // Get payment method details from payment intent
+              let paymentMethodType = null;
+              let paymentMethodLast4 = null;
+              let paymentMethodBrand = null;
+
+              try {
+                const paymentIntent = await stripe.paymentIntents.retrieve(
+                  paymentIntentId as string
+                );
+                if (paymentIntent.payment_method) {
+                  const paymentMethod = await stripe.paymentMethods.retrieve(
+                    paymentIntent.payment_method as string
+                  );
+                  if (paymentMethod.card) {
+                    paymentMethodType = 'card';
+                    paymentMethodLast4 = paymentMethod.card.last4;
+                    paymentMethodBrand = paymentMethod.card.brand;
+                  } else {
+                    paymentMethodType = paymentMethod.type;
+                  }
+                }
+              } catch (pmErr) {
+                console.error('Failed to retrieve payment method details:', pmErr);
+              }
+
+              await supabase.from('payments').upsert(
+                {
+                  user_id: profileId,
+                  stripe_payment_intent_id: paymentIntentId as string,
+                  stripe_subscription_id: subscriptionId as string,
+                  amount_cents: amountTotal,
+                  currency: currency,
+                  status: 'succeeded',
+                  payment_method_type: paymentMethodType,
+                  payment_method_last4: paymentMethodLast4,
+                  payment_method_brand: paymentMethodBrand,
+                  description: `Initial subscription payment for ${plan} plan`,
+                  paid_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'stripe_payment_intent_id' }
+              );
+              console.log(
+                `Initial payment recorded: user=${profileId}, amount=${amountTotal} ${currency}`
+              );
+            } catch (paymentErr) {
+              console.error('Failed to record initial payment:', paymentErr);
+            }
+          }
         }
 
         // Handle pending style data from onboarding signup flow
@@ -289,6 +354,10 @@ export async function POST(request: NextRequest) {
           // Check if this is a plan change (upgrade/downgrade)
           const isPlanChange = currentSub && currentSub.plan !== plan && !isCreated;
 
+          // Get articles limit from plan
+          const planData = await getPlanByPriceIdAdmin(priceId || '');
+          const articlesLimit = planData?.articles_per_month ?? 2;
+
           // Save history for plan changes
           if (isPlanChange && currentSub) {
             const eventType = plan > currentSub.plan ? 'upgraded' : 'downgraded';
@@ -305,6 +374,9 @@ export async function POST(request: NextRequest) {
             console.log(
               `Subscription ${eventType}: user=${profile.id}, from=${currentSub.plan} to=${plan}`
             );
+
+            // Update usage limit when plan changes
+            await setUsageLimit(profile.id, articlesLimit);
           }
 
           // Save history for new subscriptions
@@ -322,7 +394,7 @@ export async function POST(request: NextRequest) {
             console.log(`Subscription created: user=${profile.id}, plan=${plan}`);
           }
 
-          // Update subscription record
+          // Update subscription record with usage tracking fields
           await supabase.from('subscriptions').upsert({
             user_id: profile.id,
             stripe_subscription_id: subscription.id,
@@ -337,6 +409,14 @@ export async function POST(request: NextRequest) {
             canceled_at: subscription.canceled_at
               ? new Date(subscription.canceled_at * 1000).toISOString()
               : null,
+            articles_limit: articlesLimit,
+            // Only reset usage for new subscriptions, not updates
+            ...(isCreated
+              ? {
+                  articles_used: 0,
+                  usage_reset_at: new Date(subscription.current_period_start * 1000).toISOString(),
+                }
+              : {}),
             updated_at: new Date().toISOString(),
           });
         }
@@ -412,6 +492,8 @@ export async function POST(request: NextRequest) {
         const invoiceId = invoice.id;
         const amountPaid = invoice.amount_paid;
         const currency = invoice.currency;
+        const chargeId = invoice.charge;
+        const paymentIntentId = invoice.payment_intent;
 
         // Get user profile
         const { data: profile } = await supabase
@@ -423,6 +505,53 @@ export async function POST(request: NextRequest) {
         if (!profile) {
           console.error(`No profile found for customer ${customerId}`);
           break;
+        }
+
+        // Record payment in payments table
+        try {
+          // Get payment method details from charge if available
+          let paymentMethodType = null;
+          let paymentMethodLast4 = null;
+          let paymentMethodBrand = null;
+
+          if (chargeId) {
+            try {
+              const charge = await stripe.charges.retrieve(chargeId as string);
+              if (charge.payment_method_details?.card) {
+                paymentMethodType = 'card';
+                paymentMethodLast4 = charge.payment_method_details.card.last4;
+                paymentMethodBrand = charge.payment_method_details.card.brand;
+              } else if (charge.payment_method_details?.type) {
+                paymentMethodType = charge.payment_method_details.type;
+              }
+            } catch (chargeErr) {
+              console.error('Failed to retrieve charge details:', chargeErr);
+            }
+          }
+
+          await supabase.from('payments').upsert(
+            {
+              user_id: profile.id,
+              stripe_payment_intent_id: paymentIntentId as string,
+              stripe_invoice_id: invoiceId as string,
+              stripe_charge_id: chargeId as string,
+              stripe_subscription_id: subscriptionId as string,
+              amount_cents: amountPaid,
+              currency: currency,
+              status: 'succeeded',
+              payment_method_type: paymentMethodType,
+              payment_method_last4: paymentMethodLast4,
+              payment_method_brand: paymentMethodBrand,
+              description:
+                invoice.description || `Payment for ${invoice.billing_reason || 'subscription'}`,
+              paid_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'stripe_payment_intent_id' }
+          );
+          console.log(`Payment recorded: user=${profile.id}, amount=${amountPaid} ${currency}`);
+        } catch (paymentErr) {
+          console.error('Failed to record payment:', paymentErr);
         }
 
         // Update subscription status to active on successful payment
@@ -463,6 +592,10 @@ export async function POST(request: NextRequest) {
               new Date(currentSub.current_period_start).getTime() !==
                 new Date(periodStart * 1000).getTime();
 
+            // Get articles limit from plan
+            const planData = await getPlanByPriceIdAdmin(priceId || '');
+            const articlesLimit = planData?.articles_per_month ?? 2;
+
             // Save to subscription history before updating (preserve old period)
             if (currentSub && isRenewal) {
               await supabase.from('subscription_history').insert({
@@ -481,9 +614,13 @@ export async function POST(request: NextRequest) {
               console.log(
                 `Subscription history saved for renewal: user=${profile.id}, period=${currentSub.current_period_start} to ${currentSub.current_period_end}`
               );
+
+              // Reset usage on renewal (new billing period)
+              await resetUsage(profile.id);
+              console.log(`Usage reset for user ${profile.id} on subscription renewal`);
             }
 
-            // Update subscription record with new period dates
+            // Update subscription record with new period dates and reset usage for renewals
             await supabase.from('subscriptions').upsert({
               user_id: profile.id,
               stripe_subscription_id: subscriptionId as string,
@@ -494,6 +631,11 @@ export async function POST(request: NextRequest) {
               current_period_end: new Date(periodEnd * 1000).toISOString(),
               cancel_at: null,
               canceled_at: null,
+              articles_limit: articlesLimit,
+              // Reset usage on renewal
+              ...(isRenewal
+                ? { articles_used: 0, usage_reset_at: new Date(periodStart * 1000).toISOString() }
+                : {}),
               updated_at: new Date().toISOString(),
             });
 
@@ -515,6 +657,10 @@ export async function POST(request: NextRequest) {
         const invoice = event.data.object as any;
         const customerId = invoice.customer;
         const subscriptionId = invoice.subscription;
+        const invoiceId = invoice.id;
+        const amountDue = invoice.amount_due;
+        const currency = invoice.currency;
+        const paymentIntentId = invoice.payment_intent;
 
         // Get user profile
         const { data: profile } = await supabase
@@ -522,6 +668,49 @@ export async function POST(request: NextRequest) {
           .select('id')
           .eq('stripe_customer_id', customerId as string)
           .single();
+
+        // Record failed payment in payments table
+        if (profile) {
+          try {
+            // Get failure reason from payment intent if available
+            let failureReason = null;
+            if (paymentIntentId) {
+              try {
+                const paymentIntent = await stripe.paymentIntents.retrieve(
+                  paymentIntentId as string
+                );
+                failureReason =
+                  paymentIntent.last_payment_error?.message ||
+                  paymentIntent.last_payment_error?.code;
+              } catch (piErr) {
+                console.error('Failed to retrieve payment intent:', piErr);
+              }
+            }
+
+            await supabase.from('payments').upsert(
+              {
+                user_id: profile.id,
+                stripe_payment_intent_id: paymentIntentId as string,
+                stripe_invoice_id: invoiceId as string,
+                stripe_subscription_id: subscriptionId as string,
+                amount_cents: amountDue,
+                currency: currency,
+                status: 'failed',
+                description:
+                  invoice.description ||
+                  `Failed payment for ${invoice.billing_reason || 'subscription'}`,
+                failure_reason: failureReason,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'stripe_payment_intent_id' }
+            );
+            console.log(
+              `Failed payment recorded: user=${profile.id}, amount=${amountDue} ${currency}, reason=${failureReason}`
+            );
+          } catch (paymentErr) {
+            console.error('Failed to record failed payment:', paymentErr);
+          }
+        }
 
         // Update subscription status to past_due
         const { error: updateError } = await supabase

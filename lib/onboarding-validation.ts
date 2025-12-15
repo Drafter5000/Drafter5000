@@ -213,3 +213,51 @@ export function selectAISuggestion(
     suggestions: suggestions.filter(s => s !== suggestion),
   };
 }
+
+/**
+ * Validation result for LinkedIn signup form (no password required)
+ */
+export interface LinkedInSignupValidationResult {
+  valid: boolean;
+  errors: {
+    name?: string;
+    email?: string;
+    job?: string;
+  };
+}
+
+/**
+ * Validates LinkedIn signup form data (no password required).
+ * Returns validation result with errors for each invalid field.
+ *
+ * @param data - The LinkedIn signup form data to validate
+ * @returns ValidationResult with valid flag and field errors
+ */
+export function validateLinkedInSignupForm(data: {
+  name: string;
+  email: string;
+  job: string;
+}): LinkedInSignupValidationResult {
+  const errors: LinkedInSignupValidationResult['errors'] = {};
+
+  // Name validation: minimum 2 characters
+  if (data.name.length < 2) {
+    errors.name = 'Name must be at least 2 characters';
+  }
+
+  // Email validation: valid email pattern
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(data.email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+
+  // Job validation: minimum 2 characters
+  if (data.job.length < 2) {
+    errors.job = 'Job must be at least 2 characters';
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+  };
+}

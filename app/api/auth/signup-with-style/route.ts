@@ -177,16 +177,19 @@ export async function POST(request: NextRequest) {
     // Store style data in pending_style_data table
     // This will be activated after payment via webhook
     // Requirements: 4.5
-    const { error: pendingStyleError } = await supabaseAdmin.from('pending_style_data').upsert({
-      user_id: authData.user.id,
-      display_name: name,
-      style_samples: style_samples,
-      subjects: subjects,
-      preferred_language: preferred_language || 'en',
-      delivery_days: delivery_days || [],
-      job: job,
-      updated_at: new Date().toISOString(),
-    });
+    const { error: pendingStyleError } = await supabaseAdmin.from('pending_style_data').upsert(
+      {
+        user_id: authData.user.id,
+        display_name: name,
+        style_samples: style_samples,
+        subjects: subjects,
+        preferred_language: preferred_language || 'en',
+        delivery_days: delivery_days || [],
+        job: job,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    );
 
     if (pendingStyleError) {
       console.error('Failed to save pending style data:', pendingStyleError);

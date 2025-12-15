@@ -221,7 +221,24 @@ function DashboardContent() {
         ]);
         setData(dashboardData);
         setUsage(usageData);
-        const userStyle = stylesData.length > 0 ? stylesData[0] : null;
+
+        let userStyle = stylesData.length > 0 ? stylesData[0] : null;
+
+        // If no article style exists, try to activate pending style data
+        if (!userStyle) {
+          try {
+            const activateResponse = await apiClient.post<{
+              success: boolean;
+              style: ArticleStyle | null;
+            }>('/stripe/activate-style', {});
+            if (activateResponse.success && activateResponse.style) {
+              userStyle = activateResponse.style;
+            }
+          } catch (activateErr) {
+            console.error('Failed to activate pending style:', activateErr);
+          }
+        }
+
         setStyle(userStyle);
         await fetchTopics(userStyle);
       } catch (err: unknown) {
