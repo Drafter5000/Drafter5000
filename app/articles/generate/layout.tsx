@@ -2,13 +2,13 @@
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useContext } from 'react';
+import { useContext, Suspense } from 'react';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { Win95Window, Win95Progress, Win95Button } from '@/components/win95';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { CheckCircle2, Monitor } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const STEPS = [
   { path: '/articles/generate/step-1', label: 'Writing Style', number: 1 },
@@ -16,11 +16,31 @@ const STEPS = [
   { path: '/articles/generate/step-3', label: 'Sign Up', number: 3 },
 ];
 
-/**
- * Public onboarding layout - no authentication required
- * Requirements: 7.1, 8.1, 8.2
- */
-export default function GenerateLayout({ children }: { children: React.ReactNode }) {
+function LayoutSkeleton({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">✨</span>
+            <span className="font-bold text-lg">Drafter5000</span>
+          </div>
+        </div>
+        <div className="mb-8">
+          <Skeleton className="h-2 w-full mb-4" />
+          <div className="flex justify-between">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-6 w-24" />
+            ))}
+          </div>
+        </div>
+        <div className="bg-card rounded-lg border p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function GenerateLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const context = useContext(DesignContext);
@@ -42,7 +62,7 @@ export default function GenerateLayout({ children }: { children: React.ReactNode
           <div className="win95-raised p-2 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <span className="text-[16px]">✨</span>
-              <span className="text-[12px] font-bold">Drafter</span>
+              <span className="text-[12px] font-bold">Drafter5000</span>
             </Link>
             <div className="flex items-center gap-2">
               <Win95Button size="sm" onClick={toggleAndReload} title="Switch to Modern Design">
@@ -112,20 +132,9 @@ export default function GenerateLayout({ children }: { children: React.ReactNode
         <div className="flex items-center justify-between mb-8">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl">✨</span>
-            <span className="font-bold text-lg">Drafter</span>
+            <span className="font-bold text-lg">Drafter5000</span>
           </Link>
           <div className="flex items-center gap-3">
-            {/* Win95 design toggle - temporarily hidden
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleAndReload}
-              title="Switch to Win95 Design"
-            >
-              <Monitor className="h-4 w-4 mr-1" />
-              Win95
-            </Button>
-            */}
             {!isLinkedInUser && (
               <Link href="/login" className="text-sm text-primary hover:underline">
                 Already have an account? Sign in
@@ -180,5 +189,17 @@ export default function GenerateLayout({ children }: { children: React.ReactNode
         <div className="bg-card rounded-lg border p-6">{children}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Public onboarding layout - no authentication required
+ * Requirements: 7.1, 8.1, 8.2
+ */
+export default function GenerateLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<LayoutSkeleton>{children}</LayoutSkeleton>}>
+      <GenerateLayoutContent>{children}</GenerateLayoutContent>
+    </Suspense>
   );
 }

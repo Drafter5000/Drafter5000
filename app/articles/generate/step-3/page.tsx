@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +62,40 @@ interface UserProfile {
   job?: string;
 }
 
-export default function GenerateStep3Page() {
+function Step3LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="text-center space-y-4">
+        <Skeleton className="h-16 w-16 rounded-2xl mx-auto" />
+        <Skeleton className="h-8 w-52 mx-auto" />
+        <Skeleton className="h-5 w-96 mx-auto" />
+      </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        {[1, 2, 3, 4].map(i => (
+          <Card key={i} className="border-2 pt-0 pb-6">
+            <CardHeader className="py-4">
+              <Skeleton className="h-5 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {[1, 2].map(j => (
+                <div key={j} className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="flex justify-between items-center pt-6 border-t">
+        <Skeleton className="h-10 w-24 rounded-md" />
+        <Skeleton className="h-11 w-52 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
+function GenerateStep3Content() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -733,5 +766,13 @@ export default function GenerateStep3Page() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function GenerateStep3Page() {
+  return (
+    <Suspense fallback={<Step3LoadingSkeleton />}>
+      <GenerateStep3Content />
+    </Suspense>
   );
 }

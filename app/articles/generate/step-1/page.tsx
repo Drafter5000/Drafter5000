@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { StyleFormStep1 } from '@/components/articles/style-form-step1';
@@ -9,11 +9,41 @@ import { isStyleSampleValid } from '@/lib/onboarding-validation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText } from 'lucide-react';
 
-/**
- * Step 1 - Writing Style (Anonymous Access)
- * Requirements: 1.2, 2.1, 2.3, 2.4
- */
-export default function GenerateStep1Page() {
+function LoadingSkeleton({ designMode }: { designMode: DesignMode }) {
+  if (designMode === 'win95') {
+    return (
+      <div className="text-center py-8">
+        <span className="text-[11px] win95-loading">Loading...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center space-y-4">
+        <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+        <Skeleton className="h-8 w-64 mx-auto" />
+        <Skeleton className="h-5 w-80 mx-auto" />
+      </div>
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="space-y-2" style={{ opacity: 1 - (i - 1) * 0.2 }}>
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Skeleton className="h-11 w-32 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
+function GenerateStep1Content() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const context = useContext(DesignContext);
@@ -61,37 +91,7 @@ export default function GenerateStep1Page() {
   };
 
   if (initialLoading) {
-    if (designMode === 'win95') {
-      return (
-        <div className="text-center py-8">
-          <span className="text-[11px] win95-loading">Loading...</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        <div className="text-center space-y-4">
-          <Skeleton className="h-16 w-16 rounded-full mx-auto" />
-          <Skeleton className="h-8 w-64 mx-auto" />
-          <Skeleton className="h-5 w-80 mx-auto" />
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="space-y-2" style={{ opacity: 1 - (i - 1) * 0.2 }}>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-5 w-16 rounded-full" />
-              </div>
-              <Skeleton className="h-32 w-full rounded-lg" />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Skeleton className="h-11 w-32 rounded-md" />
-        </div>
-      </div>
-    );
+    return <LoadingSkeleton designMode={designMode} />;
   }
 
   // Win95 Design
@@ -136,5 +136,20 @@ export default function GenerateStep1Page() {
         error={error}
       />
     </div>
+  );
+}
+
+/**
+ * Step 1 - Writing Style (Anonymous Access)
+ * Requirements: 1.2, 2.1, 2.3, 2.4
+ */
+export default function GenerateStep1Page() {
+  const context = useContext(DesignContext);
+  const designMode: DesignMode = context?.designMode ?? 'modern';
+
+  return (
+    <Suspense fallback={<LoadingSkeleton designMode={designMode} />}>
+      <GenerateStep1Content />
+    </Suspense>
   );
 }
