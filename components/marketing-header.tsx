@@ -14,11 +14,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 const navLinks = [
   { name: 'Features', href: '#features' },
   { name: 'How it Works', href: '#how-it-works' },
-  { name: 'Testimonials', href: '#testimonials' },
+  { name: 'Testimonials', href: '#customer-stories' },
   { name: 'Pricing', href: '/pricing' },
 ];
 
-export function MarketingHeader() {
+interface MarketingHeaderProps {
+  hideNavLinks?: boolean;
+}
+
+export function MarketingHeader({ hideNavLinks = false }: MarketingHeaderProps) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const context = useContext(DesignContext);
@@ -64,17 +68,19 @@ export function MarketingHeader() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link, index) => (
-              <Link
-                key={index}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-xl hover:bg-secondary"
-              >
-                {link.name}
-              </Link>
-            ))}
-          </nav>
+          {!hideNavLinks && (
+            <nav className="hidden lg:flex items-center gap-1">
+              {navLinks.map((link, index) => (
+                <Link
+                  key={index}
+                  href={link.href}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-xl hover:bg-secondary"
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </nav>
+          )}
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-3">
@@ -148,16 +154,17 @@ export function MarketingHeader() {
           >
             <div className="bg-background/95 backdrop-blur-xl border-b border-border shadow-xl mx-4 rounded-2xl overflow-hidden">
               <nav className="p-4 space-y-2">
-                {navLinks.map((link, index) => (
-                  <Link
-                    key={index}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block text-base font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-3 rounded-xl hover:bg-secondary"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
+                {!hideNavLinks &&
+                  navLinks.map((link, index) => (
+                    <Link
+                      key={index}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block text-base font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-3 rounded-xl hover:bg-secondary"
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
                 {!user && (
                   <div className="pt-4 border-t border-border space-y-3">
                     {!isLoginPage && (

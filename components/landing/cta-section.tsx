@@ -74,7 +74,7 @@ export function CTASection() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+          {/* <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
               <span>No credit card required</span>
@@ -87,7 +87,7 @@ export function CTASection() {
               <Sparkles className="h-5 w-5 text-primary" />
               <span>Cancel anytime</span>
             </div>
-          </div>
+          </div> */}
         </motion.div>
       </div>
     </section>

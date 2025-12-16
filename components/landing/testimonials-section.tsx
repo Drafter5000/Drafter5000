@@ -39,7 +39,7 @@ const testimonials = [
 
 export function TestimonialsSection() {
   return (
-    <section className="py-32 px-6 relative overflow-hidden">
+    <section id="customer-stories" className="py-32 px-6 relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-chart-2/5 blur-3xl" />

@@ -51,7 +51,10 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section className="py-24 px-6 bg-gradient-to-b from-background to-secondary/20 relative overflow-hidden">
+    <section
+      id="how-it-works"
+      className="py-24 px-6 bg-gradient-to-b from-background to-secondary/20 relative overflow-hidden"
+    >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div

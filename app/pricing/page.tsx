@@ -121,7 +121,7 @@ function PricingContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <MarketingHeader />
+      <MarketingHeader hideNavLinks />
       <main className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-40 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
@@ -297,7 +297,7 @@ function PricingContent() {
 function PricingPageFallback() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <MarketingHeader />
+      <MarketingHeader hideNavLinks />
       <main className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
