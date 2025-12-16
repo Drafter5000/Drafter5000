@@ -398,3 +398,26 @@ export interface IncrementUsageResult {
   articlesLimit: number;
   canGenerate: boolean;
 }
+
+// ===========================================
+// USER STATS TYPES
+// ===========================================
+
+export interface UserStats {
+  id: string;
+  user_id: string;
+  articles_generated: number;
+  articles_sent: number;
+  articles_draft: number;
+  articles_in_progress: number;
+  articles_review: number;
+  total_topics: number;
+  generated_trend_value: number;
+  generated_trend_positive: boolean;
+  sent_trend_value: number;
+  sent_trend_positive: boolean;
+  last_synced_at: string | null;
+  sync_source: string;
+  created_at: string;
+  updated_at: string;
+}

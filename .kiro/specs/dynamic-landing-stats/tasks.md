@@ -1,0 +1,60 @@
+# Implementation Plan
+
+- [x] 1. Create landing stats service with calculation logic
+  - [x] 1.1 Create `lib/services/landing-stats.ts` with types and interfaces
+    - Define `LandingStats`, `CustomerData` interfaces
+    - Export types for use in API and components
+    - _Requirements: 1.2, 2.2_
+  - [x] 1.2 Implement `calculateEstimatedArticles` pure function
+    - Calculate weeks since subscription start for each customer
+    - Multiply by delivery_days count and sum all customers
+    - _Requirements: 1.2_
+  - [ ]\* 1.3 Write property test for article calculation
+    - **Property 1: Article Calculation Formula Correctness**
+    - **Validates: Requirements 1.2**
+  - [x] 1.4 Implement `formatStatNumber` utility function
+    - Format numbers with "+" suffix
+    - Handle edge cases (0, small numbers, large numbers)
+    - _Requirements: 1.3, 2.3_
+  - [ ]\* 1.5 Write property test for number formatting
+    - **Property 3: Number Formatting Consistency**
+    - **Validates: Requirements 1.3, 2.3**
+  - [x] 1.6 Implement `getLandingStats` main function
+    - Query active customers from user_profiles
+    - Query delivery_days from article_styles
+    - Calculate and return both metrics
+    - _Requirements: 2.1, 2.2, 3.2_
+  - [ ]\* 1.7 Write property test for active customer counting
+    - **Property 2: Active Customer Count Accuracy**
+    - **Validates: Requirements 2.1, 2.2**
+
+- [x] 2. Create API endpoint for landing stats
+  - [x] 2.1 Create `/api/landing-stats/route.ts` endpoint
+    - Implement GET handler
+    - Return formatted and raw statistics
+    - Handle errors with fallback values
+    - _Requirements: 3.1, 3.2, 4.2_
+  - [ ]\* 2.2 Write unit tests for API endpoint
+    - Test successful response structure
+    - Test error handling with fallback values
+    - _Requirements: 3.2, 4.2_
+
+- [x] 3. Update landing page components
+  - [x] 3.1 Update `StatsSection` component to fetch dynamic stats
+    - Add state for fetched statistics
+    - Fetch from `/api/landing-stats` on mount
+    - Display loading state while fetching
+    - Use fallback values on error
+    - _Requirements: 1.1, 2.1, 4.1, 4.2_
+  - [x] 3.2 Update `HeroVisual` component to accept dynamic article count
+    - Add `articleCount` prop
+    - Display formatted count in floating card
+    - _Requirements: 1.1, 1.3_
+  - [x] 3.3 Update landing page to pass stats to HeroVisual
+    - Lift state to parent component
+    - Pass article count to HeroVisual
+    - Ensure consistency between HeroVisual and StatsSection
+    - _Requirements: 1.1_
+
+- [x] 4. Checkpoint - Make sure all tests are passing
+  - Ensure all tests pass, ask the user if questions arise.

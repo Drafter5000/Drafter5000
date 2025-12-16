@@ -212,16 +212,42 @@ function DashboardContent() {
     }
   };
 
+  // Stats sync state
+  const [syncing, setSyncing] = useState(false);
+
+  // Force sync stats from Google Sheets
+  const handleSyncStats = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      await apiClient.post('/stats/sync', {});
+      // Refetch dashboard data after sync
+      if (user) {
+        const dashboardData = await apiClient.get<DashboardData>(
+          `/dashboard/metrics?user_id=${user.id}`
+        );
+        setData(dashboardData);
+      }
+    } catch (err) {
+      console.error('Failed to sync stats:', err);
+    } finally {
+      setSyncing(false);
+    }
+  }, [syncing, user]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user || fetchingRef.current) return;
       fetchingRef.current = true;
       try {
         setLoading(true);
+        // Fetch all data in parallel, including stats sync
         const [dashboardData, stylesData, usageData] = await Promise.all([
           apiClient.get<DashboardData>(`/dashboard/metrics?user_id=${user.id}`),
           apiClient.get<ArticleStyle[]>(`/article-styles?user_id=${user.id}`),
           apiClient.get<UsageData>('/stripe/usage'),
+          // Trigger background stats sync (don't await result)
+          apiClient.get('/stats/sync?max_age=5').catch(() => null),
         ]);
         setData(dashboardData);
         setUsage(usageData);
@@ -761,14 +787,16 @@ function DashboardContent() {
                   Here's what's happening with your content today
                 </p>
               </div>
-              {/* {style && (
-                <Link href="/articles/generate/step-1">
-                  <Button className="gap-2 shadow-lg shadow-primary/25">
-                    <Plus className="h-4 w-4" />
-                    New Article
-                  </Button>
-                </Link>
-              )} */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncStats}
+                disabled={syncing}
+                className="gap-2 self-start md:self-auto"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Stats'}
+              </Button>
             </div>
 
             {/* Stats Grid */}

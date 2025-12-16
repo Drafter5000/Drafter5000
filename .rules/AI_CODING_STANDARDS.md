@@ -171,6 +171,7 @@ N/A
 - [x] LinkedIn OAuth onboarding flow - Auto-fill user data from LinkedIn, hide password fields, hide "Already have an account?" link
 - [x] Payment tracking system - Added payments table and webhook handlers to track all payment transactions
 - [x] Usage/Credits tracking system - Added database-based usage tracking to subscriptions table, replacing Google Sheets-based tracking
+- [x] Google Sheets Stats Sync - Sync stats from all user sheets to database with caching, proper loading skeletons instead of "0+"
 
 ---
 
@@ -248,6 +249,40 @@ Use this section to document the approach taken for complex tasks.
 - `app/api/auth/complete-linkedin-onboarding/route.ts` - New API endpoint for LinkedIn onboarding
 
 **Notes:** LinkedIn users are identified by the `provider=linkedin` query parameter or by checking if user is authenticated. The flow preserves this parameter across all steps.
+
+### December 16, 2025 - Google Sheets Stats Sync & Caching
+
+**Problem:** Dashboard and landing page stats were showing "0+" while loading, confusing users. Stats were fetched directly from Google Sheets on every request, causing slow load times and unnecessary API calls.
+
+**Solution:**
+
+1. Created `user_stats` table to store synced statistics from Google Sheets
+2. Implemented `user-stats-sync.ts` service with caching (5-minute TTL)
+3. Added `/api/stats/sync` endpoint for individual user sync
+4. Added `/api/stats/sync-all` endpoint for admin/cron batch sync
+5. Updated landing page with proper loading skeletons instead of "0+"
+6. Added sessionStorage caching on frontend for landing stats
+7. Added HTTP cache headers (s-maxage=300, stale-while-revalidate=3600)
+8. Created `useDashboardStats` hook with built-in caching
+
+**Files Created:**
+
+- `scripts/19-user-stats-table.sql` - Database migration for user_stats table
+- `lib/services/user-stats-sync.ts` - Stats sync service with caching
+- `lib/hooks/use-dashboard-stats.ts` - Custom hook for dashboard stats
+- `app/api/stats/sync/route.ts` - User stats sync API
+- `app/api/stats/sync-all/route.ts` - Batch sync API for admin/cron
+
+**Files Modified:**
+
+- `components/landing/stats-section.tsx` - Added loading skeletons, memoized stats
+- `app/page.tsx` - Added sessionStorage caching, loading state
+- `app/api/landing-stats/route.ts` - Added cache headers
+- `lib/services/landing-stats.ts` - Added database fallback for stats
+- `app/dashboard/page.tsx` - Added sync button and background sync
+- `lib/types.ts` - Added UserStats type
+
+**Notes:** Stats are now synced from Google Sheets to database with 5-minute cache. Landing page shows proper loading skeletons while fetching. Run `bun run db:migrate` to apply the new migration.
 
 ---
 

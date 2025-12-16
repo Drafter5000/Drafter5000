@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Play } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import {
   Hero3D,
   HeroVisual,
@@ -23,12 +23,50 @@ import {
   GradientText,
   FAQSection,
 } from '@/components/landing';
+import type { LandingStats } from '@/lib/services/landing-stats';
+
+// Cache key for landing stats
+const LANDING_STATS_CACHE_KEY = 'drafter_landing_stats';
+const LANDING_STATS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+interface CachedStats {
+  data: LandingStats;
+  timestamp: number;
+}
+
+function getCachedStats(): LandingStats | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const cached = sessionStorage.getItem(LANDING_STATS_CACHE_KEY);
+    if (!cached) return null;
+    const parsed: CachedStats = JSON.parse(cached);
+    if (Date.now() - parsed.timestamp > LANDING_STATS_CACHE_TTL) {
+      sessionStorage.removeItem(LANDING_STATS_CACHE_KEY);
+      return null;
+    }
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedStats(data: LandingStats): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const cached: CachedStats = { data, timestamp: Date.now() };
+    sessionStorage.setItem(LANDING_STATS_CACHE_KEY, JSON.stringify(cached));
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 export default function Home() {
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const [visitorNumber, setVisitorNumber] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [landingStats, setLandingStats] = useState<LandingStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     setVisitorNumber(Math.floor(Math.random() * 9000) + 1000);
@@ -38,6 +76,27 @@ export default function Home() {
         new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
       );
     }, 60000);
+
+    // Check cache first
+    const cached = getCachedStats();
+    if (cached) {
+      setLandingStats(cached);
+      setStatsLoading(false);
+    }
+
+    // Fetch fresh stats (even if cached, to update in background)
+    fetch('/api/landing-stats')
+      .then(res => res.json())
+      .then(data => {
+        setLandingStats(data);
+        setCachedStats(data);
+        setStatsLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch landing stats:', err);
+        setStatsLoading(false);
+      });
+
     return () => clearInterval(interval);
   }, []);
 
@@ -184,18 +243,20 @@ export default function Home() {
                   <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
                     <div className="win95-sunken p-2">
                       <div className="text-[16px] font-bold text-[var(--win95-title-bar)]">
-                        10K+
+                        {statsLoading ? '...' : (landingStats?.formattedArticles ?? '0+')}
                       </div>
                       <div>Articles Generated</div>
                     </div>
                     <div className="win95-sunken p-2">
                       <div className="text-[16px] font-bold text-[var(--win95-title-bar)]">
-                        500+
+                        {statsLoading ? '...' : (landingStats?.formattedCustomers ?? '0+')}
                       </div>
                       <div>Happy Users</div>
                     </div>
                     <div className="win95-sunken p-2">
-                      <div className="text-[16px] font-bold text-[var(--win95-title-bar)]">99%</div>
+                      <div className="text-[16px] font-bold text-[var(--win95-title-bar)]">
+                        100%
+                      </div>
                       <div>Satisfaction</div>
                     </div>
                   </div>
@@ -270,7 +331,7 @@ export default function Home() {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium"
                 >
                   <Sparkles className="h-4 w-4 text-primary" />
-                  <span>AI-Powered Writing Assistant</span>
+                  <span>An AI-Powered app that ACTUALLY saves you time</span>
                   <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs">
                     New
                   </span>
@@ -282,7 +343,7 @@ export default function Home() {
                   transition={{ duration: 0.8, delay: 0.3 }}
                   className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]"
                 >
-                  Articles that <GradientText>sound like you</GradientText> wrote them
+                  LinkedIn articles that <GradientText>sound like you</GradientText> #AI
                 </motion.h1>
 
                 <motion.p
@@ -309,25 +370,19 @@ export default function Home() {
                       Get Started <ArrowRight className="h-5 w-5" />
                     </Button>
                   </Link>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-2 text-lg px-8 h-14 rounded-2xl bg-background/50 backdrop-blur-sm gap-2"
-                  >
-                    <Play className="h-5 w-5" />
-                    Watch Demo
-                  </Button>
                 </motion.div>
               </motion.div>
 
               {/* Hero Visual */}
-              <HeroVisual />
+              <HeroVisual
+                articleCount={statsLoading ? undefined : landingStats?.formattedArticles}
+              />
             </div>
           </div>
         </section>
 
         {/* Stats Section */}
-        <StatsSection />
+        <StatsSection dynamicStats={landingStats} isLoading={statsLoading} />
 
         {/* Features Section */}
         <FeatureSection />
