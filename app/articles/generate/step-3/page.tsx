@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -15,36 +14,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Calendar,
-  User,
-  Globe,
-  AlertCircle,
-  Loader2,
-  ArrowLeft,
-  CheckCircle2,
-  Rocket,
-  Mail,
-  Sparkles,
-  Lock,
-  Briefcase,
-  Eye,
-  EyeOff,
-  Info,
-} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DraftSessionService } from '@/lib/draft-session';
 import { apiClient } from '@/lib/api-client';
-import { validateSignupForm, validateLinkedInSignupForm } from '@/lib/onboarding-validation';
+import { DAYS, LANGUAGES } from '@/lib/constants';
 import {
-  toggleDay as toggleDayUtil,
-  toggleAllDays,
   areAllDaysSelected,
   DayCode,
+  toggleAllDays,
+  toggleDay as toggleDayUtil,
 } from '@/lib/day-selection';
-import { LANGUAGES, DAYS } from '@/lib/constants';
-import { useAuth } from '@/components/auth-provider';
+import { DraftSessionService } from '@/lib/draft-session';
+import { validateLinkedInSignupForm, validateSignupForm } from '@/lib/onboarding-validation';
+import {
+  AlertCircle,
+  ArrowLeft,
+  Briefcase,
+  Calendar,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Globe,
+  Info,
+  Loader2,
+  Lock,
+  Mail,
+  Rocket,
+  Sparkles,
+  User,
+} from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
 interface SignupResponse {
   success: boolean;
@@ -109,10 +109,8 @@ function GenerateStep3Content() {
     subjects: string[];
   } | null>(null);
 
-  // Check if user is a LinkedIn OAuth user
   const isLinkedInUser = searchParams.get('provider') === 'linkedin' || !!user;
 
-  // Form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -124,7 +122,6 @@ function GenerateStep3Content() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Fetch LinkedIn user profile data
   useEffect(() => {
     const fetchLinkedInProfile = async () => {
       if (!isLinkedInUser || !user) return;
@@ -145,7 +142,6 @@ function GenerateStep3Content() {
   }, [isLinkedInUser, user]);
 
   useEffect(() => {
-    // Skip redirect check if submission was successful (we're navigating away)
     if (isSubmitSuccess) return;
 
     const draftSession = DraftSessionService.load();
@@ -162,7 +158,6 @@ function GenerateStep3Content() {
       return;
     }
 
-    // Pre-fill user info from draft session if available (for non-LinkedIn users)
     if (!isLinkedInUser) {
       if (draftSession.name) setName(draftSession.name);
       if (draftSession.email) setEmail(draftSession.email);
@@ -205,7 +200,6 @@ function GenerateStep3Content() {
       return;
     }
 
-    // Use different validation for LinkedIn users
     const result = isLinkedInUser
       ? validateLinkedInSignupForm({ name, email, job })
       : validateSignupForm({ name, email, password, confirmPassword, job });
@@ -228,7 +222,6 @@ function GenerateStep3Content() {
     setCanRetry(true);
 
     try {
-      // Use different endpoint for LinkedIn users
       const endpoint = isLinkedInUser
         ? '/auth/complete-linkedin-onboarding'
         : '/auth/signup-with-style';

@@ -141,7 +141,6 @@ function GenerateStep1Content() {
 
 /**
  * Step 1 - Writing Style (Anonymous Access)
- * Requirements: 1.2, 2.1, 2.3, 2.4
  */
 export default function GenerateStep1Page() {
   const context = useContext(DesignContext);
