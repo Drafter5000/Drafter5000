@@ -8,79 +8,65 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getBrowserSupabaseClient } from '@/lib/supabase-browser';
+import { validatePassword, checkPasswordRequirements } from '@/lib/password-validation';
 import {
   AlertCircle,
-  ArrowLeft,
   ArrowRight,
+  Check,
   CheckCircle2,
   KeyRound,
   Loader2,
-  Mail,
+  Lock,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-export default function ForgotPasswordPage() {
-  const searchParams = useSearchParams();
-  const [email, setEmail] = useState('');
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showRequirements, setShowRequirements] = useState(false);
+
+  const requirements = checkPasswordRequirements(password);
 
   useEffect(() => {
     setMounted(true);
-    // Check for error from invalid reset link
-    const errorParam = searchParams.get('error');
-    if (errorParam === 'invalid_reset_link') {
-      setError('The password reset link is invalid or has expired. Please request a new one.');
-    }
-  }, [searchParams]);
-
-  const validateEmail = (email: string): boolean => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    if (!email.trim()) {
-      setError('Please enter your email address');
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      setError(validation.errors[0]);
       return;
     }
 
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
     setLoading(true);
-    setError(null);
 
     try {
       const supabase = getBrowserSupabaseClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-      });
+      const { error } = await supabase.auth.updateUser({ password });
 
       if (error) throw error;
       setSuccess(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to send reset email';
+      const message = err instanceof Error ? err.message : 'Failed to reset password';
       setError(message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getEmailProviderUrl = () => {
-    const domain = email.split('@')[1]?.toLowerCase();
-    if (!domain) return 'https://mail.google.com';
-    if (domain.includes('gmail')) return 'https://mail.google.com';
-    if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live'))
-      return 'https://outlook.live.com';
-    if (domain.includes('yahoo')) return 'https://mail.yahoo.com';
-    return 'https://mail.google.com';
   };
 
   if (success) {
@@ -100,44 +86,21 @@ export default function ForgotPasswordPage() {
                 <CheckCircle2 className="h-10 w-10 text-white" />
               </div>
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                Check Your Email
+                Password Reset!
               </CardTitle>
               <CardDescription className="text-base text-gray-500">
-                We&apos;ve sent a password reset link to
+                Your password has been successfully updated
               </CardDescription>
-              <p className="text-primary font-medium mt-1">{email}</p>
             </CardHeader>
 
-            <CardContent className="px-8 pb-8 space-y-4">
-              <a
-                href={getEmailProviderUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
+            <CardContent className="px-8 pb-8">
+              <Button
+                onClick={() => router.push('/login')}
+                className="w-full h-12 text-base shadow-lg shadow-primary/25 gap-2 group transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
               >
-                <Button className="w-full h-12 text-base shadow-lg shadow-primary/25 gap-2 group transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5">
-                  <Mail className="h-4 w-4" />
-                  Open Email App
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </a>
-
-              <Link href="/login" className="block">
-                <Button variant="outline" className="w-full h-12 text-base gap-2 group">
-                  <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-                  Back to Login
-                </Button>
-              </Link>
-
-              <p className="text-sm text-gray-500 text-center pt-4">
-                Didn&apos;t receive the email? Check your spam folder or{' '}
-                <button
-                  onClick={() => setSuccess(false)}
-                  className="text-primary font-medium hover:underline"
-                >
-                  try again
-                </button>
-              </p>
+                Continue to Login
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
             </CardContent>
           </Card>
         </main>
@@ -178,10 +141,10 @@ export default function ForgotPasswordPage() {
               <KeyRound className="h-10 w-10 text-white" />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-              Forgot Password?
+              Set New Password
             </CardTitle>
             <CardDescription className="text-base text-gray-500">
-              No worries, we&apos;ll send you reset instructions
+              Create a strong password for your account
             </CardDescription>
           </CardHeader>
 
@@ -196,39 +159,88 @@ export default function ForgotPasswordPage() {
 
               <div className="space-y-2">
                 <Label
-                  htmlFor="email"
+                  htmlFor="password"
                   className="text-sm font-medium flex items-center gap-2 text-gray-700"
                 >
-                  <Mail className="h-3.5 w-3.5 text-gray-400" />
-                  Email <span className="text-destructive">*</span>
+                  <Lock className="h-3.5 w-3.5 text-gray-400" />
+                  New Password <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
                   onChange={e => {
-                    setEmail(e.target.value);
+                    setPassword(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  onFocus={() => setShowRequirements(true)}
+                  disabled={loading}
+                  className="h-12 bg-gray-50/50 border-gray-200 focus:bg-white transition-colors"
+                />
+
+                {/* Password Requirements */}
+                {showRequirements && password && (
+                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <p className="text-xs font-medium text-gray-600 mb-2">Password requirements:</p>
+                    <RequirementItem met={requirements.minLength} text="At least 8 characters" />
+                    <RequirementItem
+                      met={requirements.hasUppercase}
+                      text="One uppercase letter (A-Z)"
+                    />
+                    <RequirementItem
+                      met={requirements.hasLowercase}
+                      text="One lowercase letter (a-z)"
+                    />
+                    <RequirementItem met={requirements.hasNumber} text="One number (0-9)" />
+                    <RequirementItem
+                      met={requirements.hasSpecialChar}
+                      text="One special character (!@#$%...)"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-sm font-medium flex items-center gap-2 text-gray-700"
+                >
+                  <Lock className="h-3.5 w-3.5 text-gray-400" />
+                  Confirm Password <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={e => {
+                    setConfirmPassword(e.target.value);
                     if (error) setError(null);
                   }}
                   disabled={loading}
                   className="h-12 bg-gray-50/50 border-gray-200 focus:bg-white transition-colors"
                 />
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1 duration-200">
+                    Passwords do not match
+                  </p>
+                )}
               </div>
 
               <Button
                 type="submit"
-                disabled={loading || !email.trim()}
+                disabled={loading || !password || !confirmPassword}
                 className="w-full h-12 text-base shadow-lg shadow-primary/25 mt-2 gap-2 group transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
               >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Sending...
+                    Resetting...
                   </>
                 ) : (
                   <>
-                    Send Reset Link
+                    Reset Password
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </>
                 )}
@@ -236,12 +248,9 @@ export default function ForgotPasswordPage() {
             </form>
 
             <div className="mt-6 text-center text-sm">
-              <Link
-                href="/login"
-                className="text-primary font-medium hover:underline inline-flex items-center gap-1 group"
-              >
-                <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
-                Back to Login
+              <span className="text-gray-500">Remember your password? </span>
+              <Link href="/login" className="text-primary font-medium hover:underline">
+                Sign in
               </Link>
             </div>
           </CardContent>
@@ -259,6 +268,21 @@ export default function ForgotPasswordPage() {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+function RequirementItem({ met, text }: { met: boolean; text: string }) {
+  return (
+    <div
+      className={`flex items-center gap-2 text-xs ${met ? 'text-emerald-600' : 'text-gray-500'}`}
+    >
+      {met ? (
+        <Check className="h-3.5 w-3.5 text-emerald-500" />
+      ) : (
+        <X className="h-3.5 w-3.5 text-gray-400" />
+      )}
+      <span>{text}</span>
     </div>
   );
 }
