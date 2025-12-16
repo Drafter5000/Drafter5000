@@ -6,7 +6,8 @@ import { useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { DesignContext } from '@/components/design-provider';
-import { PenLine, Sparkles, Monitor } from 'lucide-react';
+import { Sparkles, Monitor } from 'lucide-react';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
 export function Header() {
@@ -31,10 +32,10 @@ export function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/70 backdrop-blur-xl border-b border-border/50">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 font-bold text-lg group">
-          <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
-            <PenLine className="h-4.5 w-4.5 text-primary-foreground" />
+          <div className="h-9 w-9 rounded-xl overflow-hidden shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
+            <Image src="/logo/logo.png" alt="Drafter5000 Logo" width={36} height={36} />
           </div>
-          <span>Drafter</span>
+          <span>Drafter5000</span>
         </Link>
         <nav className="flex items-center gap-4">
           {/* Win95 design toggle - temporarily hidden

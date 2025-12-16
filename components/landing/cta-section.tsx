@@ -50,8 +50,8 @@ export function CTASection() {
           </h2>
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Join thousands of writers who are already saving time and creating better content with
-            Drafter. Start creating today.
+            Join entrepreneurs who are saving time and creating better content with Drafter5000.
+            Defibrillate your LinkedIn today.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">

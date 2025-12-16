@@ -30,8 +30,7 @@ const steps = [
     icon: Calendar,
     number: '03',
     title: 'Set Schedule',
-    description:
-      'Pick the days and frequency for article delivery. Daily, weekly, or custom schedules available.',
+    description: 'Pick the days and frequency for article delivery.',
     highlight: 'Flexible delivery',
     color: 'bg-amber-500',
     lightColor: 'bg-amber-500/10',

@@ -6,7 +6,8 @@ import { useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { DesignContext } from '@/components/design-provider';
-import { PenLine, Sparkles, Menu, X, Monitor } from 'lucide-react';
+import { Sparkles, Menu, X, Monitor } from 'lucide-react';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -55,11 +56,11 @@ export function MarketingHeader() {
           <Link href="/" className="flex items-center gap-2.5 font-bold text-xl group">
             <motion.div
               whileHover={{ scale: 1.05, rotate: 5 }}
-              className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow"
+              className="h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow"
             >
-              <PenLine className="h-5 w-5 text-white" />
+              <Image src="/logo/logo.png" alt="Drafter5000 Logo" width={40} height={40} />
             </motion.div>
-            <span className="hidden sm:inline">Drafter</span>
+            <span className="hidden sm:inline">Drafter5000</span>
           </Link>
 
           {/* Desktop Navigation */}

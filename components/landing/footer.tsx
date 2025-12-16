@@ -1,74 +1,58 @@
 'use client';
 
 import Link from 'next/link';
-import { PenLine, Twitter, Github, Linkedin, Mail } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 const footerLinks = {
   product: [
     { name: 'Features', href: '#features' },
     { name: 'Pricing', href: '/pricing' },
-    { name: 'API', href: '#' },
-    { name: 'Integrations', href: '#' },
   ],
-  company: [
-    { name: 'About', href: '#' },
-    { name: 'Blog', href: '#' },
-    { name: 'Careers', href: '#' },
-    { name: 'Press', href: '#' },
-  ],
-  resources: [
-    { name: 'Documentation', href: '#' },
-    { name: 'Help Center', href: '#' },
-    { name: 'Community', href: '#' },
-    { name: 'Templates', href: '#' },
-  ],
-  legal: [
-    { name: 'Privacy', href: '#' },
-    { name: 'Terms', href: '#' },
-    { name: 'Security', href: '#' },
-    { name: 'Cookies', href: '#' },
-  ],
+  company: [{ name: 'About', href: '#' }],
 };
 
-const socialLinks = [
-  { icon: Twitter, href: '#', label: 'Twitter' },
-  { icon: Github, href: '#', label: 'GitHub' },
-  { icon: Linkedin, href: '#', label: 'LinkedIn' },
-  { icon: Mail, href: '#', label: 'Email' },
-];
-
 export function Footer() {
+  const [contactForm, setContactForm] = useState({ email: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    // Simulate form submission
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setSubmitted(true);
+    setIsSubmitting(false);
+    setContactForm({ email: '', message: '' });
+  };
+
   return (
     <footer className="border-t border-border bg-secondary/30">
       <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
-          <div className="col-span-2">
+          <div className="col-span-1">
             <Link href="/" className="flex items-center gap-2.5 font-bold text-lg mb-4">
-              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
-                <PenLine className="h-4.5 w-4.5 text-primary-foreground" />
-              </div>
-              <span>Drafter</span>
+              <Image
+                src="/logo/logo.png"
+                alt="Drafter5000 Logo"
+                width={36}
+                height={36}
+                className="rounded-xl"
+              />
+              <span>Drafter5000</span>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
               AI-powered content creation that sounds like you. Transform your writing workflow
               today.
             </p>
-            <div className="flex items-center gap-4">
-              {socialLinks.map((social, index) => (
-                <a
-                  key={index}
-                  href={social.href}
-                  aria-label={social.label}
-                  className="h-10 w-10 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors"
-                >
-                  <social.icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
           </div>
 
-          {/* Links */}
+          {/* Product Links */}
           <div>
             <h4 className="font-semibold mb-4">Product</h4>
             <ul className="space-y-3">
@@ -85,6 +69,7 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Company Links */}
           <div>
             <h4 className="font-semibold mb-4">Company</h4>
             <ul className="space-y-3">
@@ -101,45 +86,39 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Contact Us Form */}
           <div>
-            <h4 className="font-semibold mb-4">Resources</h4>
-            <ul className="space-y-3">
-              {footerLinks.resources.map((link, index) => (
-                <li key={index}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-3">
-              {footerLinks.legal.map((link, index) => (
-                <li key={index}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <h4 className="font-semibold mb-4">Contact Us</h4>
+            {submitted ? (
+              <p className="text-sm text-primary">Thanks! We'll get back to you soon.</p>
+            ) : (
+              <form onSubmit={handleContactSubmit} className="space-y-3">
+                <Input
+                  type="email"
+                  placeholder="Your email"
+                  value={contactForm.email}
+                  onChange={e => setContactForm({ ...contactForm, email: e.target.value })}
+                  required
+                  className="h-9 text-sm"
+                />
+                <Textarea
+                  placeholder="Your message"
+                  value={contactForm.message}
+                  onChange={e => setContactForm({ ...contactForm, message: e.target.value })}
+                  required
+                  className="text-sm min-h-[80px] resize-none"
+                />
+                <Button type="submit" size="sm" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
+                </Button>
+              </form>
+            )}
           </div>
         </div>
 
         <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Drafter. All rights reserved.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Made with ❤️ for content creators worldwide
+            © {new Date().getFullYear()} Drafter5000. All rights reserved.
           </p>
         </div>
       </div>

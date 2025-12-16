@@ -106,7 +106,7 @@ export function PricingPreview() {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the plan that fits your needs. Cancel anytime.
+            Choose the plan that fits your needs. Cancel anytime. 7-day money back guarantee.
           </p>
         </motion.div>
 
