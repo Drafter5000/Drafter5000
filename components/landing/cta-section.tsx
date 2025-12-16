@@ -4,8 +4,10 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Zap, Shield } from 'lucide-react';
 import Link from 'next/link';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 
 export function CTASection() {
+  const { siteName } = useSiteConfigContext();
   return (
     <section className="py-32 px-6 relative overflow-hidden">
       {/* Animated background */}
@@ -50,7 +52,7 @@ export function CTASection() {
           </h2>
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Join entrepreneurs who are saving time and creating better content with Drafter5000.
+            Join entrepreneurs who are saving time and creating better content with {siteName}.
             Defibrillate your LinkedIn today.
           </p>
 

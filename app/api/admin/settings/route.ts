@@ -4,6 +4,7 @@ import { getAdminSession } from '@/lib/admin-auth';
 
 interface AppSettings {
   siteName: string;
+  logoUrl: string;
   supportEmail: string;
   maintenanceMode: boolean;
   allowRegistration: boolean;
@@ -14,7 +15,8 @@ interface AppSettings {
 }
 
 const defaultSettings: AppSettings = {
-  siteName: 'Drafter',
+  siteName: 'Drafter5000',
+  logoUrl: '/logo/logo.png',
   supportEmail: '',
   maintenanceMode: false,
   allowRegistration: true,
@@ -43,6 +45,9 @@ export async function GET() {
         switch (config.key) {
           case 'site_name':
             settings.siteName = config.value || defaultSettings.siteName;
+            break;
+          case 'logo_url':
+            settings.logoUrl = config.value || defaultSettings.logoUrl;
             break;
           case 'support_email':
             settings.supportEmail = config.value || defaultSettings.supportEmail;
@@ -89,6 +94,7 @@ export async function PUT(request: NextRequest) {
     // Map settings to config keys
     const configUpdates = [
       { key: 'site_name', value: body.siteName || '' },
+      { key: 'logo_url', value: body.logoUrl || '' },
       { key: 'support_email', value: body.supportEmail || '' },
       { key: 'maintenance_mode', value: String(body.maintenanceMode || false) },
       { key: 'allow_registration', value: String(body.allowRegistration !== false) },

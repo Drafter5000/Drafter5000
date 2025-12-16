@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useContext } from 'react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/auth-provider';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 import { DesignContext } from '@/components/design-provider';
 import { Sparkles, Monitor } from 'lucide-react';
 import Image from 'next/image';
@@ -12,6 +14,7 @@ import { useState, useEffect } from 'react';
 
 export function Header() {
   const { user, loading } = useAuth();
+  const { siteName, logoUrl, loading: configLoading } = useSiteConfigContext();
   const pathname = usePathname();
   const context = useContext(DesignContext);
   const toggleAndReload = context?.toggleAndReload;
@@ -33,9 +36,13 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 font-bold text-lg group">
           <div className="h-9 w-9 rounded-xl overflow-hidden shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
-            <Image src="/logo/logo.png" alt="Drafter5000 Logo" width={36} height={36} />
+            {configLoading ? (
+              <Skeleton className="h-9 w-9 rounded-xl" />
+            ) : (
+              <Image src={logoUrl} alt={`${siteName} Logo`} width={36} height={36} />
+            )}
           </div>
-          <span>Drafter5000</span>
+          {configLoading ? <Skeleton className="h-5 w-24" /> : <span>{siteName}</span>}
         </Link>
         <nav className="flex items-center gap-4">
           {/* Win95 design toggle - temporarily hidden

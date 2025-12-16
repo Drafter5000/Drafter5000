@@ -5,7 +5,9 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 
 const footerLinks = {
   product: [
@@ -16,6 +18,7 @@ const footerLinks = {
 };
 
 export function Footer() {
+  const { siteName, logoUrl, loading: configLoading } = useSiteConfigContext();
   const [contactForm, setContactForm] = useState({ email: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -37,14 +40,18 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-1">
             <Link href="/" className="flex items-center gap-2.5 font-bold text-lg mb-4">
-              <Image
-                src="/logo/logo.png"
-                alt="Drafter5000 Logo"
-                width={36}
-                height={36}
-                className="rounded-xl"
-              />
-              <span>Drafter5000</span>
+              {configLoading ? (
+                <Skeleton className="h-9 w-9 rounded-xl" />
+              ) : (
+                <Image
+                  src={logoUrl}
+                  alt={`${siteName} Logo`}
+                  width={36}
+                  height={36}
+                  className="rounded-xl"
+                />
+              )}
+              {configLoading ? <Skeleton className="h-5 w-24" /> : <span>{siteName}</span>}
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
               AI-powered content creation that sounds like you. Transform your writing workflow
@@ -118,7 +125,7 @@ export function Footer() {
 
         <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Drafter5000. All rights reserved.
+            © {new Date().getFullYear()} {siteName}. All rights reserved.
           </p>
         </div>
       </div>

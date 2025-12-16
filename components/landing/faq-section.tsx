@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { HelpCircle, Plus, Minus } from 'lucide-react';
 import { useState } from 'react';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 
 const faqs = [
   {
@@ -77,6 +78,7 @@ function FAQItem({
 }
 
 export function FAQSection() {
+  const { siteName } = useSiteConfigContext();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
@@ -100,7 +102,7 @@ export function FAQSection() {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground">
-            Everything you need to know about Drafter5000
+            Everything you need to know about {siteName}
           </p>
         </motion.div>
 

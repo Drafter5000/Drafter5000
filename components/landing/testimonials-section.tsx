@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Star, Quote } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 
 const testimonials = [
   {
@@ -38,6 +39,8 @@ const testimonials = [
 ];
 
 export function TestimonialsSection() {
+  const { siteName } = useSiteConfigContext();
+
   return (
     <section id="customer-stories" className="py-32 px-6 relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -61,7 +64,7 @@ export function TestimonialsSection() {
             Loved by entrepreneurs, mostly in <span className="text-[#003DA5]">Quebec</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            See what our customers have to say about their experience with Drafter5000
+            See what our customers have to say about their experience with {siteName}
           </p>
         </motion.div>
 

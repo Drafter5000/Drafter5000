@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useContext } from 'react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/auth-provider';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 import { DesignContext } from '@/components/design-provider';
 import { Sparkles, Menu, X, Monitor } from 'lucide-react';
 import Image from 'next/image';
@@ -24,6 +26,7 @@ interface MarketingHeaderProps {
 
 export function MarketingHeader({ hideNavLinks = false }: MarketingHeaderProps) {
   const { user, loading } = useAuth();
+  const { siteName, logoUrl, loading: configLoading } = useSiteConfigContext();
   const pathname = usePathname();
   const context = useContext(DesignContext);
   const toggleAndReload = context?.toggleAndReload;
@@ -62,9 +65,17 @@ export function MarketingHeader({ hideNavLinks = false }: MarketingHeaderProps) 
               whileHover={{ scale: 1.05, rotate: 5 }}
               className="h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow"
             >
-              <Image src="/logo/logo.png" alt="Drafter5000 Logo" width={40} height={40} />
+              {configLoading ? (
+                <Skeleton className="h-10 w-10 rounded-xl" />
+              ) : (
+                <Image src={logoUrl} alt={`${siteName} Logo`} width={40} height={40} />
+              )}
             </motion.div>
-            <span className="hidden sm:inline">Drafter5000</span>
+            {configLoading ? (
+              <Skeleton className="hidden sm:block h-6 w-24" />
+            ) : (
+              <span className="hidden sm:inline">{siteName}</span>
+            )}
           </Link>
 
           {/* Desktop Navigation */}

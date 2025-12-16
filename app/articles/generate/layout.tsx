@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useContext, Suspense } from 'react';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 import { Win95Window, Win95Progress, Win95Button } from '@/components/win95';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2 } from 'lucide-react';
@@ -23,7 +24,7 @@ function LayoutSkeleton({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
             <span className="text-2xl">✨</span>
-            <span className="font-bold text-lg">Drafter5000</span>
+            <Skeleton className="h-6 w-28" />
           </div>
         </div>
         <div className="mb-8">
@@ -44,6 +45,7 @@ function GenerateLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const context = useContext(DesignContext);
+  const { siteName } = useSiteConfigContext();
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const toggleAndReload = context?.toggleAndReload;
   const { user } = useAuth();
@@ -62,7 +64,7 @@ function GenerateLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="win95-raised p-2 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <span className="text-[16px]">✨</span>
-              <span className="text-[12px] font-bold">Drafter5000</span>
+              <span className="text-[12px] font-bold">{siteName}</span>
             </Link>
             <div className="flex items-center gap-2">
               <Win95Button size="sm" onClick={toggleAndReload} title="Switch to Modern Design">
@@ -132,7 +134,7 @@ function GenerateLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between mb-8">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl">✨</span>
-            <span className="font-bold text-lg">Drafter5000</span>
+            <span className="font-bold text-lg">{siteName}</span>
           </Link>
           <div className="flex items-center gap-3">
             {!isLinkedInUser && (
