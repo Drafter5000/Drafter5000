@@ -2,27 +2,27 @@
 
 import type React from 'react';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { apiClient } from '@/lib/api-client';
 import {
   AlertCircle,
-  Loader2,
+  ArrowRight,
   CheckCircle2,
   Eye,
   EyeOff,
-  User,
-  Mail,
+  Loader2,
   Lock,
-  ArrowRight,
+  Mail,
+  User,
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface FieldErrors {
   name?: string;

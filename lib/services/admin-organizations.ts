@@ -137,35 +137,56 @@ export async function getOrganizationMembers(orgId: string): Promise<
 > {
   const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase
+  // First get the organization members
+  const { data: members, error: membersError } = await supabase
     .from('organization_members')
-    .select(
-      `
-      id,
-      user_id,
-      role,
-      joined_at,
-      user_profiles!inner (
-        email,
-        display_name
-      )
-    `
-    )
+    .select('id, user_id, role, joined_at')
     .eq('organization_id', orgId)
     .eq('is_active', true);
 
-  if (error || !data) {
+  if (membersError) {
+    console.error('Failed to fetch organization members:', membersError);
     return [];
   }
 
-  return data.map((member: any) => ({
-    id: member.id,
-    user_id: member.user_id,
-    email: member.user_profiles.email,
-    display_name: member.user_profiles.display_name,
-    role: member.role,
-    joined_at: member.joined_at,
-  }));
+  if (!members || members.length === 0) {
+    return [];
+  }
+
+  // Get user profiles for all member user_ids
+  const userIds = members.map(m => m.user_id);
+  const { data: profiles, error: profilesError } = await supabase
+    .from('user_profiles')
+    .select('id, email, display_name')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error('Failed to fetch user profiles:', profilesError);
+    // Return members without profile info
+    return members.map(member => ({
+      id: member.id,
+      user_id: member.user_id,
+      email: 'Unknown',
+      display_name: null,
+      role: member.role,
+      joined_at: member.joined_at,
+    }));
+  }
+
+  // Create a map of user_id to profile for quick lookup
+  const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+  return members.map(member => {
+    const profile = profileMap.get(member.user_id);
+    return {
+      id: member.id,
+      user_id: member.user_id,
+      email: profile?.email || 'Unknown',
+      display_name: profile?.display_name || null,
+      role: member.role,
+      joined_at: member.joined_at,
+    };
+  });
 }
 
 /**

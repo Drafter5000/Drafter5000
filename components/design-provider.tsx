@@ -17,7 +17,6 @@ export const DesignContext = createContext<DesignContextType | null>(null);
 const STORAGE_KEY = 'design-mode';
 
 export function DesignProvider({ children }: { children: React.ReactNode }) {
-  // Default to 'modern' design
   const [designMode, setDesignModeState] = useState<DesignMode>('modern');
   const [mounted, setMounted] = useState(false);
 

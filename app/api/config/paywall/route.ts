@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
+import { type NextRequest, NextResponse } from 'next/server';
 
 // Default trial period in days - can be overridden by database config
 const DEFAULT_TRIAL_DAYS = 0;

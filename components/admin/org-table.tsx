@@ -1,6 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -9,26 +17,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import type { AdminOrgView, PaginatedResult } from '@/lib/types';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Search,
-  MoreHorizontal,
-  Eye,
-  Settings,
   Ban,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  MoreHorizontal,
+  Search,
+  Settings,
 } from 'lucide-react';
-import type { AdminOrgView, PaginatedResult } from '@/lib/types';
 import Link from 'next/link';
+import { useState } from 'react';
 import { OrgTableSkeleton } from './table-skeleton';
 
 interface OrgTableProps {

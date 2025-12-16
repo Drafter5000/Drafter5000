@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       email: onboardingData?.email || profileData?.email || null,
       preferred_language: onboardingData?.preferred_language || 'en',
       delivery_days:
-        onboardingData?.delivery_days?.length > 0
+        onboardingData?.delivery_days && onboardingData.delivery_days.length > 0
           ? onboardingData.delivery_days
           : [...DEFAULT_DELIVERY_DAYS],
     });

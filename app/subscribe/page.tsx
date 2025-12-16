@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/components/auth-provider';
+import { PaymentVerification } from '@/components/payment-verification';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +30,6 @@ import {
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { PaymentVerification } from '@/components/payment-verification';
 
 // Custom header for subscribe page with logout button only
 function SubscribeHeader({ onLogout, loggingOut }: { onLogout: () => void; loggingOut: boolean }) {

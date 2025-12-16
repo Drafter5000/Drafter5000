@@ -10,7 +10,7 @@ import { Win95Window, Win95Button, Win95Alert } from '@/components/win95';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, APIError } from '@/lib/api-client';
 import { SubscriptionExpirationBanner } from '@/components/subscription-expiration-banner';
 import { useSubscriptionStatus } from '@/lib/hooks/use-subscription-status';
 import {
@@ -190,6 +190,10 @@ function DashboardContent() {
       }
       topicsFetchedRef.current = true;
     } catch (err) {
+      // Skip logging for 401/403 - redirect is already happening
+      if (err instanceof APIError && (err.status === 401 || err.status === 403)) {
+        return;
+      }
       console.error('Failed to fetch topics:', err);
       if (styleData?.subjects?.length) {
         const subjectTopics: Topic[] = styleData.subjects.map((subject, index) => ({
@@ -242,6 +246,10 @@ function DashboardContent() {
         setStyle(userStyle);
         await fetchTopics(userStyle);
       } catch (err: unknown) {
+        // Skip setting error for 401/403 - redirect is already happening
+        if (err instanceof APIError && (err.status === 401 || err.status === 403)) {
+          return;
+        }
         const message = err instanceof Error ? err.message : 'Failed to load dashboard';
         setError(message);
       } finally {
@@ -263,6 +271,10 @@ function DashboardContent() {
       topicsFetchedRef.current = false;
       await fetchTopics(style);
     } catch (err: unknown) {
+      // Skip for 401/403 - redirect is already happening
+      if (err instanceof APIError && (err.status === 401 || err.status === 403)) {
+        return;
+      }
       if (err instanceof Error && err.message.includes('already exists')) {
         setTopicError('This topic already exists');
       } else {
@@ -283,6 +295,10 @@ function DashboardContent() {
       topicsFetchedRef.current = false;
       await fetchTopics(style);
     } catch (err: unknown) {
+      // Skip for 401/403 - redirect is already happening
+      if (err instanceof APIError && (err.status === 401 || err.status === 403)) {
+        return;
+      }
       console.error('Failed to update topic:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to update topic';
       // Check if it's a limit reached error
@@ -312,6 +328,10 @@ function DashboardContent() {
       setDeleteDialogOpen(false);
       setTopicToDelete(null);
     } catch (err) {
+      // Skip for 401/403 - redirect is already happening
+      if (err instanceof APIError && (err.status === 401 || err.status === 403)) {
+        return;
+      }
       console.error('Failed to delete topic:', err);
     } finally {
       setDeletingRowIndex(null);

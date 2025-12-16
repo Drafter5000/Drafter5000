@@ -1,10 +1,10 @@
-import type React from 'react';
-import type { Metadata } from 'next';
-import { Inter, Geist_Mono } from 'next/font/google';
-import { Analytics } from '@vercel/analytics/next';
 import { AuthProvider } from '@/components/auth-provider';
 import { DesignProvider } from '@/components/design-provider';
 import { DesignToggle } from '@/components/design-toggle';
+import { Analytics } from '@vercel/analytics/next';
+import type { Metadata } from 'next';
+import { Geist_Mono, Inter } from 'next/font/google';
+import type React from 'react';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
