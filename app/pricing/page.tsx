@@ -1,6 +1,6 @@
 'use client';
 
-import { Header } from '@/components/header';
+import { MarketingHeader } from '@/components/marketing-header';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, Zap, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Check, Zap, AlertCircle, CheckCircle2, XCircle, ShieldCheck } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
@@ -121,7 +121,7 @@ function PricingContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <Header />
+      <MarketingHeader />
       <main className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-40 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
@@ -277,6 +277,17 @@ function PricingContent() {
               ))
             )}
           </div>
+
+          {/* Money-Back Guarantee */}
+          <div className="mt-12 max-w-md mx-auto">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+              <ShieldCheck className="h-6 w-6 text-green-600 shrink-0" />
+              <p className="text-sm text-green-800">
+                7-day guarantee. If you're not happy, we'll refund you completely. No questions
+                asked.
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     </div>
@@ -286,7 +297,7 @@ function PricingContent() {
 function PricingPageFallback() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <Header />
+      <MarketingHeader />
       <main className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">

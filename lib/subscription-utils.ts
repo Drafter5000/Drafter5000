@@ -1,6 +1,5 @@
 /**
  * Subscription utility functions for handling subscription expiration and renewal
- * Requirements: 5.4, 1.1, 1.2, 1.3
  */
 
 import type { UserProfile } from './types';
