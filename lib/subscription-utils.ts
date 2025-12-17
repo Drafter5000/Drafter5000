@@ -31,7 +31,6 @@ export interface SubscriptionData {
 /**
  * Checks if a subscription status indicates an expired subscription.
  * Returns true for 'past_due' and 'canceled' statuses.
- * Requirements: 5.4
  */
 export function isSubscriptionExpired(status: SubscriptionStatus | string): boolean {
   return status === 'past_due' || status === 'canceled';
@@ -39,7 +38,6 @@ export function isSubscriptionExpired(status: SubscriptionStatus | string): bool
 
 /**
  * Computes the full subscription state from user profile and subscription data.
- * Requirements: 5.4, 1.1, 1.2
  */
 export function getSubscriptionState(
   profile: Pick<UserProfile, 'subscription_status'> | null,
@@ -80,7 +78,6 @@ export function getSubscriptionState(
 
 /**
  * Generates a user-facing message based on subscription state.
- * Requirements: 1.1, 1.3
  */
 export function getExpirationMessage(state: Omit<SubscriptionState, 'message'>): string {
   if (!state.isExpired) {
@@ -125,7 +122,6 @@ export function getDisabledFeatureTooltip(): string {
 
 /**
  * Checks if a user can access premium features based on their subscription.
- * Requirements: 2.1, 2.2
  */
 export function canAccessPremiumFeatures(status: SubscriptionStatus | string): boolean {
   return status === 'active' || status === 'trialing';

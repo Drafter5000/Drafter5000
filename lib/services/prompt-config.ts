@@ -28,10 +28,6 @@ export interface ValidationResult {
   error?: string;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 export const SUPPORTED_VARIABLES = [
   'job_title',
   'existing_topics',

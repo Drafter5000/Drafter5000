@@ -35,6 +35,7 @@ import {
   Clock,
   PenTool,
   BookOpen,
+  Info,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -48,6 +49,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteDialog } from '@/components/articles/delete-dialog';
 // Tabs removed - using custom filter pills instead
 
@@ -387,7 +389,6 @@ function DashboardContent() {
   const topicCounts = {
     all: topics.length,
     'Needs Draft': topics.filter(t => t.status === 'Needs Draft').length,
-    'Needs to be sent': topics.filter(t => t.status === 'Needs to be sent').length,
     Sent: topics.filter(t => t.status.toLowerCase() === 'sent').length,
   };
 
@@ -474,7 +475,7 @@ function DashboardContent() {
                   </Win95Alert>
                 )}
                 <div className="win95-sunken p-3">
-                  <h2 className="text-[14px] font-bold mb-1">Welcome back, {firstName}! 👋</h2>
+                  <h2 className="text-[14px] font-bold mb-1">Welcome {firstName}! 👋</h2>
                   <p className="text-[11px] text-[var(--win95-button-shadow)]">
                     Here's an overview of your article generation system
                   </p>
@@ -781,7 +782,7 @@ function DashboardContent() {
               <div>
                 <p className="text-sm font-medium text-primary mb-1">Dashboard</p>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Welcome back, {firstName}! 👋
+                  Welcome {firstName}! 👋
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   Here's what's happening with your content today
@@ -799,47 +800,18 @@ function DashboardContent() {
               </Button>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/10 to-blue-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Generated</p>
-                      <p className="text-3xl font-bold mt-1">{data.metrics.articles_generated}</p>
-                      {data.metrics.trends.articles_generated && (
-                        <p
-                          className={`text-xs mt-1 flex items-center gap-1 ${data.metrics.trends.articles_generated.isPositive ? 'text-emerald-600' : 'text-red-600'}`}
-                        >
-                          <TrendingUp className="h-3 w-3" />
-                          {data.metrics.trends.articles_generated.value}% this month
-                        </p>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
+            {/* Stats Grid - 2 boxes only */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Sent</p>
-                      <p className="text-3xl font-bold mt-1">{data.metrics.articles_sent}</p>
-                      {data.metrics.trends.articles_sent && (
-                        <p
-                          className={`text-xs mt-1 flex items-center gap-1 ${data.metrics.trends.articles_sent.isPositive ? 'text-emerald-600' : 'text-red-600'}`}
-                        >
-                          <TrendingUp className="h-3 w-3" />
-                          {data.metrics.trends.articles_sent.value}% this month
-                        </p>
-                      )}
+                      <p className="text-sm font-medium text-muted-foreground">Generated</p>
+                      <p className="text-3xl font-bold mt-1">{topicCounts.Sent}</p>
+                      <p className="text-xs mt-1 text-muted-foreground">Articles sent</p>
                     </div>
                     <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                      <Mail className="h-6 w-6 text-emerald-600" />
+                      <Check className="h-6 w-6 text-emerald-600" />
                     </div>
                   </div>
                 </CardContent>
@@ -849,36 +821,24 @@ function DashboardContent() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">In Draft</p>
-                      <p className="text-3xl font-bold mt-1">{data.metrics.draft_articles}</p>
-                      <p className="text-xs mt-1 text-muted-foreground">Awaiting review</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Topics in the pipeline
+                        </p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Your AI will draft articles from these topics</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-3xl font-bold mt-1">{topicCounts['Needs Draft']}</p>
+                      <p className="text-xs mt-1 text-muted-foreground">Awaiting draft</p>
                     </div>
                     <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
                       <PenTool className="h-6 w-6 text-amber-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-500/10 to-purple-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Topics</p>
-                      <p className="text-3xl font-bold mt-1">{topics.length}</p>
-                      <p className="text-xs mt-1 text-muted-foreground flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                          {topicCounts['Needs Draft']} draft
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          {topicCounts.Sent} sent
-                        </span>
-                      </p>
-                    </div>
-                    <div className="h-12 w-12 rounded-2xl bg-purple-500/10 flex items-center justify-center">
-                      <Sparkles className="h-6 w-6 text-purple-600" />
                     </div>
                   </div>
                 </CardContent>
@@ -1141,23 +1101,15 @@ function DashboardContent() {
                       },
                       {
                         key: 'Needs Draft',
-                        label: 'Needs Draft',
+                        label: 'Topics in the pipeline',
                         count: topicCounts['Needs Draft'],
                         color:
                           'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400',
                         icon: <PenTool className="h-3 w-3" />,
                       },
                       {
-                        key: 'Needs to be sent',
-                        label: 'Needs to be sent',
-                        count: topicCounts['Needs to be sent'],
-                        color:
-                          'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
-                        icon: <Loader2 className="h-3 w-3" />,
-                      },
-                      {
                         key: 'Sent',
-                        label: 'Sent',
+                        label: 'Generated',
                         count: topicCounts.Sent,
                         color:
                           'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400',

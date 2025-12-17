@@ -107,7 +107,7 @@ export interface SubscriptionPlan {
   stripe_product_id: string | null;
   stripe_price_id: string | null;
   is_active: boolean;
-  is_visible: boolean; // Controls display on pricing page
+  is_visible: boolean;
   is_highlighted: boolean;
   sort_order: number;
   cta_text: string | null;
@@ -127,10 +127,6 @@ export interface PlanFeature {
 export interface SubscriptionPlanWithFeatures extends SubscriptionPlan {
   features: PlanFeature[];
 }
-
-// ===========================================
-// ADMIN DASHBOARD TYPES
-// ===========================================
 
 export type AdminAction =
   | 'user.create'
@@ -238,10 +234,6 @@ export interface DashboardMetrics {
   active_users: number;
 }
 
-// ===========================================
-// ARTICLE STYLES TYPES
-// ===========================================
-
 export interface ArticleStyle {
   id: string;
   user_id: string;
@@ -306,7 +298,6 @@ export interface ArticleWithStyle extends Article {
   style_name: string | null;
 }
 
-// Step-based creation types for wizard flow
 export interface ArticleStyleStep1Data {
   style_samples: string[];
 }
@@ -335,10 +326,6 @@ export interface ArticleStyleDraft {
   preferred_language?: string;
   delivery_days?: string[];
 }
-
-// ===========================================
-// PAYMENT TYPES
-// ===========================================
 
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded' | 'canceled';
 

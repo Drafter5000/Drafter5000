@@ -1,7 +1,6 @@
 /**
  * Renewal Modal Component
  * Displays a modal prompting subscription renewal when user attempts to access disabled features
- * Requirements: 2.5, 3.1, 4.4
  */
 
 'use client';

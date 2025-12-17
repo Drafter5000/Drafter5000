@@ -29,7 +29,6 @@ import { validateLinkedInSignupForm, validateSignupForm } from '@/lib/onboarding
 import {
   AlertCircle,
   ArrowLeft,
-  Briefcase,
   Calendar,
   CheckCircle2,
   Eye,
@@ -121,6 +120,7 @@ function GenerateStep3Content() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   useEffect(() => {
     const fetchLinkedInProfile = async () => {
@@ -196,6 +196,8 @@ function GenerateStep3Content() {
   const selectedLanguage = LANGUAGES.find(l => l.code === language);
 
   const handleSubmit = async () => {
+    setHasAttemptedSubmit(true);
+
     if (!draftData) {
       setError('Please complete steps 1 and 2 first');
       return;
@@ -205,15 +207,14 @@ function GenerateStep3Content() {
       ? validateLinkedInSignupForm({ name, email, job })
       : validateSignupForm({ name, email, password, confirmPassword, job });
 
-    if (!result.valid) {
-      setFieldErrors(result.errors);
-      return;
-    }
+    // Build all field errors at once
+    const allErrors: Record<string, string> = { ...result.errors };
     if (frequency.length === 0) {
-      setFieldErrors({
-        ...result.errors,
-        delivery_days: 'Please select at least one delivery day',
-      });
+      allErrors.delivery_days = 'Please select at least one delivery day';
+    }
+
+    if (!result.valid || frequency.length === 0) {
+      setFieldErrors(allErrors);
       return;
     }
     setFieldErrors({});
@@ -412,13 +413,11 @@ function GenerateStep3Content() {
           <Rocket className="h-8 w-8 text-green-500" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold">
-            {isLinkedInUser ? 'Complete Your Profile' : 'Create Your Account'}
-          </h2>
+          <h2 className="text-2xl font-bold">Settings</h2>
           <p className="text-muted-foreground mt-2">
             {isLinkedInUser
-              ? 'Final step! Complete your profile to choose your plan and start receiving articles'
-              : 'Final step! Sign up to choose your plan and start receiving articles'}
+              ? 'Final step! Complete your settings to choose your plan and start receiving articles'
+              : 'Final step! Set up your preferences and create your account'}
           </p>
         </div>
         {isLinkedInUser && (
@@ -463,7 +462,7 @@ function GenerateStep3Content() {
           <CardHeader className="py-4 bg-green-500/5">
             <CardTitle className="text-lg flex items-center gap-2">
               <Calendar className="h-5 w-5 text-green-500" />
-              Delivery Days
+              Delivery Day
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
@@ -511,7 +510,7 @@ function GenerateStep3Content() {
                 </span>
               </div>
             )}
-            {fieldErrors.delivery_days && (
+            {hasAttemptedSubmit && fieldErrors.delivery_days && (
               <p className="text-xs text-destructive">{fieldErrors.delivery_days}</p>
             )}
           </CardContent>
@@ -587,15 +586,25 @@ function GenerateStep3Content() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 disabled={loading || isLinkedInUser}
-                className={`${fieldErrors.name ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
+                className={`${hasAttemptedSubmit && fieldErrors.name ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
               />
-              {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
+              {hasAttemptedSubmit && fieldErrors.name && (
+                <p className="text-xs text-destructive">{fieldErrors.name}</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                 Email Address {!isLinkedInUser && <span className="text-destructive">*</span>}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The articles will be emailed to this address</p>
+                  </TooltipContent>
+                </Tooltip>
               </Label>
               <Input
                 id="email"
@@ -604,39 +613,12 @@ function GenerateStep3Content() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 disabled={loading || isLinkedInUser}
-                className={`${fieldErrors.email ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
+                className={`${hasAttemptedSubmit && fieldErrors.email ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
               />
-              {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
-            </div>
-
-            {/* <div className="space-y-2">
-              <Label htmlFor="job" className="flex items-center gap-2">
-                <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                Job Title <span className="text-destructive">*</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>The AI will draft articles as if it was doing this job</p>
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                id="job"
-                placeholder="Marketing Manager"
-                value={job}
-                onChange={e => setJob(e.target.value)}
-                disabled={loading}
-                className={fieldErrors.job ? 'border-destructive' : ''}
-              />
-              {fieldErrors.job && <p className="text-xs text-destructive">{fieldErrors.job}</p>}
-              {isLinkedInUser && !job && (
-                <p className="text-xs text-muted-foreground">
-                  Please enter your job title to help personalize your articles
-                </p>
+              {hasAttemptedSubmit && fieldErrors.email && (
+                <p className="text-xs text-destructive">{fieldErrors.email}</p>
               )}
-            </div> */}
+            </div>
           </CardContent>
         </Card>
 
@@ -662,7 +644,7 @@ function GenerateStep3Content() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     disabled={loading}
-                    className={`pr-10 ${fieldErrors.password ? 'border-destructive' : ''}`}
+                    className={`pr-10 ${hasAttemptedSubmit && fieldErrors.password ? 'border-destructive' : ''}`}
                   />
                   <button
                     type="button"
@@ -673,7 +655,7 @@ function GenerateStep3Content() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {fieldErrors.password && (
+                {hasAttemptedSubmit && fieldErrors.password && (
                   <p className="text-xs text-destructive">{fieldErrors.password}</p>
                 )}
                 <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
@@ -691,7 +673,7 @@ function GenerateStep3Content() {
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     disabled={loading}
-                    className={`pr-10 ${fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
+                    className={`pr-10 ${hasAttemptedSubmit && fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
                   />
                   <button
                     type="button"
@@ -706,7 +688,7 @@ function GenerateStep3Content() {
                     )}
                   </button>
                 </div>
-                {fieldErrors.confirmPassword && (
+                {hasAttemptedSubmit && fieldErrors.confirmPassword && (
                   <p className="text-xs text-destructive">{fieldErrors.confirmPassword}</p>
                 )}
               </div>
@@ -723,10 +705,8 @@ function GenerateStep3Content() {
             <div>
               <h3 className="font-semibold">Ready to go!</h3>
               <p className="text-sm text-muted-foreground">
-                You'll receive articles on {frequency.length} day
-                {frequency.length !== 1 ? 's' : ''} in {selectedLanguage?.label}. After creating
-                your account, you'll choose a subscription plan to activate your personalized
-                articles.
+                You'll receive {frequency.length} article{frequency.length !== 1 ? 's' : ''} per
+                week in {selectedLanguage?.label}.
               </p>
             </div>
           </div>
@@ -742,7 +722,7 @@ function GenerateStep3Content() {
 
         <Button
           onClick={handleSubmit}
-          disabled={!isValid || loading}
+          disabled={loading}
           size="lg"
           className={isValid ? 'bg-green-600 hover:bg-green-700' : ''}
         >
