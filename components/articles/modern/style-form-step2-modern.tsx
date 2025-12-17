@@ -50,7 +50,6 @@ export function StyleFormStep2Modern({
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  // Track all AI-generated topics during this session (includes added and ignored)
   const [generatedTopicsHistory, setGeneratedTopicsHistory] = useState<string[]>([]);
 
   const addSubject = (subject: string) => {
@@ -85,7 +84,6 @@ export function StyleFormStep2Modern({
       const newSuggestions = response.suggestions || [];
       setAiActive(true);
       setAiSuggestions(newSuggestions);
-      // Add new suggestions to history
       setGeneratedTopicsHistory(prev => [...new Set([...prev, ...newSuggestions])]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to generate suggestions';

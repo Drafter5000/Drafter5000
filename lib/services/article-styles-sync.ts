@@ -270,7 +270,7 @@ export async function syncStyleToSheets(
               const appendResult = await sheets.spreadsheets.values.append({
                 spreadsheetId: customersSpreadsheetId,
                 range: `${escapedSheetName}!A2`,
-                valueInputOption: 'RAW',
+                valueInputOption: 'USER_ENTERED',
                 requestBody: {
                   values: topicRows,
                 },
@@ -340,16 +340,38 @@ export async function deleteStyleFromSheets(styleId: string): Promise<SyncResult
 }
 
 export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResult> {
+  console.log('=== UPDATE STYLE IN SHEETS START ===');
+  console.log('Style ID:', style.id);
+  console.log('Style email:', style.email);
+  console.log('Style subjects:', style.subjects?.length || 0);
+  console.log('Style samples:', style.style_samples?.length || 0);
+
   try {
     const customersSpreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
+    const mainSpreadsheetId = process.env.GOOGLE_SHEETS_ARTICLES_ID;
+    const mainSheetName = process.env.GOOGLE_SHEETS_MAIN_SHEET_NAME || 'Sheet1';
 
-    if (!customersSpreadsheetId) {
-      console.warn('GOOGLE_SHEETS_CUSTOMER_CONFIG_ID not configured, skipping sync');
+    console.log('Customers spreadsheet ID:', customersSpreadsheetId ? 'SET' : 'NOT SET');
+    console.log('Main spreadsheet ID:', mainSpreadsheetId ? 'SET' : 'NOT SET');
+    console.log('Main sheet name:', mainSheetName);
+
+    if (!mainSpreadsheetId && !customersSpreadsheetId) {
+      console.warn('No Google Sheets configured, skipping sync');
       return { success: true };
     }
 
+    // Fetch job from user_profiles
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('job')
+      .eq('id', style.user_id)
+      .single();
+    const userJob = profile?.job || '';
+    console.log('User job from profile:', userJob);
+
     const customerSheetName = style.display_name || style.name || style.user_id;
-    const escapedSheetName =
+    const escapedCustomerSheetName =
       customerSheetName.includes(' ') || customerSheetName.includes("'")
         ? `'${customerSheetName.replace(/'/g, "''")}'`
         : customerSheetName;
@@ -357,57 +379,249 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
     const auth = getGoogleAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Get existing topics from the sheet
-    let existingTopics: string[] = [];
-    try {
-      const existingData = await sheets.spreadsheets.values.get({
-        spreadsheetId: customersSpreadsheetId,
-        range: `${escapedSheetName}!A:A`,
-      });
-      existingTopics = (existingData.data.values || [])
-        .flat()
-        .filter((t: string) => t && t !== 'Topic') // Filter out header
-        .map((t: string) => t?.toLowerCase?.() || '');
-    } catch {
-      console.log('Could not fetch existing topics from sheet');
-    }
+    // Escape main sheet name for use in ranges
+    const escapedMainSheetName =
+      mainSheetName.includes(' ') || mainSheetName.includes("'")
+        ? `'${mainSheetName.replace(/'/g, "''")}'`
+        : mainSheetName;
 
-    // Find new subjects that don't exist in the sheet
-    if (style.subjects && style.subjects.length > 0) {
-      const clientName = style.display_name || style.name || '';
-      const currentDate = formatDate(new Date());
+    // Update main sheet with all fields if main spreadsheet is configured
+    if (mainSpreadsheetId && style.email) {
+      try {
+        console.log('=== UPDATING MAIN SHEET ===');
+        console.log('Using sheet name:', escapedMainSheetName);
 
-      const newSubjects = style.subjects.filter(
-        (subject: string) => !existingTopics.includes(subject.toLowerCase())
-      );
-
-      if (newSubjects.length > 0) {
-        const topicRows = newSubjects.map((subject: string) => [
-          subject,
-          'Needs Draft',
-          '',
-          '',
-          currentDate,
-          clientName,
-        ]);
-
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: customersSpreadsheetId,
-          range: `${escapedSheetName}!A2`,
-          valueInputOption: 'RAW',
-          requestBody: {
-            values: topicRows,
-          },
+        // Find the row with this email in the main sheet
+        const mainSheetData = await sheets.spreadsheets.values.get({
+          spreadsheetId: mainSpreadsheetId,
+          range: `${escapedMainSheetName}!A:Z`, // Columns A through Z to capture all possible columns
         });
 
-        console.log(`Added ${newSubjects.length} new topics to sheet: ${customerSheetName}`);
+        const rows = mainSheetData.data.values || [];
+        const headerRow = rows[0] || [];
+        console.log('Main sheet headers:', headerRow);
+
+        // Find column indices (case-insensitive)
+        const findColIndex = (name: string) =>
+          headerRow.findIndex((h: string) => h?.toLowerCase() === name.toLowerCase());
+
+        const emailColIndex = findColIndex('customer email');
+        const jobColIndex = findColIndex('customer job');
+        const article1ColIndex = findColIndex('article 1 example');
+        const article2ColIndex = findColIndex('article 2 example');
+        const article3ColIndex = findColIndex('article 3 example');
+        const languageColIndex = findColIndex('language');
+        const mondayColIndex = findColIndex('email monday');
+        const tuesdayColIndex = findColIndex('email tuesday');
+        const wednesdayColIndex = findColIndex('email wednesday');
+        const thursdayColIndex = findColIndex('email thursday');
+        const fridayColIndex = findColIndex('email friday');
+        const saturdayColIndex = findColIndex('email saturday');
+        const sundayColIndex = findColIndex('email sunday');
+
+        console.log('Column indices:', {
+          email: emailColIndex,
+          job: jobColIndex,
+          article1: article1ColIndex,
+          article2: article2ColIndex,
+          article3: article3ColIndex,
+          language: languageColIndex,
+          monday: mondayColIndex,
+          tuesday: tuesdayColIndex,
+          wednesday: wednesdayColIndex,
+          thursday: thursdayColIndex,
+          friday: fridayColIndex,
+          saturday: saturdayColIndex,
+          sunday: sundayColIndex,
+        });
+
+        if (emailColIndex >= 0) {
+          // Find the row with matching email
+          const rowIndex = rows.findIndex(
+            (row: string[], idx: number) =>
+              idx > 0 && row[emailColIndex]?.toLowerCase() === style.email?.toLowerCase()
+          );
+
+          console.log('Found row index:', rowIndex, 'for email:', style.email);
+
+          if (rowIndex > 0) {
+            const rowNum = rowIndex + 1; // 1-based row number for sheets API
+
+            // Helper function to get column letter (supports columns beyond Z)
+            const getColLetter = (index: number): string => {
+              if (index < 26) return String.fromCharCode(65 + index);
+              return (
+                String.fromCharCode(64 + Math.floor(index / 26)) +
+                String.fromCharCode(65 + (index % 26))
+              );
+            };
+
+            // Update job title if column exists
+            if (jobColIndex >= 0) {
+              const cell = `${escapedMainSheetName}!${getColLetter(jobColIndex)}${rowNum}`;
+              await sheets.spreadsheets.values.update({
+                spreadsheetId: mainSpreadsheetId,
+                range: cell,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: [[userJob || '']] },
+              });
+              console.log(`Updated job title: "${userJob}" at ${cell}`);
+            }
+
+            // Update article samples
+            if (article1ColIndex >= 0) {
+              const cell = `${escapedMainSheetName}!${getColLetter(article1ColIndex)}${rowNum}`;
+              await sheets.spreadsheets.values.update({
+                spreadsheetId: mainSpreadsheetId,
+                range: cell,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: [[style.style_samples[0] || '']] },
+              });
+              console.log(`Updated article 1 at ${cell}`);
+            }
+            if (article2ColIndex >= 0) {
+              const cell = `${escapedMainSheetName}!${getColLetter(article2ColIndex)}${rowNum}`;
+              await sheets.spreadsheets.values.update({
+                spreadsheetId: mainSpreadsheetId,
+                range: cell,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: [[style.style_samples[1] || '']] },
+              });
+              console.log(`Updated article 2 at ${cell}`);
+            }
+            if (article3ColIndex >= 0) {
+              const cell = `${escapedMainSheetName}!${getColLetter(article3ColIndex)}${rowNum}`;
+              await sheets.spreadsheets.values.update({
+                spreadsheetId: mainSpreadsheetId,
+                range: cell,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: [[style.style_samples[2] || '']] },
+              });
+              console.log(`Updated article 3 at ${cell}`);
+            }
+
+            // Update language
+            if (languageColIndex >= 0) {
+              const cell = `${escapedMainSheetName}!${getColLetter(languageColIndex)}${rowNum}`;
+              await sheets.spreadsheets.values.update({
+                spreadsheetId: mainSpreadsheetId,
+                range: cell,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: [[getLanguageName(style.preferred_language)]] },
+              });
+              console.log(
+                `Updated language: "${getLanguageName(style.preferred_language)}" at ${cell}`
+              );
+            }
+
+            // Update delivery days (interval)
+            const deliveryDays = style.delivery_days || [];
+            const dayUpdates = [
+              { col: mondayColIndex, day: 'mon', name: 'Monday' },
+              { col: tuesdayColIndex, day: 'tue', name: 'Tuesday' },
+              { col: wednesdayColIndex, day: 'wed', name: 'Wednesday' },
+              { col: thursdayColIndex, day: 'thu', name: 'Thursday' },
+              { col: fridayColIndex, day: 'fri', name: 'Friday' },
+              { col: saturdayColIndex, day: 'sat', name: 'Saturday' },
+              { col: sundayColIndex, day: 'sun', name: 'Sunday' },
+            ];
+
+            for (const { col, day, name } of dayUpdates) {
+              if (col >= 0) {
+                const cell = `${escapedMainSheetName}!${getColLetter(col)}${rowNum}`;
+                const value = deliveryDays.includes(day) ? 'TRUE' : 'FALSE';
+                await sheets.spreadsheets.values.update({
+                  spreadsheetId: mainSpreadsheetId,
+                  range: cell,
+                  valueInputOption: 'USER_ENTERED',
+                  requestBody: { values: [[value]] },
+                });
+                console.log(`Updated ${name}: ${value} at ${cell}`);
+              }
+            }
+
+            console.log(`Successfully updated all fields in main sheet row ${rowNum}`);
+          } else {
+            console.log('No matching row found for email:', style.email);
+          }
+        } else {
+          console.log('Customer email column not found in main sheet');
+        }
+      } catch (mainSheetError) {
+        console.error('Could not update main sheet:', mainSheetError);
+        // Continue with customer sheet sync even if main sheet update fails
       }
     }
 
+    // Update customer sheet with topics if customers spreadsheet is configured
+    if (customersSpreadsheetId && style.subjects && style.subjects.length > 0) {
+      try {
+        console.log('=== UPDATING CUSTOMER SHEET ===');
+        console.log('Customer sheet name:', customerSheetName);
+
+        // Get existing topics from the customer sheet
+        let existingTopics: string[] = [];
+        try {
+          const existingData = await sheets.spreadsheets.values.get({
+            spreadsheetId: customersSpreadsheetId,
+            range: `${escapedCustomerSheetName}!A:A`,
+          });
+          existingTopics = (existingData.data.values || [])
+            .flat()
+            .filter((t: string) => t && t !== 'Topic') // Filter out header
+            .map((t: string) => t?.toLowerCase?.() || '');
+          console.log('Existing topics count:', existingTopics.length);
+        } catch {
+          console.log('Could not fetch existing topics from sheet');
+        }
+
+        // Find new subjects that don't exist in the sheet
+        const clientName = style.display_name || style.name || '';
+        const currentDate = formatDate(new Date());
+
+        const newSubjects = style.subjects.filter(
+          (subject: string) => !existingTopics.includes(subject.toLowerCase())
+        );
+
+        console.log(
+          `New topics to add: ${newSubjects.length} (filtered from ${style.subjects.length})`
+        );
+
+        if (newSubjects.length > 0) {
+          const topicRows = newSubjects.map((subject: string) => [
+            subject,
+            'Needs Draft',
+            '',
+            '',
+            currentDate,
+            clientName,
+          ]);
+
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: customersSpreadsheetId,
+            range: `${escapedCustomerSheetName}!A2`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+              values: topicRows,
+            },
+          });
+
+          console.log(`Added ${newSubjects.length} new topics to sheet: ${customerSheetName}`);
+        } else {
+          console.log('All topics already exist in sheet, nothing to add');
+        }
+      } catch (customerSheetError) {
+        console.error('Could not update customer sheet:', customerSheetError);
+      }
+    }
+
+    console.log('=== UPDATE STYLE IN SHEETS SUCCESS ===');
     console.log(`Style ${style.id} synced to Google Sheets`);
     return { success: true };
   } catch (error) {
+    console.error('=== UPDATE STYLE IN SHEETS FAILED ===');
     console.error('Failed to update style in Google Sheets:', error);
+    console.error('Error details:', error instanceof Error ? error.stack : String(error));
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

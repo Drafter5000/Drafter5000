@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
                   .from('article_styles')
                   .insert({
                     user_id: profileId,
-                    name: `${displayName}'s Style`,
+                    name: 'Settings',
                     style_samples: styleSamples,
                     subjects: subjects,
                     email: userProfile?.email || '',

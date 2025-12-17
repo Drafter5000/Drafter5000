@@ -42,6 +42,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const { user_id, ...updateData } = body;
 
+    console.log('=== PUT /api/article-styles/[id] ===');
+    console.log('Style ID:', id);
+    console.log('User ID:', user_id);
+    console.log('Update data:', JSON.stringify(updateData, null, 2));
+
     if (!user_id) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
     }
@@ -73,11 +78,32 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const style = await updateArticleStyle(id, user_id, updateData);
+    console.log('Style updated in database:', style.id);
+    console.log('Updated style subjects count:', style.subjects?.length);
+    console.log('Updated style samples count:', style.style_samples?.length);
 
     // Sync to Google Sheets (non-blocking)
-    updateStyleInSheets(style).catch(err => {
-      console.error('Failed to sync update to sheets:', err);
+    console.log('Triggering Google Sheets sync for style:', style.id);
+    console.log('Style data for sync:', {
+      email: style.email,
+      display_name: style.display_name,
+      preferred_language: style.preferred_language,
+      delivery_days: style.delivery_days,
+      subjects_count: style.subjects?.length,
+      samples_count: style.style_samples?.length,
     });
+
+    updateStyleInSheets(style)
+      .then(result => {
+        if (result.success) {
+          console.log('Google Sheets sync completed successfully for style:', style.id);
+        } else {
+          console.error('Google Sheets sync failed:', result.error);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to sync update to sheets:', err);
+      });
 
     return NextResponse.json(style);
   } catch (error: unknown) {

@@ -38,14 +38,14 @@ export function StyleCardWin95({ style, onDelete }: StyleCardWin95Props) {
 
   return (
     <>
-      <Win95Window title={style.name} icon={<span>📄</span>} showControls={false}>
+      <Win95Window title="Settings" icon={<span>📄</span>} showControls={false}>
         <div className="space-y-3">
           {/* Header Info */}
           <div className="win95-sunken p-2">
             <div className="flex items-center gap-2">
               <span className="text-[20px]">📄</span>
               <div>
-                <p className="text-[11px] font-bold">{style.name}</p>
+                <p className="text-[11px] font-bold">Settings</p>
                 <p className="text-[10px] text-[var(--win95-button-shadow)]">
                   Created: {createdDate}
                 </p>
@@ -65,7 +65,7 @@ export function StyleCardWin95({ style, onDelete }: StyleCardWin95Props) {
           {/* Actions */}
           <div className="flex gap-2">
             <Link href={`/articles/styles/${style.id}`} className="flex-1">
-              <Win95Button className="w-full">View Details</Win95Button>
+              <Win95Button className="w-full">View Settings</Win95Button>
             </Link>
             <Link href={`/articles/styles/${style.id}/edit`}>
               <Win95Button>Edit</Win95Button>
@@ -81,7 +81,7 @@ export function StyleCardWin95({ style, onDelete }: StyleCardWin95Props) {
         onConfirm={handleDelete}
         loading={deleting}
         title="Delete Article Style"
-        description={`Are you sure you want to delete "${style.name}"? This action cannot be undone.`}
+        description="Are you sure you want to delete your settings? This action cannot be undone."
       />
     </>
   );

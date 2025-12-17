@@ -53,7 +53,10 @@ export async function checkUsageLimit(userId: string): Promise<UsageLimitResult>
   }
 
   const used = subscription.articles_used || 0;
-  const limit = subscription.articles_limit || (await getArticlesLimitForPlan(plan));
+  // Always fetch the limit from the plan to ensure it's up-to-date
+  const planLimit = await getArticlesLimitForPlan(plan);
+  // Use the higher of subscription limit or plan limit (in case plan was updated)
+  const limit = Math.max(subscription.articles_limit || 0, planLimit);
 
   return {
     canGenerate: used < limit,
@@ -114,7 +117,10 @@ export async function checkUsageLimitAdmin(userId: string): Promise<UsageLimitRe
   }
 
   const used = subscription.articles_used || 0;
-  const limit = subscription.articles_limit || (await getArticlesLimitForPlanAdmin(plan));
+  // Always fetch the limit from the plan to ensure it's up-to-date
+  const planLimit = await getArticlesLimitForPlanAdmin(plan);
+  // Use the higher of subscription limit or plan limit (in case plan was updated)
+  const limit = Math.max(subscription.articles_limit || 0, planLimit);
 
   return {
     canGenerate: used < limit,

@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Sparkles,
   RefreshCw,
+  Save,
 } from 'lucide-react';
 import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation';
 import { apiClient } from '@/lib/api-client';
@@ -122,8 +123,10 @@ export default function EditStep2Page() {
       // Update the style in context
       editContext?.updateStyle({ subjects });
 
-      // Navigate to next step
-      router.push(`/articles/styles/${styleId}/edit/step-3`);
+      // Navigate to next step, preserving returnTo param
+      const returnTo = editContext?.returnTo;
+      const nextUrl = `/articles/styles/${styleId}/edit/step-3${returnTo && returnTo !== `/articles/styles/${styleId}` ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
+      router.push(nextUrl);
     } catch (err) {
       setError('Failed to save changes');
     } finally {
@@ -134,7 +137,30 @@ export default function EditStep2Page() {
   const handleBack = () => {
     // Save current state before going back
     editContext?.updateStyle({ subjects });
-    router.push(`/articles/styles/${styleId}/edit/step-1`);
+    const returnTo = editContext?.returnTo;
+    const backUrl = `/articles/styles/${styleId}/edit/step-1${returnTo && returnTo !== `/articles/styles/${styleId}` ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
+    router.push(backUrl);
+  };
+
+  // Save changes and exit without going through all steps
+  const handleSaveAndExit = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Prepare the updated data
+      const updatedData = { subjects };
+
+      // Update the style in context
+      editContext?.updateStyle(updatedData);
+
+      // Save and redirect back to origin - pass the data directly to avoid async state issues
+      await editContext?.saveAndExit(updatedData);
+    } catch (err) {
+      console.error('Failed to save style:', err);
+      setError('Failed to save changes');
+      setLoading(false);
+    }
   };
 
   if (editContext?.loading) {
@@ -322,9 +348,14 @@ export default function EditStep2Page() {
           <Win95Button onClick={handleBack} disabled={loading}>
             ← Back
           </Win95Button>
-          <Win95Button onClick={handleSubmit} disabled={!isValid || loading}>
-            {loading ? 'Saving...' : 'Next: Settings →'}
-          </Win95Button>
+          <div className="flex gap-2">
+            <Win95Button onClick={handleSaveAndExit} disabled={loading || editContext?.saving}>
+              {editContext?.saving ? 'Saving...' : '💾 Save & Exit'}
+            </Win95Button>
+            <Win95Button onClick={handleSubmit} disabled={!isValid || loading}>
+              {loading ? 'Saving...' : 'Next: Settings →'}
+            </Win95Button>
+          </div>
         </div>
       </div>
     );
@@ -546,19 +577,40 @@ export default function EditStep2Page() {
           Back
         </Button>
 
-        <Button onClick={handleSubmit} disabled={!isValid || loading} size="lg">
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Saving...
-            </>
-          ) : (
-            <>
-              Next: Settings
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleSaveAndExit}
+            disabled={loading || editContext?.saving}
+            size="lg"
+          >
+            {editContext?.saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save & Exit
+              </>
+            )}
+          </Button>
+
+          <Button onClick={handleSubmit} disabled={!isValid || loading} size="lg">
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Next: Settings
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

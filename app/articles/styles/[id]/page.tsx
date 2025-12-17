@@ -127,7 +127,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
         <div className="min-h-screen p-4">
           <div className="max-w-4xl mx-auto">
             <DashboardHeader />
-            <Win95Window title={`Style: ${style.name}`} icon={<span>📄</span>}>
+            <Win95Window title="Settings" icon={<span>📄</span>}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Link href="/dashboard">
@@ -140,7 +140,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 </div>
                 <div className="win95-sunken p-3">
-                  <h1 className="text-[14px] font-bold">{style.name}</h1>
+                  <h1 className="text-[14px] font-bold">Settings</h1>
                   <p className="text-[10px] text-[var(--win95-button-shadow)]">
                     Created {new Date(style.created_at).toLocaleDateString()}
                   </p>
@@ -246,7 +246,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
                     <FileText className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold">{style.name}</h1>
+                    <h1 className="text-2xl font-bold">Settings</h1>
                     <p className="text-sm text-muted-foreground flex items-center gap-2">
                       <Clock className="h-3.5 w-3.5" />
                       Created{' '}

@@ -248,7 +248,6 @@ export interface ArticleStyle {
   sheets_row_id: string | null;
   sheets_synced?: boolean; // Flag to prevent duplicate Google Sheets syncs
   is_active: boolean;
-  job: string | null; // User's job title for AI suggestions
   created_at: string;
   updated_at: string;
 }
@@ -312,7 +311,6 @@ export interface ArticleStyleStep3Data {
   display_name: string;
   preferred_language: string;
   delivery_days: string[];
-  job?: string;
 }
 
 export interface ArticleStyleDraft {

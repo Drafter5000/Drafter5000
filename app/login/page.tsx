@@ -85,12 +85,29 @@ export default function LoginPage() {
 
     try {
       const supabase = getBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      // Check if user is a super admin - they should use the admin portal
+      if (authData.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('is_super_admin')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profile?.is_super_admin) {
+          // Sign out and redirect to admin login with error message
+          await supabase.auth.signOut();
+          setError('Admin users must use the Admin Portal to sign in.');
+          setLoading(false);
+          return;
+        }
+      }
 
       router.push('/dashboard');
       router.refresh();

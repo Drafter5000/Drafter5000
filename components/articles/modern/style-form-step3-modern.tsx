@@ -62,7 +62,9 @@ export function StyleFormStep3Modern({
   error = null,
 }: StyleFormStep3ModernProps) {
   const [name, setName] = useState(
-    initialData.name === 'Untitled Style' ? '' : initialData.name || ''
+    initialData.name === 'Untitled Style' || initialData.name === 'Settings'
+      ? ''
+      : initialData.name || ''
   );
   const [email, setEmail] = useState(initialData.email || userEmail);
   const [firstName, setFirstName] = useState('');
@@ -134,7 +136,7 @@ export function StyleFormStep3Modern({
               </Label>
               <Input
                 id="name"
-                placeholder="Untitled Style"
+                placeholder="Settings"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 disabled={loading}

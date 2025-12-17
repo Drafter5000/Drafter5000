@@ -7,7 +7,7 @@ import { Win95Button } from '@/components/win95';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LayoutDashboard, CreditCard, Settings, LogOut, Monitor, Palette } from 'lucide-react';
+import { LayoutDashboard, CreditCard, LogOut } from 'lucide-react';
 
 export function DashboardHeader() {
   const { user, signOut } = useAuth();
@@ -50,9 +50,6 @@ export function DashboardHeader() {
             <Link href="/dashboard/billing">
               <Win95Button size="sm">💳 Billing</Win95Button>
             </Link>
-            <Link href="/dashboard/settings">
-              <Win95Button size="sm">⚙️ Settings</Win95Button>
-            </Link>
             <Win95Button size="sm" onClick={handleSignOut}>
               🚪 Sign Out
             </Win95Button>
@@ -79,33 +76,16 @@ export function DashboardHeader() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleAndReload}
-              title="Switch to Win95 Design"
-            >
-              <Monitor className="h-4 w-4 mr-1" />
-              Win95
-            </Button> */}
-            {!isOnDashboard && (
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  <LayoutDashboard className="h-4 w-4 mr-1" />
-                  Dashboard
-                </Button>
-              </Link>
-            )}
+            <Link href="/dashboard">
+              <Button variant="ghost" size="sm">
+                <LayoutDashboard className="h-4 w-4 mr-1" />
+                Dashboard
+              </Button>
+            </Link>
             <Link href="/dashboard/billing">
               <Button variant="ghost" size="sm">
                 <CreditCard className="h-4 w-4 mr-1" />
                 Billing
-              </Button>
-            </Link>
-            <Link href="/dashboard/settings">
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4 mr-1" />
-                Settings
               </Button>
             </Link>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>

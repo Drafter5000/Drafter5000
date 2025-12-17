@@ -135,7 +135,7 @@ export async function saveDraft(draft: ArticleStyleDraft): Promise<string> {
     .from('article_styles')
     .insert({
       user_id: draft.user_id,
-      name: draft.name || 'Untitled Style',
+      name: draft.name || 'Settings',
       style_samples: draft.style_samples || [],
       subjects: draft.subjects || [],
       email: draft.email || null,

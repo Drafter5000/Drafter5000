@@ -57,7 +57,6 @@ const INITIAL_STEPS: VerificationStep[] = [
 export function PaymentVerification({ sessionId, onComplete, onError }: PaymentVerificationProps) {
   const [steps, setSteps] = useState<VerificationStep[]>(INITIAL_STEPS);
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [isComplete, setIsComplete] = useState(false);
 
   const updateStepStatus = useCallback((stepId: string, status: VerificationStep['status']) => {
@@ -147,9 +146,8 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
       updateStepStatus('complete', 'complete');
       console.log('[PaymentVerification] Step 4 complete');
 
-      console.log('[PaymentVerification] All steps complete, starting countdown...');
+      console.log('[PaymentVerification] All steps complete, redirecting to welcome page...');
       setIsComplete(true);
-      setCountdown(3);
     } catch (err) {
       console.error('[PaymentVerification] Verification flow error:', err);
       const message = err instanceof Error ? err.message : 'Verification failed';
@@ -167,24 +165,14 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
     runVerification();
   }, [runVerification]);
 
-  // Countdown and redirect
+  // Redirect to welcome page when complete (no countdown)
   useEffect(() => {
-    if (countdown === null) return;
-
-    if (countdown === 0) {
+    if (isComplete) {
       onComplete?.();
-      // Use full page redirect to ensure middleware properly evaluates auth state
-      // router.replace() does client-side navigation which can cause race conditions
-      window.location.href = '/dashboard?payment_success=true';
-      return;
+      // Redirect to welcome page after successful payment verification
+      window.location.href = '/welcome';
     }
-
-    const timer = setTimeout(() => {
-      setCountdown(prev => (prev !== null ? prev - 1 : null));
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [countdown, onComplete]);
+  }, [isComplete, onComplete]);
 
   const handleRetry = () => {
     setError(null);
@@ -193,9 +181,9 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
     runVerification();
   };
 
-  const handleGoToDashboard = () => {
-    // Use full page redirect to ensure middleware properly evaluates auth state
-    window.location.href = '/dashboard?payment_success=true';
+  const handleGoToWelcome = () => {
+    // Redirect to welcome page
+    window.location.href = '/welcome';
   };
 
   const getStepIcon = (step: VerificationStep) => {
@@ -222,8 +210,8 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
             <h2 className="text-xl font-bold mb-2">Verification Failed</h2>
             <p className="text-muted-foreground mb-6">{error}</p>
             <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={handleGoToDashboard}>
-                Go to Dashboard
+              <Button variant="outline" onClick={handleGoToWelcome}>
+                Continue
               </Button>
               <Button onClick={handleRetry}>Try Again</Button>
             </div>
@@ -244,9 +232,7 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
                   <CheckCircle2 className="h-10 w-10 text-green-500" />
                 </div>
                 <h2 className="text-2xl font-bold mb-2">You're All Set! 🎉</h2>
-                <p className="text-muted-foreground">
-                  Your account is ready. Redirecting in {countdown}...
-                </p>
+                <p className="text-muted-foreground">Redirecting...</p>
               </>
             ) : (
               <>
@@ -291,15 +277,6 @@ export function PaymentVerification({ sessionId, onComplete, onError }: PaymentV
               </div>
             ))}
           </div>
-
-          {isComplete && (
-            <div className="mt-6 text-center">
-              <Button onClick={handleGoToDashboard} className="gap-2">
-                <Rocket className="h-4 w-4" />
-                Go to Dashboard Now
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

@@ -55,7 +55,7 @@ export function StyleCardModern({ style, onDelete }: StyleCardModernProps) {
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold line-clamp-1">{style.name}</h3>
+                <h3 className="font-semibold line-clamp-1">Settings</h3>
                 <p className="text-xs text-muted-foreground">{createdDate}</p>
               </div>
             </div>
@@ -100,7 +100,7 @@ export function StyleCardModern({ style, onDelete }: StyleCardModernProps) {
           <div className="mt-4">
             <Link href={`/articles/styles/${style.id}`}>
               <Button variant="outline" size="sm" className="w-full">
-                View Details
+                View Settings
               </Button>
             </Link>
           </div>
@@ -113,7 +113,7 @@ export function StyleCardModern({ style, onDelete }: StyleCardModernProps) {
         onConfirm={handleDelete}
         loading={deleting}
         title="Delete Article Style"
-        description={`Are you sure you want to delete "${style.name}"? This action cannot be undone.`}
+        description="Are you sure you want to delete your settings? This action cannot be undone."
       />
     </>
   );

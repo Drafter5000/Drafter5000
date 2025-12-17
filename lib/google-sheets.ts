@@ -201,7 +201,7 @@ export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRo
     const result = await sheets.spreadsheets.values.append({
       spreadsheetId,
       range,
-      valueInputOption: 'RAW',
+      valueInputOption: 'USER_ENTERED', // Use USER_ENTERED to properly handle dates without adding quotes
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
         values: [rowValues],
@@ -230,7 +230,7 @@ export async function appendToCustomersSheet(spreadsheetId: string, data: Custom
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: 'Customers!A:F',
-    valueInputOption: 'RAW',
+    valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [
         [data.question, data.status, data.subject, data.article, data.lastUpdate, data.client],
@@ -253,7 +253,7 @@ export async function appendOnboardingCustomer(
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: `${sheetRef}!A:F`,
-    valueInputOption: 'RAW',
+    valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [
         [
@@ -321,7 +321,7 @@ export async function createCustomerSheet(
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${escapedSheetName}!A1:H1`,
-        valueInputOption: 'RAW',
+        valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [headerRow],
         },

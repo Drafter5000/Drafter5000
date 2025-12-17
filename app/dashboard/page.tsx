@@ -379,17 +379,19 @@ function DashboardContent() {
   const dismissPaymentSuccess = () => setShowPaymentSuccess(false);
 
   // Filter topics by status (case-insensitive for 'sent')
+  // Hide 'Needs to be sent' status from users - it's an internal status
+  const visibleTopics = topics.filter(t => t.status.toLowerCase() !== 'needs to be sent');
   const filteredTopics =
     activeTopicTab === 'all'
-      ? topics
+      ? visibleTopics
       : activeTopicTab === 'Sent'
-        ? topics.filter(t => t.status.toLowerCase() === 'sent')
-        : topics.filter(t => t.status === activeTopicTab);
+        ? visibleTopics.filter(t => t.status.toLowerCase() === 'sent')
+        : visibleTopics.filter(t => t.status === activeTopicTab);
   const displayedTopics = showAllTopics ? filteredTopics : filteredTopics.slice(0, 6);
   const topicCounts = {
-    all: topics.length,
-    'Needs Draft': topics.filter(t => t.status === 'Needs Draft').length,
-    Sent: topics.filter(t => t.status.toLowerCase() === 'sent').length,
+    all: visibleTopics.length,
+    'Needs Draft': visibleTopics.filter(t => t.status === 'Needs Draft').length,
+    Sent: visibleTopics.filter(t => t.status.toLowerCase() === 'sent').length,
   };
 
   // Win95 Design - keeping it simple
@@ -506,9 +508,11 @@ function DashboardContent() {
                 {style && (
                   <div className="win95-sunken p-3">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-bold">📄 {style.name}</span>
+                      <span className="text-[11px] font-bold">📄 Settings</span>
                       {!featuresDisabled ? (
-                        <Link href={`/articles/styles/${style.id}/edit`}>
+                        <Link
+                          href={`/articles/styles/${style.id}/edit?returnTo=${encodeURIComponent('/dashboard')}`}
+                        >
                           <Win95Button size="sm">✏️ Edit</Win95Button>
                         </Link>
                       ) : (
@@ -530,7 +534,7 @@ function DashboardContent() {
                       </div>
                       <div className="win95-raised p-2">
                         <span className="text-[10px]">✨</span>
-                        <p className="text-[11px] font-bold">{topics.length} topics</p>
+                        <p className="text-[11px] font-bold">{visibleTopics.length} topics</p>
                       </div>
                     </div>
                   </div>
@@ -800,45 +804,41 @@ function DashboardContent() {
               </Button>
             </div>
 
-            {/* Stats Grid - 2 boxes only */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Generated</p>
-                      <p className="text-3xl font-bold mt-1">{topicCounts.Sent}</p>
-                      <p className="text-xs mt-1 text-muted-foreground">Articles sent</p>
+            {/* Stats Grid - 2 compact boxes */}
+            <div className="flex flex-wrap gap-4">
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:shadow-md transition-shadow w-full sm:w-auto sm:min-w-[200px]">
+                <CardContent className="pt-5 pb-4 px-5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <Check className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                      <Check className="h-6 w-6 text-emerald-600" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Generated</p>
+                      <p className="text-2xl font-bold">{topicCounts.Sent}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/10 to-amber-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/10 to-amber-500/5 hover:shadow-md transition-shadow w-full sm:w-auto sm:min-w-[200px]">
+                <CardContent className="pt-5 pb-4 px-5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                      <PenTool className="h-5 w-5 text-amber-600" />
+                    </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Topics in the pipeline
-                        </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">In pipeline</p>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Your AI will draft articles from these topics</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <p className="text-3xl font-bold mt-1">{topicCounts['Needs Draft']}</p>
-                      <p className="text-xs mt-1 text-muted-foreground">Awaiting draft</p>
-                    </div>
-                    <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                      <PenTool className="h-6 w-6 text-amber-600" />
+                      <p className="text-2xl font-bold">{topicCounts['Needs Draft']}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -870,12 +870,14 @@ function DashboardContent() {
                               <FileText className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                              <h3 className="font-bold text-lg">{style.name}</h3>
+                              <h3 className="font-bold text-lg">Settings</h3>
                               <p className="text-sm text-muted-foreground">Your Writing Style</p>
                             </div>
                           </div>
                           {!featuresDisabled ? (
-                            <Link href={`/articles/styles/${style.id}/edit`}>
+                            <Link
+                              href={`/articles/styles/${style.id}/edit?returnTo=${encodeURIComponent('/dashboard')}`}
+                            >
                               <Button
                                 size="sm"
                                 variant="secondary"
@@ -891,7 +893,7 @@ function DashboardContent() {
                               variant="secondary"
                               disabled
                               className="gap-2"
-                              title="Active subscription required to edit style"
+                              title="Active subscription required to edit settings"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                               Edit
@@ -929,7 +931,7 @@ function DashboardContent() {
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                               Topics
                             </p>
-                            <p className="font-bold text-lg">{topics.length}</p>
+                            <p className="font-bold text-lg">{visibleTopics.length}</p>
                           </div>
                         </div>
                       </div>
@@ -981,13 +983,13 @@ function DashboardContent() {
                               title="Active subscription required"
                             >
                               <Eye className="h-4 w-4" />
-                              View Details
+                              View Settings
                             </Button>
                           ) : (
                             <Link href={`/articles/styles/${style.id}`} className="flex-1">
                               <Button variant="outline" className="w-full gap-2 group/btn">
                                 <Eye className="h-4 w-4" />
-                                View Details
+                                View Settings
                                 <ArrowRight className="h-3.5 w-3.5 opacity-0 -ml-2 group-hover/btn:opacity-100 group-hover/btn:ml-0 transition-all" />
                               </Button>
                             </Link>
@@ -1194,7 +1196,11 @@ function DashboardContent() {
                                     variant="outline"
                                     className={`shrink-0 text-[10px] ${STATUS_COLORS[topic.status.toLowerCase() === 'sent' ? 'Sent' : topic.status]}`}
                                   >
-                                    {topic.status.toLowerCase() === 'sent' ? 'sent' : topic.status}
+                                    {topic.status.toLowerCase() === 'sent'
+                                      ? 'Generated'
+                                      : topic.status === 'Needs Draft'
+                                        ? 'In pipeline'
+                                        : topic.status}
                                   </Badge>
                                 </div>
                                 {topic.article && (
@@ -1258,10 +1264,10 @@ function DashboardContent() {
                   )}
 
                   {/* Footer */}
-                  {topics.length > 0 && (
+                  {visibleTopics.length > 0 && (
                     <div className="flex items-center justify-between text-sm text-muted-foreground px-6 py-4">
                       <span>
-                        {topics.length} topic{topics.length !== 1 ? 's' : ''}
+                        {visibleTopics.length} topic{visibleTopics.length !== 1 ? 's' : ''}
                       </span>
                       <span className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
