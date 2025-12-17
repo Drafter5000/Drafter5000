@@ -35,6 +35,8 @@ export function StyleFormStep2Win95({
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // Track all AI-generated topics during this session (includes added and ignored)
+  const [generatedTopicsHistory, setGeneratedTopicsHistory] = useState<string[]>([]);
 
   const addSubject = (subject: string) => {
     if (isSubjectValid(subject, subjects)) {
@@ -59,13 +61,17 @@ export function StyleFormStep2Win95({
     try {
       const response = await apiClient.post<{ suggestions: string[] }>('/ai/suggestions', {
         user_id: userId,
-        existing_topics: subjects,
+        chosen_topics: subjects,
+        generated_topics_history: generatedTopicsHistory,
         style_samples: styleSamples,
         job: job,
       });
 
+      const newSuggestions = response.suggestions || [];
       setAiActive(true);
-      setAiSuggestions(response.suggestions || []);
+      setAiSuggestions(newSuggestions);
+      // Add new suggestions to history
+      setGeneratedTopicsHistory(prev => [...new Set([...prev, ...newSuggestions])]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to generate suggestions';
       setAiError(message);
@@ -89,12 +95,14 @@ export function StyleFormStep2Win95({
     <div className="space-y-4">
       {error && <Win95Alert type="error">{error}</Win95Alert>}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
         {/* Your Topics */}
         <Win95Window title="Your Topics" icon={<span>💡</span>} showControls={false}>
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px]">Type a topic and press Enter</span>
+              <span className="text-[11px]">
+                Type a topic and press Enter or click &apos;+&apos;
+              </span>
               {subjects.length > 0 && <Win95Badge>{subjects.length} added</Win95Badge>}
             </div>
 
@@ -122,7 +130,7 @@ export function StyleFormStep2Win95({
                 onClick={() => addSubject(inputValue)}
                 disabled={!inputValue.trim() || loading}
               >
-                Add
+                +
               </Win95Button>
             </div>
 

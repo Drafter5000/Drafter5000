@@ -46,6 +46,8 @@ export default function EditStep2Page() {
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // Track all AI-generated topics during this session (includes added and ignored)
+  const [generatedTopicsHistory, setGeneratedTopicsHistory] = useState<string[]>([]);
 
   // Initialize from style data
   useEffect(() => {
@@ -78,12 +80,16 @@ export default function EditStep2Page() {
     try {
       const response = await apiClient.post<{ suggestions: string[] }>('/ai/suggestions', {
         user_id: user.id,
-        existing_topics: subjects,
+        chosen_topics: subjects,
+        generated_topics_history: generatedTopicsHistory,
         style_samples: editContext.style.style_samples,
       });
 
+      const newSuggestions = response.suggestions || [];
       setAiActive(true);
-      setAiSuggestions(response.suggestions || []);
+      setAiSuggestions(newSuggestions);
+      // Add new suggestions to history
+      setGeneratedTopicsHistory(prev => [...new Set([...prev, ...newSuggestions])]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to generate suggestions';
       setAiError(message);
@@ -342,7 +348,7 @@ export default function EditStep2Page() {
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
         {/* Your Topics Card */}
         <Card className="border-0 shadow-sm">
           <CardHeader>

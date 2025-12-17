@@ -50,6 +50,8 @@ export function StyleFormStep2Modern({
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // Track all AI-generated topics during this session (includes added and ignored)
+  const [generatedTopicsHistory, setGeneratedTopicsHistory] = useState<string[]>([]);
 
   const addSubject = (subject: string) => {
     if (isSubjectValid(subject, subjects)) {
@@ -74,13 +76,17 @@ export function StyleFormStep2Modern({
     try {
       const response = await apiClient.post<{ suggestions: string[] }>('/ai/suggestions', {
         user_id: userId,
-        existing_topics: subjects,
+        chosen_topics: subjects,
+        generated_topics_history: generatedTopicsHistory,
         style_samples: styleSamples,
         job: job,
       });
 
+      const newSuggestions = response.suggestions || [];
       setAiActive(true);
-      setAiSuggestions(response.suggestions || []);
+      setAiSuggestions(newSuggestions);
+      // Add new suggestions to history
+      setGeneratedTopicsHistory(prev => [...new Set([...prev, ...newSuggestions])]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to generate suggestions';
       setAiError(message);
@@ -113,7 +119,7 @@ export function StyleFormStep2Modern({
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -123,7 +129,7 @@ export function StyleFormStep2Modern({
               </CardTitle>
               {subjects.length > 0 && <Badge variant="secondary">{subjects.length} added</Badge>}
             </div>
-            <CardDescription>Type a topic and press Enter or click Add</CardDescription>
+            <CardDescription>Type a topic and press Enter or click &apos;+&apos;</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Topic example */}
