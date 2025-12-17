@@ -135,7 +135,7 @@ function PricingContent() {
               <span>Simple, Transparent Pricing</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              {fromSignup ? 'Choose Your Plan' : 'Plans for every creator'}
+              {fromSignup ? 'Choose Your Plan' : 'Plans for every entrepreneur'}
             </h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               {fromSignup

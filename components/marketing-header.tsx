@@ -63,12 +63,12 @@ export function MarketingHeader({ hideNavLinks = false }: MarketingHeaderProps) 
           <Link href="/" className="flex items-center gap-2.5 font-bold text-xl group">
             <motion.div
               whileHover={{ scale: 1.05, rotate: 5 }}
-              className="h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow"
+              className="h-14 w-14 rounded-xl overflow-hidden shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow"
             >
               {configLoading ? (
                 <Skeleton className="h-10 w-10 rounded-xl" />
               ) : (
-                <Image src={logoUrl} alt={`${siteName} Logo`} width={40} height={40} />
+                <Image src={logoUrl} alt={`${siteName} Logo`} width={56} height={56} />
               )}
             </motion.div>
             {configLoading ? (

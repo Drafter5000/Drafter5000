@@ -6,7 +6,18 @@ import { checkSubscriptionAccess } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const { user_id, existing_topics = [], style_samples, job } = await request.json();
+    const {
+      user_id,
+      existing_topics = [],
+      chosen_topics,
+      generated_topics_history = [],
+      style_samples,
+      job,
+    } = await request.json();
+
+    // Support both old (existing_topics) and new (chosen_topics + generated_topics_history) API
+    const chosenTopics = chosen_topics || existing_topics;
+    const generatedHistory = generated_topics_history;
 
     // Check subscription status for authenticated users
     if (user_id) {
@@ -58,8 +69,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate AI suggestions based on existing topics and job title
-    const suggestions = await generateTopicSuggestions(samplesToUse, existing_topics, 10, jobTitle);
+    // Generate AI suggestions based on chosen topics, history, and job title
+    const suggestions = await generateTopicSuggestions(
+      samplesToUse,
+      chosenTopics,
+      10,
+      jobTitle,
+      generatedHistory
+    );
 
     return NextResponse.json({ suggestions });
   } catch (error: unknown) {

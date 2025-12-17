@@ -19,7 +19,6 @@ export interface FeatureGateProps {
   fallback?: React.ReactNode;
   showTooltip?: boolean;
   tooltipMessage?: string;
-  /** If true, clicking on disabled content will show renewal modal */
   showModalOnClick?: boolean;
 }
 

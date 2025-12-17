@@ -1,4 +1,3 @@
-// Custom error class for API errors with status code
 export class APIError extends Error {
   status: number;
 
@@ -17,11 +16,9 @@ export class APIClient {
   }
 
   private handleUnauthorized(): never {
-    // Redirect to login page on 401 Unauthorized
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
-    // Throw a silent error that won't be logged to console
     const error = new APIError('Unauthorized', 401);
     throw error;
   }
@@ -57,12 +54,10 @@ export class APIClient {
     const isJson = contentType.includes('application/json');
 
     if (!response.ok) {
-      // Handle 401 Unauthorized - redirect to login silently
       if (response.status === 401) {
         this.handleUnauthorized();
       }
 
-      // Handle 403 Forbidden - also redirect to login (session may be invalid)
       if (response.status === 403) {
         this.handleUnauthorized();
       }
@@ -84,7 +79,6 @@ export class APIClient {
       return response.json();
     }
 
-    // For successful non-JSON responses, return empty object
     return {} as T;
   }
 

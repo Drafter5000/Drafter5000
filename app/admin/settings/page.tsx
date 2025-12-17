@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Settings, Shield, Database, CreditCard } from 'lucide-react';
+import { Loader2, Save, Settings, Shield, Database, CreditCard, Image } from 'lucide-react';
 import { PasswordResetForm } from '@/components/admin/password-reset-form';
 
 interface AppSettings {
   siteName: string;
+  logoUrl: string;
   supportEmail: string;
   maintenanceMode: boolean;
   allowRegistration: boolean;
@@ -22,6 +23,7 @@ interface AppSettings {
 
 const defaultSettings: AppSettings = {
   siteName: '',
+  logoUrl: '/logo/logo_new.png',
   supportEmail: '',
   maintenanceMode: false,
   allowRegistration: true,
@@ -136,6 +138,44 @@ export default function AdminSettingsPage() {
                 placeholder="support@example.com"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Branding Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Image className="h-5 w-5 text-primary" />
+              Branding
+            </CardTitle>
+            <CardDescription>Customize your application branding</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="logoUrl">Logo URL</Label>
+              <Input
+                id="logoUrl"
+                value={settings.logoUrl}
+                onChange={e => setSettings({ ...settings, logoUrl: e.target.value })}
+                placeholder="/logo/logo_new.png"
+              />
+              <p className="text-xs text-muted-foreground">
+                Path to your logo image (e.g., /logo/logo_new.png or a full URL)
+              </p>
+            </div>
+            {settings.logoUrl && (
+              <div className="p-4 rounded-lg border bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                <img
+                  src={settings.logoUrl}
+                  alt="Logo preview"
+                  className="h-12 object-contain"
+                  onError={e => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 

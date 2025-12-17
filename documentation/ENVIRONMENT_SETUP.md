@@ -143,7 +143,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51Qe8G7Q2V650apbb...
 
 2. **Create Pro Plan:**
    - Name: `Pro`
-   - Description: `Most popular for creators`
+   - Description: `Most popular for entrepreneurs`
    - Click "Add product"
    - Add a price:
      - Pricing model: Standard pricing
@@ -170,7 +170,7 @@ brew install stripe/stripe-cli/stripe
 stripe login
 
 # Create Pro product and price
-stripe products create --name="Pro" --description="Most popular for creators"
+stripe products create --name="Pro" --description="Most popular for entrepreneurs"
 # Note the prod_xxx ID
 
 stripe prices create \

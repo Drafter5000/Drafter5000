@@ -67,7 +67,7 @@ export function StatsSection({ dynamicStats, isLoading = false }: StatsSectionPr
         value: dynamicStats?.activeCustomers ?? 0,
         suffix: '+',
         label: 'Happy Writers',
-        description: 'Content creators worldwide',
+        description: 'Entrepreneurs worldwide',
         hasData: dynamicStats !== null && dynamicStats !== undefined,
       },
       {
@@ -98,7 +98,7 @@ export function StatsSection({ dynamicStats, isLoading = false }: StatsSectionPr
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Trusted by cool early adopters</h2>
           <p className="text-muted-foreground text-lg">
-            Join the growing community of content creators
+            Join the growing community of entrepreneurs
           </p>
         </motion.div>
 

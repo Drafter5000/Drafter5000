@@ -1,7 +1,6 @@
 /**
  * Shared constants for the application
  */
-
 export interface Language {
   code: string;
   label: string;

@@ -40,7 +40,6 @@ export interface DraftSession {
   delivery_days: string[];
   current_step: 1 | 2 | 3;
   last_updated: string;
-  // User info fields (can be pre-filled from signup)
   name?: string;
   email?: string;
   job?: string;

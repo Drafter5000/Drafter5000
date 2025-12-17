@@ -10,7 +10,7 @@ export interface SiteConfig {
 
 const DEFAULT_CONFIG: SiteConfig = {
   siteName: 'Drafter5000',
-  logoUrl: '/logo/logo.png',
+  logoUrl: '/logo/logo_new.png',
   updatedAt: '',
 };
 

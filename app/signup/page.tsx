@@ -215,7 +215,7 @@ export default function SignupPage() {
             <CardDescription
               className={`text-base text-gray-500 transition-all duration-700 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              Join thousands of content creators
+              Join thousands of entrepreneurs
             </CardDescription>
           </CardHeader>
 

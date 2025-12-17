@@ -161,8 +161,9 @@ function GenerateStep3Content() {
     if (!isLinkedInUser) {
       if (draftSession.name) setName(draftSession.name);
       if (draftSession.email) setEmail(draftSession.email);
-      if (draftSession.job) setJob(draftSession.job);
     }
+    // Job title is now collected in step-1, so load it for all users
+    if (draftSession.job) setJob(draftSession.job);
     if (draftSession.delivery_days && draftSession.delivery_days.length > 0) {
       setFrequency(draftSession.delivery_days as DayCode[]);
     }
@@ -457,157 +458,6 @@ function GenerateStep3Content() {
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Account Information Card */}
-        <Card className="border-2 pt-0 pb-6">
-          <CardHeader className="py-4 bg-blue-500/5">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5 text-blue-500" />
-              Account Information
-              {isLinkedInUser && (
-                <span className="text-xs font-normal text-muted-foreground ml-auto">
-                  From LinkedIn
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="flex items-center gap-2">
-                Full Name {!isLinkedInUser && <span className="text-destructive">*</span>}
-              </Label>
-              <Input
-                id="name"
-                placeholder="John Doe"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                disabled={loading || isLinkedInUser}
-                className={`${fieldErrors.name ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
-              />
-              {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                Email Address {!isLinkedInUser && <span className="text-destructive">*</span>}
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                disabled={loading || isLinkedInUser}
-                className={`${fieldErrors.email ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
-              />
-              {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="job" className="flex items-center gap-2">
-                <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                Job Title <span className="text-destructive">*</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>The AI will draft articles as if it was doing this job</p>
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                id="job"
-                placeholder="Marketing Manager"
-                value={job}
-                onChange={e => setJob(e.target.value)}
-                disabled={loading}
-                className={fieldErrors.job ? 'border-destructive' : ''}
-              />
-              {fieldErrors.job && <p className="text-xs text-destructive">{fieldErrors.job}</p>}
-              {isLinkedInUser && !job && (
-                <p className="text-xs text-muted-foreground">
-                  Please enter your job title to help personalize your articles
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Password Card - Only show for non-LinkedIn users */}
-        {!isLinkedInUser && (
-          <Card className="border-2 pt-0 pb-6">
-            <CardHeader className="py-4 bg-purple-500/5">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Lock className="h-5 w-5 text-purple-500" />
-                Set Password
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">
-                  Password <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    disabled={loading}
-                    className={`pr-10 ${fieldErrors.password ? 'border-destructive' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {fieldErrors.password && (
-                  <p className="text-xs text-destructive">{fieldErrors.password}</p>
-                )}
-                <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">
-                  Confirm Password <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    disabled={loading}
-                    className={`pr-10 ${fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {fieldErrors.confirmPassword && (
-                  <p className="text-xs text-destructive">{fieldErrors.confirmPassword}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Delivery Days Card */}
         <Card className="border-2 pt-0 pb-6">
           <CardHeader className="py-4 bg-green-500/5">
@@ -712,6 +562,157 @@ function GenerateStep3Content() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Account Information Card */}
+        <Card className="border-2 pt-0 pb-6">
+          <CardHeader className="py-4 bg-blue-500/5">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-500" />
+              Account Information
+              {isLinkedInUser && (
+                <span className="text-xs font-normal text-muted-foreground ml-auto">
+                  From LinkedIn
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="flex items-center gap-2">
+                Full Name {!isLinkedInUser && <span className="text-destructive">*</span>}
+              </Label>
+              <Input
+                id="name"
+                placeholder="John Doe"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                disabled={loading || isLinkedInUser}
+                className={`${fieldErrors.name ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
+              />
+              {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                Email Address {!isLinkedInUser && <span className="text-destructive">*</span>}
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                disabled={loading || isLinkedInUser}
+                className={`${fieldErrors.email ? 'border-destructive' : ''} ${isLinkedInUser ? 'bg-muted' : ''}`}
+              />
+              {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
+            </div>
+
+            {/* <div className="space-y-2">
+              <Label htmlFor="job" className="flex items-center gap-2">
+                <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                Job Title <span className="text-destructive">*</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The AI will draft articles as if it was doing this job</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="job"
+                placeholder="Marketing Manager"
+                value={job}
+                onChange={e => setJob(e.target.value)}
+                disabled={loading}
+                className={fieldErrors.job ? 'border-destructive' : ''}
+              />
+              {fieldErrors.job && <p className="text-xs text-destructive">{fieldErrors.job}</p>}
+              {isLinkedInUser && !job && (
+                <p className="text-xs text-muted-foreground">
+                  Please enter your job title to help personalize your articles
+                </p>
+              )}
+            </div> */}
+          </CardContent>
+        </Card>
+
+        {/* Password Card - Only show for non-LinkedIn users */}
+        {!isLinkedInUser && (
+          <Card className="border-2 pt-0 pb-6">
+            <CardHeader className="py-4 bg-purple-500/5">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Lock className="h-5 w-5 text-purple-500" />
+                Set Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    disabled={loading}
+                    className={`pr-10 ${fieldErrors.password ? 'border-destructive' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {fieldErrors.password && (
+                  <p className="text-xs text-destructive">{fieldErrors.password}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  Confirm Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    disabled={loading}
+                    className={`pr-10 ${fieldErrors.confirmPassword ? 'border-destructive' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {fieldErrors.confirmPassword && (
+                  <p className="text-xs text-destructive">{fieldErrors.confirmPassword}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Ready message */}
