@@ -48,6 +48,7 @@ import {
   Check,
   X,
   Clock,
+  Copy,
   Zap,
 } from 'lucide-react';
 
@@ -385,6 +386,14 @@ export default function AdminPromptsPage() {
   const formatNumber = (num: number) => num.toLocaleString();
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString();
 
+  // Copy to clipboard
+  const [copied, setCopied] = useState<'system' | 'user' | null>(null);
+  const copyToClipboard = async (text: string, type: 'system' | 'user') => {
+    await navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   if (promptLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -598,15 +607,39 @@ export default function AdminPromptsPage() {
                     <TabsTrigger value="user">User Prompt Preview</TabsTrigger>
                   </TabsList>
                   <TabsContent value="system" className="mt-4">
-                    <div className="p-4 rounded-lg border bg-muted/30">
-                      <pre className="whitespace-pre-wrap text-sm font-mono">
+                    <div className="relative p-4 rounded-lg border bg-muted/30">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2 h-8 w-8 p-0"
+                        onClick={() => copyToClipboard(preview.systemPrompt, 'system')}
+                      >
+                        {copied === 'system' ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <pre className="whitespace-pre-wrap text-sm font-mono pr-10">
                         {preview.systemPrompt}
                       </pre>
                     </div>
                   </TabsContent>
                   <TabsContent value="user" className="mt-4">
-                    <div className="p-4 rounded-lg border bg-muted/30">
-                      <pre className="whitespace-pre-wrap text-sm font-mono">
+                    <div className="relative p-4 rounded-lg border bg-muted/30">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2 h-8 w-8 p-0"
+                        onClick={() => copyToClipboard(preview.userPrompt, 'user')}
+                      >
+                        {copied === 'user' ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <pre className="whitespace-pre-wrap text-sm font-mono pr-10">
                         {preview.userPrompt}
                       </pre>
                     </div>
