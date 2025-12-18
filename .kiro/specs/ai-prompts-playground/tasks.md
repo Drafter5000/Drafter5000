@@ -1,0 +1,132 @@
+# Implementation Plan
+
+- [x] 1. Set up database schema and core types
+  - [x] 1.1 Create playground_usage table migration script
+    - Create `scripts/21-playground-usage-table.sql` with table definition and indexes
+    - _Requirements: 4.1_
+  - [x] 1.2 Define TypeScript interfaces for LLM providers, models, and usage
+    - Create `lib/types/llm-providers.ts` with all type definitions
+    - _Requirements: 2.2, 2.4_
+
+- [x] 2. Implement LLM Provider Service
+  - [x] 2.1 Create provider configuration with models
+    - Create `lib/services/llm-providers.ts` with provider/model definitions
+    - Include OpenAI, Anthropic, xAI, and Google providers with their models
+    - _Requirements: 2.2, 2.4_
+  - [x] 2.2 Implement API key validation function
+    - Add `validateApiKeyFormat()` function with provider-specific validation
+    - _Requirements: 1.5_
+  - [ ]\* 2.3 Write property test for API key validation
+    - **Property 4: Invalid API Key Rejection**
+    - **Validates: Requirements 1.5**
+  - [x] 2.4 Implement API key masking function
+    - Add `maskApiKey()` function to show only last 4 characters
+    - _Requirements: 1.3_
+  - [ ]\* 2.5 Write property test for API key masking
+    - **Property 2: API Key Masking Format**
+    - **Validates: Requirements 1.3**
+  - [x] 2.6 Implement API key storage and retrieval
+    - Add `saveApiKey()`, `getApiKey()`, `deleteApiKey()` functions
+    - Store encrypted keys in app_config table
+    - _Requirements: 1.2, 1.4_
+  - [ ]\* 2.7 Write property test for API key round-trip
+    - **Property 1: API Key Encryption Round-Trip**
+    - **Validates: Requirements 1.2**
+  - [ ]\* 2.8 Write property test for API key deletion
+    - **Property 3: API Key Deletion Removes Data**
+    - **Validates: Requirements 1.4**
+  - [x] 2.9 Implement getProviders function
+    - Return all providers with configuration status and masked keys
+    - _Requirements: 2.1, 2.3_
+  - [ ]\* 2.10 Write property test for provider enablement
+    - **Property 5: Provider Enablement Based on API Key**
+    - **Validates: Requirements 2.1, 2.3**
+  - [ ]\* 2.11 Write property test for provider models
+    - **Property 6: Provider Returns Correct Models**
+    - **Validates: Requirements 2.2, 2.4**
+
+- [x] 3. Implement Playground Service
+  - [x] 3.1 Create playground service with multi-provider support
+    - Create `lib/services/playground.ts` with `executePlayground()` function
+    - Implement API calls for OpenAI, Anthropic, xAI, and Google
+    - _Requirements: 3.2_
+  - [x] 3.2 Implement response parsing for each provider
+    - Extract content, token usage, and timing from each provider's response format
+    - _Requirements: 3.3_
+  - [ ]\* 3.3 Write property test for response metrics
+    - **Property 7: Playground Response Contains Required Metrics**
+    - **Validates: Requirements 3.3**
+  - [x] 3.4 Implement error handling for LLM requests
+    - Handle authentication errors, rate limits, timeouts, and network errors
+    - _Requirements: 3.5_
+  - [ ]\* 3.5 Write property test for error responses
+    - **Property 8: Error Responses Contain Error Details**
+    - **Validates: Requirements 3.5**
+
+- [x] 4. Implement Usage Service
+  - [x] 4.1 Create usage service for recording and querying
+    - Create `lib/services/playground-usage.ts` with `recordUsage()` and `getUsageStats()` functions
+    - _Requirements: 4.1, 4.2_
+  - [ ]\* 4.2 Write property test for usage recording
+    - **Property 10: Usage Recording Captures All Fields**
+    - **Validates: Requirements 4.1**
+  - [x] 4.3 Implement usage aggregation by period
+    - Add aggregation for day, week, month periods per provider
+    - _Requirements: 4.2, 4.3_
+  - [ ]\* 4.4 Write property test for usage aggregation
+    - **Property 11: Usage Aggregation Correctness**
+    - **Validates: Requirements 4.2, 4.3, 4.4**
+  - [x] 4.5 Implement usage history retrieval
+    - Add `getUsageHistory()` function with pagination
+    - _Requirements: 4.4_
+
+- [x] 5. Checkpoint - Ensure all service tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Create API Routes
+  - [x] 6.1 Create LLM providers API route
+    - Create `app/api/admin/llm-providers/route.ts` with GET and POST handlers
+    - _Requirements: 1.1, 1.2, 1.4, 2.1_
+  - [x] 6.2 Create playground execution API route
+    - Create `app/api/admin/playground/route.ts` with POST handler
+    - _Requirements: 3.2, 3.3, 3.5_
+  - [x] 6.3 Create playground usage API route
+    - Create `app/api/admin/playground/usage/route.ts` with GET handler
+    - _Requirements: 4.2, 4.4_
+
+- [x] 7. Update Admin Prompts Page UI
+  - [x] 7.1 Add tabs structure to prompts page
+    - Refactor page to use tabs: Prompt Config, API Keys, Playground, Usage
+    - _Requirements: 1.1, 3.1_
+  - [x] 7.2 Create API Keys section component
+    - Build form for managing API keys for each provider
+    - Show masked keys, save/delete buttons
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [x] 7.3 Create Playground section component
+    - Build interactive playground with provider/model selection
+    - Add system prompt, user prompt inputs, and Run button
+    - Display response, timing, and token usage
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - [x] 7.4 Add "Load Current Config" button to playground
+    - Load saved prompt config into playground fields
+    - _Requirements: 3.6_
+  - [ ]\* 7.5 Write property test for load config
+    - **Property 9: Load Config Populates Playground**
+    - **Validates: Requirements 3.6**
+  - [x] 7.6 Create Usage section component
+    - Display usage statistics by provider and period
+    - Show usage history table
+    - _Requirements: 4.2, 4.3, 4.4_
+  - [x] 7.7 Add sample variables editor to playground
+    - Allow editing sample variables for testing
+    - Add reset to defaults button
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ]\* 7.8 Write property test for variable substitution
+    - **Property 12: Variable Substitution Applies Modified Values**
+    - **Validates: Requirements 5.2**
+  - [ ]\* 7.9 Write property test for reset variables
+    - **Property 13: Reset Variables Restores Defaults**
+    - **Validates: Requirements 5.3**
+
+- [x] 8. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

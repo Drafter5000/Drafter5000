@@ -7,7 +7,7 @@
  * Requirements: 1.3, 5.1, 5.2
  */
 
-import { formatDateForSheets } from '@/lib/google-sheets';
+import { formatDateForSheets } from '@/lib/utils/date-format';
 
 const DRAFT_SESSION_KEY = 'onboarding_draft_session';
 

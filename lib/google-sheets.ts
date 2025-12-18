@@ -1,5 +1,8 @@
 import { google } from 'googleapis';
 
+// Re-export formatDateForSheets from shared utility for backward compatibility
+export { formatDateForSheets } from '@/lib/utils/date-format';
+
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 
 /**
@@ -8,18 +11,6 @@ let sheetsClient: ReturnType<typeof google.sheets> | null = null;
  * RAW: Values are stored as-is without parsing (may add apostrophe prefix to dates)
  */
 export const SHEETS_VALUE_INPUT_OPTION = 'USER_ENTERED' as const;
-
-/**
- * Format date as YYYY-MM-DD for Google Sheets
- * This ISO format is universally recognized and avoids locale issues
- */
-export function formatDateForSheets(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 /**
  * Get Google Auth instance with proper credentials handling.
