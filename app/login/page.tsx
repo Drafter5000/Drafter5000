@@ -109,12 +109,12 @@ export default function LoginPage() {
         }
       }
 
-      router.push('/dashboard');
-      router.refresh();
+      // Use window.location for a full page navigation to ensure
+      // the auth state is properly synced with the server
+      window.location.href = '/dashboard';
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to sign in';
       setError(message);
-    } finally {
       setLoading(false);
     }
   };
