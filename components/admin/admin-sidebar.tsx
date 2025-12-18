@@ -51,11 +51,11 @@ const navItems: NavItem[] = [
     href: '/admin/billing',
     icon: Receipt,
   },
-  {
-    title: 'Usage',
-    href: '/admin/usage',
-    icon: BarChart3,
-  },
+  // {
+  //   title: 'Usage',
+  //   href: '/admin/usage',
+  //   icon: BarChart3,
+  // },
   {
     title: 'Plans',
     href: '/admin/plans',

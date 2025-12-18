@@ -153,7 +153,7 @@ export default function OrganizationDetailsPage({
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           {organization.is_active ? (
             <Button variant="destructive" onClick={handleDeactivate} disabled={updating}>
               {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -165,7 +165,7 @@ export default function OrganizationDetailsPage({
               Reactivate
             </Button>
           )}
-        </div>
+        </div> */}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
