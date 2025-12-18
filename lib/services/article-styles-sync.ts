@@ -1,4 +1,10 @@
-import { appendToMainSheet, createCustomerSheet, getGoogleAuth } from '@/lib/google-sheets';
+import {
+  appendToMainSheet,
+  createCustomerSheet,
+  getGoogleAuth,
+  formatDateForSheets,
+  SHEETS_VALUE_INPUT_OPTION,
+} from '@/lib/google-sheets';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { ArticleStyle } from '@/lib/types';
 import Stripe from 'stripe';
@@ -34,17 +40,9 @@ function getLanguageName(code: string): string {
   return LANGUAGE_NAMES[code] || code.toUpperCase();
 }
 
-/**
- * Format date as MM/DD/YYYY for Google Sheets
- * Using this format ensures Google Sheets recognizes it as a date
- * and doesn't add a leading apostrophe
- */
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${month}/${day}/${year}`;
-}
+// Use the common formatDateForSheets function from google-sheets.ts
+// Alias for backward compatibility within this file
+const formatDate = (date: Date): string => formatDateForSheets(date);
 
 /**
  * Get the subscription end date for a user
@@ -272,7 +270,7 @@ export async function syncStyleToSheets(
               const appendResult = await sheets.spreadsheets.values.append({
                 spreadsheetId: customersSpreadsheetId,
                 range: `${escapedSheetName}!A2`,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: SHEETS_VALUE_INPUT_OPTION,
                 requestBody: {
                   values: topicRows,
                 },
@@ -477,7 +475,7 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
               await sheets.spreadsheets.values.update({
                 spreadsheetId: mainSpreadsheetId,
                 range: cell,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: SHEETS_VALUE_INPUT_OPTION,
                 requestBody: { values: [[userJob || '']] },
               });
               console.log(`Updated job title: "${userJob}" at ${cell}`);
@@ -489,7 +487,7 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
               await sheets.spreadsheets.values.update({
                 spreadsheetId: mainSpreadsheetId,
                 range: cell,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: SHEETS_VALUE_INPUT_OPTION,
                 requestBody: { values: [[style.style_samples[0] || '']] },
               });
               console.log(`Updated article 1 at ${cell}`);
@@ -499,7 +497,7 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
               await sheets.spreadsheets.values.update({
                 spreadsheetId: mainSpreadsheetId,
                 range: cell,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: SHEETS_VALUE_INPUT_OPTION,
                 requestBody: { values: [[style.style_samples[1] || '']] },
               });
               console.log(`Updated article 2 at ${cell}`);
@@ -509,7 +507,7 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
               await sheets.spreadsheets.values.update({
                 spreadsheetId: mainSpreadsheetId,
                 range: cell,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: SHEETS_VALUE_INPUT_OPTION,
                 requestBody: { values: [[style.style_samples[2] || '']] },
               });
               console.log(`Updated article 3 at ${cell}`);
@@ -521,7 +519,7 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
               await sheets.spreadsheets.values.update({
                 spreadsheetId: mainSpreadsheetId,
                 range: cell,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: SHEETS_VALUE_INPUT_OPTION,
                 requestBody: { values: [[getLanguageName(style.preferred_language)]] },
               });
               console.log(
@@ -548,7 +546,7 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
                 await sheets.spreadsheets.values.update({
                   spreadsheetId: mainSpreadsheetId,
                   range: cell,
-                  valueInputOption: 'USER_ENTERED',
+                  valueInputOption: SHEETS_VALUE_INPUT_OPTION,
                   requestBody: { values: [[value]] },
                 });
                 console.log(`Updated ${name}: ${value ? 'x' : '(empty)'} at ${cell}`);
@@ -668,7 +666,7 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
             await sheets.spreadsheets.values.append({
               spreadsheetId: customersSpreadsheetId,
               range: `${escapedCustomerSheetName}!A2`,
-              valueInputOption: 'USER_ENTERED',
+              valueInputOption: SHEETS_VALUE_INPUT_OPTION,
               requestBody: {
                 values: topicRows,
               },

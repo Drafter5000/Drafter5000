@@ -85,9 +85,8 @@ export async function getUsageMetrics(orgId: string): Promise<UsageMetrics | nul
     lastActivity = lastArticle?.created_at || null;
   }
 
-  // Mock storage and API calls - in real app these would come from actual metrics
-  const storageBytes = articleCount * 5000; // ~5KB per article estimate
-  const apiCallsMonth = articlesThisMonth * 10; // ~10 API calls per article
+  const storageBytes = articleCount * 5000;
+  const apiCallsMonth = articlesThisMonth * 10;
 
   return {
     organization_id: org.id,

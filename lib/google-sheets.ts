@@ -3,16 +3,22 @@ import { google } from 'googleapis';
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 
 /**
- * Format date as MM/DD/YYYY for Google Sheets
- * Using this format ensures Google Sheets recognizes it as a date
- * and doesn't add a leading apostrophe
+ * Value input option for Google Sheets API
+ * USER_ENTERED: Values are parsed as if typed by a user (dates recognized, formulas executed)
+ * RAW: Values are stored as-is without parsing (may add apostrophe prefix to dates)
+ */
+export const SHEETS_VALUE_INPUT_OPTION = 'USER_ENTERED' as const;
+
+/**
+ * Format date as YYYY-MM-DD for Google Sheets
+ * This ISO format is universally recognized and avoids locale issues
  */
 export function formatDateForSheets(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  return `${month}/${day}/${year}`;
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -214,7 +220,7 @@ export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRo
     const result = await sheets.spreadsheets.values.append({
       spreadsheetId,
       range,
-      valueInputOption: 'USER_ENTERED', // Use USER_ENTERED to properly handle dates without adding quotes
+      valueInputOption: SHEETS_VALUE_INPUT_OPTION,
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
         values: [rowValues],
@@ -243,7 +249,7 @@ export async function appendToCustomersSheet(spreadsheetId: string, data: Custom
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: 'Customers!A:F',
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: SHEETS_VALUE_INPUT_OPTION,
     requestBody: {
       values: [
         [data.question, data.status, data.subject, data.article, data.lastUpdate, data.client],
@@ -266,7 +272,7 @@ export async function appendOnboardingCustomer(
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: `${sheetRef}!A:F`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: SHEETS_VALUE_INPUT_OPTION,
     requestBody: {
       values: [
         [
@@ -334,7 +340,7 @@ export async function createCustomerSheet(
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${escapedSheetName}!A1:H1`,
-        valueInputOption: 'USER_ENTERED',
+        valueInputOption: SHEETS_VALUE_INPUT_OPTION,
         requestBody: {
           values: [headerRow],
         },

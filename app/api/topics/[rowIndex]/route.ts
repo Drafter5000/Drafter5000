@@ -1,6 +1,6 @@
 import { getServerSupabaseUser, getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getGoogleAuth, formatDateForSheets } from '@/lib/google-sheets';
+import { getGoogleAuth, formatDateForSheets, SHEETS_VALUE_INPUT_OPTION } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
 import { checkSubscriptionAccess } from '@/lib/subscription-utils';
@@ -152,7 +152,7 @@ export async function PUT(
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId,
       requestBody: {
-        valueInputOption: 'RAW',
+        valueInputOption: SHEETS_VALUE_INPUT_OPTION,
         data: updates,
       },
     });

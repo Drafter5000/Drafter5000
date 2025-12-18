@@ -7,6 +7,8 @@
  * Requirements: 1.3, 5.1, 5.2
  */
 
+import { formatDateForSheets } from '@/lib/google-sheets';
+
 const DRAFT_SESSION_KEY = 'onboarding_draft_session';
 
 /**
@@ -189,11 +191,7 @@ export const DraftSessionService = {
    * @param subjects - Array of topic/subject strings
    */
   saveTopicEntries(subjects: string[]): void {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const year = now.getFullYear();
-    const formattedDate = `${month}/${day}/${year}`;
+    const formattedDate = formatDateForSheets(new Date());
 
     const topicEntries: TopicEntry[] = subjects.map(topic => ({
       topic,

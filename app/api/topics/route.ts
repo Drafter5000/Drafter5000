@@ -1,6 +1,6 @@
 import { getServerSupabaseUser, getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getGoogleAuth, formatDateForSheets } from '@/lib/google-sheets';
+import { getGoogleAuth, formatDateForSheets, SHEETS_VALUE_INPUT_OPTION } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
 import { checkSubscriptionAccess } from '@/lib/subscription-utils';
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
       await sheets.spreadsheets.values.append({
         spreadsheetId,
         range: `${escapedSheetName}!A2`,
-        valueInputOption: 'RAW',
+        valueInputOption: SHEETS_VALUE_INPUT_OPTION,
         requestBody: {
           values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
         },
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
         await sheets.spreadsheets.values.update({
           spreadsheetId,
           range: `${escapedSheetName}!A1:F1`,
-          valueInputOption: 'RAW',
+          valueInputOption: SHEETS_VALUE_INPUT_OPTION,
           requestBody: {
             values: [['Topic', 'Status', 'Subject', 'Article', 'Last Update', 'Client']],
           },
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
         await sheets.spreadsheets.values.append({
           spreadsheetId,
           range: `${escapedSheetName}!A2`,
-          valueInputOption: 'RAW',
+          valueInputOption: SHEETS_VALUE_INPUT_OPTION,
           requestBody: {
             values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
           },
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
             await sheets.spreadsheets.values.append({
               spreadsheetId,
               range: `${escapedSheetName}!A2`,
-              valueInputOption: 'RAW',
+              valueInputOption: SHEETS_VALUE_INPUT_OPTION,
               requestBody: {
                 values: existingSubjectsRows,
               },
