@@ -45,7 +45,7 @@ ON CONFLICT DO NOTHING;
 
 -- Insert Pro Plan Features
 INSERT INTO plan_features (plan_id, feature_text, sort_order) VALUES
-('pro', '20 articles per month', 1),
+('pro', 'Up to 30 article per month', 1),
 ('pro', 'Priority email delivery', 2),
 ('pro', 'Advanced AI customization', 3),
 ('pro', 'Flexible scheduling', 4),

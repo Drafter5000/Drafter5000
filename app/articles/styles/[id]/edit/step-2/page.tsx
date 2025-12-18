@@ -23,9 +23,16 @@ import {
   Sparkles,
   RefreshCw,
   Save,
+  Lock,
 } from 'lucide-react';
 import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation';
 import { apiClient } from '@/lib/api-client';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+interface TopicWithStatus {
+  topic: string;
+  status: string;
+}
 
 export default function EditStep2Page() {
   const router = useRouter();
@@ -42,6 +49,9 @@ export default function EditStep2Page() {
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  // Track topics with their statuses (to know which are generated/sent)
+  const [topicsWithStatus, setTopicsWithStatus] = useState<TopicWithStatus[]>([]);
+
   // AI suggestions state
   const [aiActive, setAiActive] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -49,6 +59,25 @@ export default function EditStep2Page() {
   const [aiError, setAiError] = useState<string | null>(null);
   // Track all AI-generated topics during this session (includes added and ignored)
   const [generatedTopicsHistory, setGeneratedTopicsHistory] = useState<string[]>([]);
+
+  // Fetch topics with status from API
+  useEffect(() => {
+    const fetchTopicsWithStatus = async () => {
+      try {
+        const response = await apiClient.get<{ topics: TopicWithStatus[] }>('/topics');
+        setTopicsWithStatus(response.topics || []);
+      } catch (err) {
+        console.error('Failed to fetch topics with status:', err);
+      }
+    };
+    fetchTopicsWithStatus();
+  }, []);
+
+  // Check if a topic is generated (has "Sent" status)
+  const isTopicGenerated = (subject: string): boolean => {
+    const topicData = topicsWithStatus.find(t => t.topic.toLowerCase() === subject.toLowerCase());
+    return topicData?.status?.toLowerCase() === 'sent';
+  };
 
   // Initialize from style data
   useEffect(() => {
@@ -329,17 +358,27 @@ export default function EditStep2Page() {
             </div>
           ) : (
             <div className="space-y-1">
-              {subjects.map((subject, index) => (
-                <div key={index} className="flex items-center justify-between p-2 win95-raised">
-                  <div className="flex items-center gap-2">
-                    <Win95Badge variant="outline">{index + 1}</Win95Badge>
-                    <span className="text-[11px]">{subject}</span>
+              {subjects.map((subject, index) => {
+                const isGenerated = isTopicGenerated(subject);
+                return (
+                  <div key={index} className="flex items-center justify-between p-2 win95-raised">
+                    <div className="flex items-center gap-2">
+                      <Win95Badge variant="outline">{index + 1}</Win95Badge>
+                      <span className="text-[11px]">{subject}</span>
+                      {isGenerated && <Win95Badge variant="outline">🔒 Generated</Win95Badge>}
+                    </div>
+                    {!isGenerated && (
+                      <Win95Button
+                        onClick={() => removeSubject(index)}
+                        size="sm"
+                        disabled={loading}
+                      >
+                        ×
+                      </Win95Button>
+                    )}
                   </div>
-                  <Win95Button onClick={() => removeSubject(index)} size="sm" disabled={loading}>
-                    ×
-                  </Win95Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -425,31 +464,53 @@ export default function EditStep2Page() {
               </div>
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                {subjects.map((subject, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-accent/30 transition-colors group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className="h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs"
-                      >
-                        {index + 1}
-                      </Badge>
-                      <span className="font-medium text-sm">{subject}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => removeSubject(index)}
-                      disabled={loading}
+                {subjects.map((subject, index) => {
+                  const isGenerated = isTopicGenerated(subject);
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-accent/30 transition-colors group cursor-pointer"
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className="h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs"
+                        >
+                          {index + 1}
+                        </Badge>
+                        <span className="font-medium text-sm">{subject}</span>
+                        {isGenerated && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Lock className="h-3 w-3" />
+                            Generated
+                          </Badge>
+                        )}
+                      </div>
+                      {isGenerated ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="h-8 w-8 flex items-center justify-center text-muted-foreground">
+                              <Lock className="h-4 w-4" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Generated topics cannot be removed</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => removeSubject(index)}
+                          disabled={loading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 

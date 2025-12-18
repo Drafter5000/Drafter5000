@@ -1214,8 +1214,8 @@ function DashboardContent() {
                                 )}
                                 <p className="text-xs text-muted-foreground">{topic.lastUpdate}</p>
                               </div>
-                              {/* Edit/Delete buttons - Hidden when subscription not active */}
-                              {!featuresDisabled && (
+                              {/* Edit/Delete buttons - Hidden when subscription not active or topic is generated (Sent) */}
+                              {!featuresDisabled && topic.status.toLowerCase() !== 'sent' && (
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                   <Button
                                     size="icon"

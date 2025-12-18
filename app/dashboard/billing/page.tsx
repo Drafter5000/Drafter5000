@@ -350,7 +350,7 @@ export default function BillingPage() {
                           <h3 className="text-[12px] font-bold mb-1">Pro Plan</h3>
                           <p className="text-[20px] font-bold mb-1">$70/mo</p>
                           <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
-                            20 articles per month
+                            Up to 30 article per month
                           </p>
                           <Link href="/pricing">
                             <Win95Button className="w-full">Upgrade to Pro</Win95Button>
@@ -712,7 +712,7 @@ export default function BillingPage() {
                           <Alert className="mt-4">
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription>
-                              Upgrade to Pro for 20 articles/month or Enterprise for 100
+                              Upgrade to Pro for 30 articles/month or Enterprise for 100
                               articles/month.
                               <Link href="/pricing" className="ml-2 text-primary hover:underline">
                                 View Plans →
@@ -772,7 +772,9 @@ export default function BillingPage() {
                       <div className="p-6 rounded-lg border text-center">
                         <h3 className="font-bold mb-1">Pro Plan</h3>
                         <p className="text-3xl font-bold text-primary mb-1">$70/mo</p>
-                        <p className="text-sm text-muted-foreground mb-4">20 articles per month</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Up to 30 article per month
+                        </p>
                         <Link href="/pricing">
                           <Button className="w-full">Upgrade to Pro</Button>
                         </Link>
