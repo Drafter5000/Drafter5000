@@ -1,5 +1,5 @@
 import { getServerSupabaseSession } from '@/lib/supabase-client';
-import { checkUsageLimit } from '@/lib/usage-limits';
+import { checkUsageLimit, syncUsageFromSheets } from '@/lib/usage-limits';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -9,7 +9,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get usage from database
+    // Sync usage from Google Sheets first (count "Sent" articles, case-insensitive)
+    // This ensures the database reflects the actual sent articles in the sheet
+    await syncUsageFromSheets(session.user.id);
+
+    // Get usage from database (now synced with sheets)
     const usage = await checkUsageLimit(session.user.id);
 
     return NextResponse.json({

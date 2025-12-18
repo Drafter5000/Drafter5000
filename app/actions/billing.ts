@@ -3,7 +3,7 @@
 import { getStripeClient } from '@/lib/stripe-client';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { UserProfile } from '@/lib/types';
-import { checkUsageLimit } from '@/lib/usage-limits';
+import { checkUsageLimit, syncUsageFromSheets } from '@/lib/usage-limits';
 
 export async function createCheckoutSession(userId: string, planId: 'pro' | 'enterprise') {
   try {
@@ -147,7 +147,11 @@ export async function reactivateSubscription(userId: string) {
 
 export async function getUsageStats(userId: string) {
   try {
-    // Get usage from database
+    // Sync usage from Google Sheets first (count "Sent" articles)
+    // This ensures the database reflects the actual sent articles in the sheet
+    await syncUsageFromSheets(userId);
+
+    // Get usage from database (now synced with sheets)
     const usage = await checkUsageLimit(userId);
 
     return {
