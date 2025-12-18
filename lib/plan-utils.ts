@@ -128,6 +128,46 @@ export async function getPlanByPriceIdAdmin(priceId: string): Promise<Subscripti
 }
 
 /**
+ * Fetches a single subscription plan by ID using admin client.
+ * Used for server-side operations where there's no authenticated user context.
+ */
+export async function getPlanByIdAdmin(id: string): Promise<SubscriptionPlan | null> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: plan, error: planError } = await supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (planError || !plan) {
+    return null;
+  }
+
+  return plan as SubscriptionPlan;
+}
+
+/**
+ * Fetches all active subscription plans using admin client.
+ * Used for server-side operations where there's no authenticated user context.
+ */
+export async function getActivePlansAdmin(): Promise<SubscriptionPlan[]> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: plans, error } = await supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error || !plans) {
+    return [];
+  }
+
+  return plans as SubscriptionPlan[];
+}
+
+/**
  * Gets the articles per month limit for a given plan ID.
  * Returns default free tier limit if plan not found.
  */
