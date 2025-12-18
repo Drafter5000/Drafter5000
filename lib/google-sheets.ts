@@ -3,6 +3,19 @@ import { google } from 'googleapis';
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 
 /**
+ * Format date as MM/DD/YYYY for Google Sheets
+ * Using this format ensures Google Sheets recognizes it as a date
+ * and doesn't add a leading apostrophe
+ */
+export function formatDateForSheets(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${month}/${day}/${year}`;
+}
+
+/**
  * Get Google Auth instance with proper credentials handling.
  * Supports both JSON credentials (for Vercel/production) and file path (for local dev).
  * @param scopes - OAuth scopes to request (defaults to spreadsheets)

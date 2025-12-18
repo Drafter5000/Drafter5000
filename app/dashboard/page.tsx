@@ -177,13 +177,15 @@ function DashboardContent() {
       setTopicsLoading(true);
       const response = await apiClient.get<{ topics: Topic[]; sheetName?: string }>('/topics');
       if ((!response.topics || response.topics.length === 0) && styleData?.subjects?.length) {
+        const now = new Date();
+        const formattedDate = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
         const subjectTopics: Topic[] = styleData.subjects.map((subject, index) => ({
           rowIndex: index + 2,
           topic: subject,
           status: 'Needs Draft',
           subject: subject,
           article: '',
-          lastUpdate: new Date().toISOString().split('T')[0],
+          lastUpdate: formattedDate,
           client: styleData.display_name || styleData.name || '',
         }));
         setTopics(subjectTopics);
@@ -198,13 +200,15 @@ function DashboardContent() {
       }
       console.error('Failed to fetch topics:', err);
       if (styleData?.subjects?.length) {
+        const now = new Date();
+        const formattedDate = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
         const subjectTopics: Topic[] = styleData.subjects.map((subject, index) => ({
           rowIndex: index + 2,
           topic: subject,
           status: 'Needs Draft',
           subject: subject,
           article: '',
-          lastUpdate: new Date().toISOString().split('T')[0],
+          lastUpdate: formattedDate,
           client: styleData.display_name || styleData.name || '',
         }));
         setTopics(subjectTopics);

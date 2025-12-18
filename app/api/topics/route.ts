@@ -1,6 +1,6 @@
 import { getServerSupabaseUser, getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getGoogleAuth } from '@/lib/google-sheets';
+import { getGoogleAuth, formatDateForSheets } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
 import { checkSubscriptionAccess } from '@/lib/subscription-utils';
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Topic already exists' }, { status: 409 });
     }
 
-    const currentDate = new Date().toISOString().split('T')[0];
+    const currentDate = formatDateForSheets(new Date());
     const clientName = style.display_name || style.name || '';
 
     // Add new topic row to customer sheet (tab) in Customers spreadsheet
