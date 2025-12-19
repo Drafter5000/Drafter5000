@@ -38,7 +38,7 @@ import {
   Info,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { ArticleStyle } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import {
@@ -114,6 +114,7 @@ function DashboardContent() {
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [style, setStyle] = useState<ArticleStyle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1159,91 +1160,118 @@ function DashboardContent() {
                     </div>
                   ) : (
                     <div className="space-y-1 px-6 pt-4">
-                      {displayedTopics.map(topic => (
-                        <div
-                          key={topic.rowIndex}
-                          className="group flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          {editingRowIndex === topic.rowIndex ? (
-                            <div className="flex-1 flex gap-2">
-                              <Input
-                                value={editingTopic}
-                                onChange={e => setEditingTopic(e.target.value)}
-                                autoFocus
-                                className="flex-1"
-                                onKeyDown={e =>
-                                  e.key === 'Enter' &&
-                                  handleUpdateTopic(topic.rowIndex, editingTopic)
-                                }
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleUpdateTopic(topic.rowIndex, editingTopic)}
-                                disabled={savingTopic}
-                              >
-                                {savingTopic ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Check className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <Button size="sm" variant="ghost" onClick={cancelEditing}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start gap-2 mb-1">
-                                  <p className="font-medium text-sm">{topic.topic}</p>
-                                  <Badge
-                                    variant="outline"
-                                    className={`shrink-0 text-[10px] ${STATUS_COLORS[topic.status.toLowerCase() === 'sent' ? 'Sent' : topic.status]}`}
-                                  >
-                                    {topic.status.toLowerCase() === 'sent'
-                                      ? 'Generated'
-                                      : topic.status === 'Needs Draft'
-                                        ? 'In pipeline'
-                                        : topic.status}
-                                  </Badge>
-                                </div>
-                                {topic.article && (
-                                  <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
-                                    {topic.article}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground">{topic.lastUpdate}</p>
+                      {displayedTopics.map(topic => {
+                        const isGenerated = topic.status.toLowerCase() === 'sent';
+                        const TopicWrapper = isGenerated ? 'button' : 'div';
+
+                        return (
+                          <TopicWrapper
+                            key={topic.rowIndex}
+                            className={`group flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors w-full text-left ${isGenerated ? 'cursor-pointer' : ''}`}
+                            onClick={
+                              isGenerated
+                                ? () => router.push(`/articles/${topic.rowIndex}`)
+                                : undefined
+                            }
+                          >
+                            {editingRowIndex === topic.rowIndex ? (
+                              <div className="flex-1 flex gap-2" onClick={e => e.stopPropagation()}>
+                                <Input
+                                  value={editingTopic}
+                                  onChange={e => setEditingTopic(e.target.value)}
+                                  autoFocus
+                                  className="flex-1"
+                                  onKeyDown={e =>
+                                    e.key === 'Enter' &&
+                                    handleUpdateTopic(topic.rowIndex, editingTopic)
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleUpdateTopic(topic.rowIndex, editingTopic)}
+                                  disabled={savingTopic}
+                                >
+                                  {savingTopic ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Check className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                                  <X className="h-4 w-4" />
+                                </Button>
                               </div>
-                              {/* Edit/Delete buttons - Hidden when subscription not active or topic is generated (Sent) */}
-                              {!featuresDisabled && topic.status.toLowerCase() !== 'sent' && (
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    onClick={() => startEditing(topic)}
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-red-500 hover:text-red-600"
-                                    onClick={() => openDeleteDialog(topic)}
-                                    disabled={deletingRowIndex === topic.rowIndex}
-                                  >
-                                    {deletingRowIndex === topic.rowIndex ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-4 w-4" />
+                            ) : (
+                              <>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start gap-2 mb-1">
+                                    <p
+                                      className={`font-medium text-sm ${isGenerated ? 'group-hover:text-primary transition-colors' : ''}`}
+                                    >
+                                      {topic.topic}
+                                    </p>
+                                    <Badge
+                                      variant="outline"
+                                      className={`shrink-0 text-[10px] ${STATUS_COLORS[isGenerated ? 'Sent' : topic.status]}`}
+                                    >
+                                      {isGenerated
+                                        ? 'Generated'
+                                        : topic.status === 'Needs Draft'
+                                          ? 'In pipeline'
+                                          : topic.status}
+                                    </Badge>
+                                  </div>
+                                  {topic.article && (
+                                    <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
+                                      {topic.article}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs text-muted-foreground">
+                                      {topic.lastUpdate}
+                                    </p>
+                                    {isGenerated && (
+                                      <span className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                        <ChevronRight className="h-3 w-3" />
+                                        View details
+                                      </span>
                                     )}
-                                  </Button>
+                                  </div>
                                 </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      ))}
+                                {/* Edit/Delete buttons - Hidden when subscription not active or topic is generated (Sent) */}
+                                {!featuresDisabled && !isGenerated && (
+                                  <div
+                                    className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8"
+                                      onClick={() => startEditing(topic)}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-red-500 hover:text-red-600"
+                                      onClick={() => openDeleteDialog(topic)}
+                                      disabled={deletingRowIndex === topic.rowIndex}
+                                    >
+                                      {deletingRowIndex === topic.rowIndex ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </TopicWrapper>
+                        );
+                      })}
                     </div>
                   )}
 
