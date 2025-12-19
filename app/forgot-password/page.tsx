@@ -59,8 +59,14 @@ function ForgotPasswordContent() {
 
     try {
       const supabase = getBrowserSupabaseClient();
+      // Use the configured app URL or fall back to window.location.origin
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const redirectUrl = `${appUrl}/auth/callback?type=recovery&next=/reset-password`;
+
+      console.log('[Forgot Password] Sending reset email with redirectTo:', redirectUrl);
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) throw error;
