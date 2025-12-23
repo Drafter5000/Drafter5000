@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Check, Sparkles, Zap, Crown } from 'lucide-react';
+import { Check, Sparkles, Zap, Crown, ShieldCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { usePlans } from '@/hooks/use-plans';
@@ -81,7 +81,7 @@ export function PricingPreview() {
           : 'md:grid-cols-3';
 
   return (
-    <section className="py-32 px-6 relative overflow-hidden">
+    <section className="pt-32 pb-16 px-6 relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] rounded-full bg-chart-2/5 blur-3xl" />
@@ -192,6 +192,22 @@ export function PricingPreview() {
             })
           )}
         </div>
+
+        {/* Money-Back Guarantee */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-12 max-w-md mx-auto"
+        >
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+            <ShieldCheck className="h-6 w-6 text-green-600 shrink-0" />
+            <p className="text-sm text-green-800">
+              7-day guarantee. If you're not happy, we'll refund you completely. No questions asked.
+            </p>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

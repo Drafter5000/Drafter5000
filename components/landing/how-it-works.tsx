@@ -80,7 +80,7 @@ export function HowItWorksSection() {
             {/* Connection Line */}
             <div className="absolute top-16 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-violet-500/30 via-amber-500/30 to-emerald-500/30" />
 
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-4 gap-6 items-stretch">
               {steps.map((step, index) => (
                 <motion.div
                   key={index}
@@ -88,7 +88,7 @@ export function HowItWorksSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="relative"
+                  className="relative flex flex-col"
                 >
                   {/* Step Circle */}
                   <div className="flex justify-center mb-8">
@@ -104,16 +104,16 @@ export function HowItWorksSection() {
                   </div>
 
                   {/* Content */}
-                  <div className="text-center">
+                  <div className="text-center h-full flex flex-col items-center">
                     <span className={`inline-block text-xs font-bold ${step.textColor} mb-2`}>
                       STEP {step.number}
                     </span>
                     <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed flex-1">
                       {step.description}
                     </p>
                     <span
-                      className={`inline-block text-xs font-medium ${step.textColor} ${step.lightColor} px-3 py-1 rounded-full`}
+                      className={`text-xs font-medium ${step.textColor} ${step.lightColor} px-3 py-1 rounded-full`}
                     >
                       {step.highlight}
                     </span>
