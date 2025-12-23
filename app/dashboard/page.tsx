@@ -41,13 +41,6 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { ArticleStyle } from '@/lib/types';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteDialog } from '@/components/articles/delete-dialog';
@@ -147,8 +140,6 @@ function DashboardContent() {
   // Topics state
   const [topics, setTopics] = useState<Topic[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(true);
-  const [newTopic, setNewTopic] = useState('');
-  const [addingTopic, setAddingTopic] = useState(false);
   const [topicError, setTopicError] = useState<string | null>(null);
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
   const [editingTopic, setEditingTopic] = useState('');
@@ -293,31 +284,6 @@ function DashboardContent() {
     };
     fetchData();
   }, [user]);
-
-  const handleAddTopic = async () => {
-    if (!newTopic.trim()) return;
-    setAddingTopic(true);
-    setTopicError(null);
-    try {
-      await apiClient.post('/topics', { topic: newTopic.trim() });
-      setNewTopic('');
-      topicsFetchedRef.current = false;
-      await fetchTopics(style);
-    } catch (err: unknown) {
-      // Skip for 401/403 - redirect is already happening
-      if (err instanceof APIError && (err.status === 401 || err.status === 403)) {
-        return;
-      }
-      if (err instanceof Error && err.message.includes('already exists')) {
-        setTopicError('This topic already exists');
-      } else {
-        setTopicError('Failed to add topic');
-      }
-      setTimeout(() => setTopicError(null), 3000);
-    } finally {
-      setAddingTopic(false);
-    }
-  };
 
   const handleUpdateTopic = async (rowIndex: number, topic?: string, status?: string) => {
     setSavingTopic(true);
@@ -1053,49 +1019,37 @@ function DashboardContent() {
                     </Button>
                   </div>
 
-                  {/* Add Topic Input - Disabled when subscription not active or usage limit reached */}
+                  {/* Add Topic Button - Redirects to step-2 edit section for AI-assisted topic generation */}
                   <div className="flex gap-3 px-6">
-                    <div className="relative flex-1">
-                      <Input
-                        placeholder={
-                          usageLimitReached
-                            ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
-                            : featuresDisabled
-                              ? 'Active subscription required to add topics'
-                              : 'Enter a new topic to write about...'
-                        }
-                        value={newTopic}
-                        onChange={e => {
-                          setNewTopic(e.target.value);
-                          setTopicError(null);
-                        }}
-                        onKeyDown={e => e.key === 'Enter' && !featuresDisabled && handleAddTopic()}
-                        disabled={addingTopic || featuresDisabled}
-                        className={`h-10 ${topicError ? 'border-destructive' : ''}`}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleAddTopic}
-                      disabled={addingTopic || !newTopic.trim() || featuresDisabled}
-                      className="h-10 px-4 gap-2"
-                      title={
-                        usageLimitReached
-                          ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
-                          : featuresDisabled
-                            ? 'Active subscription required to add topics'
-                            : undefined
-                      }
-                    >
-                      {addingTopic ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4" /> Add
-                        </>
-                      )}
-                    </Button>
+                    {style ? (
+                      <Link
+                        href={`/articles/styles/${style.id}/edit/step-2?returnTo=${encodeURIComponent('/dashboard')}`}
+                        className="flex-1"
+                      >
+                        <Button
+                          variant="outline"
+                          disabled={featuresDisabled}
+                          className="w-full h-10 gap-2"
+                          title={
+                            usageLimitReached
+                              ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
+                              : featuresDisabled
+                                ? 'Active subscription required to add topics'
+                                : 'Add topics with AI assistance'
+                          }
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Topics
+                          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="outline" disabled className="flex-1 h-10 gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Topics
+                      </Button>
+                    )}
                   </div>
-                  {topicError && <p className="text-sm text-destructive px-6">{topicError}</p>}
 
                   {/* Status Filter Pills */}
                   <div className="flex flex-wrap gap-2 px-6 pt-4">

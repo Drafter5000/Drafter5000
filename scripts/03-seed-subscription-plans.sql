@@ -13,7 +13,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Insert Pro Plan
 INSERT INTO subscription_plans (id, name, description, price_cents, currency, articles_per_month, stripe_product_id, stripe_price_id, is_active, is_visible, is_highlighted, sort_order, cta_text, cta_type)
-VALUES ('pro', 'Pro', 'Most popular for entrepreneurs', 7000, 'usd', 20, NULL, NULL, true, true, true, 2, 'Start Free Trial', 'checkout')
+VALUES ('pro', 'Pro', 'Most popular for entrepreneurs', 7000, 'usd', 20, NULL, NULL, true, true, true, 2, 'Subscribe Now', 'checkout')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
@@ -21,6 +21,7 @@ ON CONFLICT (id) DO UPDATE SET
   articles_per_month = EXCLUDED.articles_per_month,
   is_visible = EXCLUDED.is_visible,
   is_highlighted = EXCLUDED.is_highlighted,
+  cta_text = EXCLUDED.cta_text,
   updated_at = NOW();
 
 -- Insert Enterprise Plan

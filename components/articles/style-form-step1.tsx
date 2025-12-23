@@ -153,8 +153,9 @@ export function StyleFormStep1({
 
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-4 text-muted-foreground">
-                      <span>{wordCount} words</span>
-                      <span>{charCount} characters</span>
+                      <span>
+                        {charCount}/{CHARACTER_LIMIT} characters
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {charCount >= CHARACTER_LIMIT && (

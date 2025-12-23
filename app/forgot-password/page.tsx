@@ -115,21 +115,8 @@ function ForgotPasswordContent() {
             </CardHeader>
 
             <CardContent className="px-8 pb-8 space-y-4">
-              <a
-                href={getEmailProviderUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-              >
-                <Button className="w-full h-12 text-base shadow-lg shadow-primary/25 gap-2 group transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5">
-                  <Mail className="h-4 w-4" />
-                  Open Email App
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </a>
-
               <Link href="/login" className="block">
-                <Button variant="outline" className="w-full h-12 text-base gap-2 group">
+                <Button className="w-full h-12 text-base shadow-lg shadow-primary/25 gap-2 group transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5">
                   <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                   Back to Login
                 </Button>

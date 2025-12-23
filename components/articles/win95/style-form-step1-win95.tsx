@@ -121,7 +121,7 @@ export function StyleFormStep1Win95({
 
                   <div className="flex items-center justify-between text-[10px] text-[var(--win95-button-shadow)]">
                     <span>
-                      {wordCount} words | {charCount} characters
+                      {charCount}/{CHARACTER_LIMIT} characters
                     </span>
                     <div className="flex items-center gap-2">
                       {charCount >= CHARACTER_LIMIT && (
