@@ -6,6 +6,7 @@ const publicRoutes = [
   '/login',
   '/signup',
   '/pricing',
+  '/contact',
   '/auth/callback',
   '/admin/login',
   '/forgot-password',
