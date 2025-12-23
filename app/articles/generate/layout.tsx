@@ -8,13 +8,14 @@ import { useSiteConfigContext } from '@/components/site-config-provider';
 import { Win95Window, Win95Progress, Win95Button } from '@/components/win95';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2 } from 'lucide-react';
+import Image from 'next/image';
 import { useAuth } from '@/components/auth-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const STEPS = [
   { path: '/articles/generate/step-1', label: 'Writing Style', number: 1 },
   { path: '/articles/generate/step-2', label: 'Topics', number: 2 },
-  { path: '/articles/generate/step-3', label: 'Sign Up', number: 3 },
+  { path: '/articles/generate/step-3', label: 'Settings', number: 3 },
 ];
 
 function LayoutSkeleton({ children }: { children: React.ReactNode }) {
@@ -22,8 +23,8 @@ function LayoutSkeleton({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">✨</span>
+          <div className="flex items-center gap-2.5">
+            <Skeleton className="h-9 w-9 rounded-xl" />
             <Skeleton className="h-6 w-28" />
           </div>
         </div>
@@ -45,7 +46,7 @@ function GenerateLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const context = useContext(DesignContext);
-  const { siteName } = useSiteConfigContext();
+  const { siteName, logoUrl } = useSiteConfigContext();
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const toggleAndReload = context?.toggleAndReload;
   const { user } = useAuth();
@@ -132,9 +133,9 @@ function GenerateLayoutContent({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl">✨</span>
-            <span className="font-bold text-lg">{siteName}</span>
+          <Link href="/" className="flex items-center gap-2.5 font-bold text-lg group">
+            <Image src={logoUrl} alt={`${siteName} Logo`} width={36} height={36} />
+            <span>{siteName}</span>
           </Link>
           <div className="flex items-center gap-3">
             {!isLinkedInUser && (

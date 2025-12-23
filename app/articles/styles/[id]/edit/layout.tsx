@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useParams } from 'next/navigation';
+import { usePathname, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
@@ -13,15 +13,19 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
 import { FeatureGate } from '@/components/feature-gate';
-import { CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react';
+import { CheckCircle2, ArrowLeft } from 'lucide-react';
 import type { ArticleStyle } from '@/lib/types';
 
 interface EditStyleContextValue {
   style: ArticleStyle | null;
+  job: string;
   loading: boolean;
   updateStyle: (updates: Partial<ArticleStyle>) => void;
-  saveStyle: () => Promise<void>;
+  updateJob: (job: string) => void;
+  saveStyle: (updatedStyle?: Partial<ArticleStyle>, updatedJob?: string) => Promise<void>;
+  saveAndExit: (updatedStyle?: Partial<ArticleStyle>, updatedJob?: string) => Promise<void>;
   saving: boolean;
+  returnTo: string;
 }
 
 export const EditStyleContext = createContext<EditStyleContextValue | null>(null);
@@ -35,14 +39,19 @@ const STEPS = [
 export default function EditStyleLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useParams();
+  const searchParams = useSearchParams();
   const styleId = params.id as string;
   const { user } = useAuth();
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
 
   const [style, setStyle] = useState<ArticleStyle | null>(null);
+  const [job, setJob] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Get return URL from query params, default to style details page
+  const returnTo = searchParams.get('returnTo') || `/articles/styles/${styleId}`;
 
   // Determine current step from pathname
   const currentStepIndex = STEPS.findIndex(s => pathname.includes(s.path));
@@ -50,20 +59,23 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
   const progressValue = (currentStep / STEPS.length) * 100;
 
   useEffect(() => {
-    const fetchStyle = async () => {
+    const fetchStyleAndProfile = async () => {
       if (!user) return;
       try {
-        const data = await apiClient.get<ArticleStyle>(
-          `/article-styles/${styleId}?user_id=${user.id}`
-        );
-        setStyle(data);
+        // Fetch style and user profile in parallel
+        const [styleData, profileData] = await Promise.all([
+          apiClient.get<ArticleStyle>(`/article-styles/${styleId}?user_id=${user.id}`),
+          apiClient.get<{ job?: string }>('/auth/profile'),
+        ]);
+        setStyle(styleData);
+        setJob(profileData.job || '');
       } catch (err) {
-        console.error('Failed to fetch style:', err);
+        console.error('Failed to fetch style or profile:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchStyle();
+    fetchStyleAndProfile();
   }, [user, styleId]);
 
   const updateStyle = (updates: Partial<ArticleStyle>) => {
@@ -72,31 +84,112 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
     }
   };
 
-  const saveStyle = async () => {
+  const updateJob = (newJob: string) => {
+    setJob(newJob);
+  };
+
+  const saveStyle = async (updatedStyle?: Partial<ArticleStyle>, updatedJob?: string) => {
     if (!user || !style) return;
     setSaving(true);
     try {
+      // Merge any provided updates with current style
+      const styleToSave = updatedStyle ? { ...style, ...updatedStyle } : style;
+      const jobToSave = updatedJob !== undefined ? updatedJob : job;
+
+      console.log('Saving style to API:', {
+        id: styleId,
+        name: styleToSave.name,
+        email: styleToSave.email,
+        display_name: styleToSave.display_name,
+        preferred_language: styleToSave.preferred_language,
+        delivery_days: styleToSave.delivery_days,
+        style_samples: styleToSave.style_samples?.length,
+        subjects: styleToSave.subjects?.length,
+        job: jobToSave,
+      });
+
+      // Save job first (so it's available when sheets sync happens)
+      await apiClient.put('/auth/profile', { job: jobToSave });
+
+      // Then save style (which triggers sheets sync that reads job from profile)
       await apiClient.put(`/article-styles/${styleId}`, {
         user_id: user.id,
-        name: style.name,
-        email: style.email,
-        display_name: style.display_name,
-        preferred_language: style.preferred_language,
-        delivery_days: style.delivery_days,
-        style_samples: style.style_samples,
-        subjects: style.subjects,
+        name: styleToSave.name,
+        email: styleToSave.email,
+        display_name: styleToSave.display_name,
+        preferred_language: styleToSave.preferred_language,
+        delivery_days: styleToSave.delivery_days,
+        style_samples: styleToSave.style_samples,
+        subjects: styleToSave.subjects,
       });
+
+      // Update local state with saved values
+      if (updatedStyle) {
+        setStyle(styleToSave as ArticleStyle);
+      }
+      if (updatedJob !== undefined) {
+        setJob(jobToSave);
+      }
     } finally {
       setSaving(false);
     }
   };
 
+  // Save and redirect back to the origin page (dashboard or style details)
+  const saveAndExit = async (updatedStyle?: Partial<ArticleStyle>, updatedJob?: string) => {
+    if (!user || !style) return;
+    setSaving(true);
+    try {
+      // Merge any provided updates with current style
+      const styleToSave = updatedStyle ? { ...style, ...updatedStyle } : style;
+      const jobToSave = updatedJob !== undefined ? updatedJob : job;
+
+      console.log('Saving and exiting with style:', {
+        id: styleId,
+        name: styleToSave.name,
+        email: styleToSave.email,
+        display_name: styleToSave.display_name,
+        preferred_language: styleToSave.preferred_language,
+        delivery_days: styleToSave.delivery_days,
+        style_samples: styleToSave.style_samples?.length,
+        subjects: styleToSave.subjects?.length,
+        job: jobToSave,
+      });
+
+      // Save job first (so it's available when sheets sync happens)
+      await apiClient.put('/auth/profile', { job: jobToSave });
+
+      // Then save style (which triggers sheets sync that reads job from profile)
+      await apiClient.put(`/article-styles/${styleId}`, {
+        user_id: user.id,
+        name: styleToSave.name,
+        email: styleToSave.email,
+        display_name: styleToSave.display_name,
+        preferred_language: styleToSave.preferred_language,
+        delivery_days: styleToSave.delivery_days,
+        style_samples: styleToSave.style_samples,
+        subjects: styleToSave.subjects,
+      });
+
+      // Redirect to the return URL
+      window.location.href = returnTo;
+    } catch (error) {
+      console.error('Failed to save style:', error);
+      setSaving(false);
+      throw error;
+    }
+  };
+
   const contextValue: EditStyleContextValue = {
     style,
+    job,
     loading,
     updateStyle,
+    updateJob,
     saveStyle,
+    saveAndExit,
     saving,
+    returnTo,
   };
 
   // Win95 Design
@@ -107,10 +200,7 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
           <div className="min-h-screen p-4">
             <div className="max-w-4xl mx-auto">
               <DashboardHeader />
-              <Win95Window
-                title={style ? `Edit: ${style.name}` : 'Edit Style'}
-                icon={<span>✏️</span>}
-              >
+              <Win95Window title="Edit Settings" icon={<span>✏️</span>}>
                 {loading ? (
                   <div className="text-center py-8">
                     <span className="text-[11px] win95-loading">Loading style...</span>
@@ -136,7 +226,7 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
                         {STEPS.map((step, index) => {
                           const isCompleted = index < currentStepIndex;
                           const isCurrent = index === currentStepIndex;
-                          const stepPath = `/articles/styles/${styleId}/edit/${step.path}`;
+                          const stepPath = `/articles/styles/${styleId}/edit/${step.path}${returnTo !== `/articles/styles/${styleId}` ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
                           return (
                             <Link key={step.path} href={stepPath}>
                               <div
@@ -242,16 +332,14 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
                 <div className="space-y-6">
                   {/* Header */}
                   <div className="flex items-center gap-4">
-                    <Link href={`/articles/styles/${styleId}`}>
+                    <Link href={returnTo}>
                       <Button variant="ghost" size="icon">
                         <ArrowLeft className="h-5 w-5" />
                       </Button>
                     </Link>
                     <div>
-                      <p className="text-sm font-medium text-primary">Edit Style</p>
-                      <h1 className="text-2xl font-bold tracking-tight">
-                        {style?.name || 'Loading...'}
-                      </h1>
+                      <p className="text-sm font-medium text-primary">Edit Settings</p>
+                      <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
                     </div>
                   </div>
 
@@ -269,7 +357,7 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
                       {STEPS.map((step, index) => {
                         const isCompleted = index < currentStepIndex;
                         const isCurrent = index === currentStepIndex;
-                        const stepPath = `/articles/styles/${styleId}/edit/${step.path}`;
+                        const stepPath = `/articles/styles/${styleId}/edit/${step.path}${returnTo !== `/articles/styles/${styleId}` ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
                         return (
                           <Link key={step.path} href={stepPath}>
                             <div

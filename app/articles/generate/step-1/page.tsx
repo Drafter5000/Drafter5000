@@ -49,6 +49,7 @@ function GenerateStep1Content() {
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const [initialArticles, setInitialArticles] = useState<string[]>(['', '', '']);
+  const [initialJobTitle, setInitialJobTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,10 +62,13 @@ function GenerateStep1Content() {
     if (draftSession?.style_samples && draftSession.style_samples.length > 0) {
       setInitialArticles([...draftSession.style_samples, '', '', ''].slice(0, 3));
     }
+    if (draftSession?.job) {
+      setInitialJobTitle(draftSession.job);
+    }
     setInitialLoading(false);
   }, []);
 
-  const handleSubmit = async (articles: string[]) => {
+  const handleSubmit = async (articles: string[], jobTitle: string) => {
     setLoading(true);
     setError(null);
 
@@ -76,8 +80,15 @@ function GenerateStep1Content() {
         return;
       }
 
+      if (!jobTitle.trim()) {
+        setError('Please enter a job title to continue');
+        setLoading(false);
+        return;
+      }
+
       DraftSessionService.save({
         style_samples: validArticles,
+        job: jobTitle.trim(),
         current_step: 2,
       });
 
@@ -108,6 +119,7 @@ function GenerateStep1Content() {
 
         <StyleFormStep1
           initialArticles={initialArticles}
+          initialJobTitle={initialJobTitle}
           onSubmit={handleSubmit}
           loading={loading}
           error={error}
@@ -131,6 +143,7 @@ function GenerateStep1Content() {
 
       <StyleFormStep1
         initialArticles={initialArticles}
+        initialJobTitle={initialJobTitle}
         onSubmit={handleSubmit}
         loading={loading}
         error={error}

@@ -8,29 +8,114 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteConfigContext } from '@/components/site-config-provider';
+import { useToast } from '@/hooks/use-toast';
+import { apiClient, APIError } from '@/lib/api-client';
 
 const footerLinks = {
   product: [
     { name: 'Features', href: '#features' },
     { name: 'Pricing', href: '/pricing' },
   ],
-  company: [{ name: 'About', href: '#' }],
+  company: [
+    { name: 'About', href: '#' },
+    { name: 'Contact', href: '/contact' },
+  ],
+};
+
+interface ContactFormData {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+interface ContactFormErrors {
+  name?: string;
+  email?: string;
+  subject?: string;
+  message?: string;
+}
+
+const initialFormData: ContactFormData = {
+  name: '',
+  email: '',
+  subject: '',
+  message: '',
 };
 
 export function Footer() {
   const { siteName, logoUrl, loading: configLoading } = useSiteConfigContext();
-  const [contactForm, setContactForm] = useState({ email: '', message: '' });
+  const { toast } = useToast();
+  const [contactForm, setContactForm] = useState<ContactFormData>(initialFormData);
+  const [errors, setErrors] = useState<ContactFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+
+  const validateForm = (): boolean => {
+    const newErrors: ContactFormErrors = {};
+
+    if (!contactForm.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+
+    if (!contactForm.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!contactForm.subject.trim()) {
+      newErrors.subject = 'Subject is required';
+    }
+
+    if (!contactForm.message.trim()) {
+      newErrors.message = 'Message is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (field: keyof ContactFormData, value: string) => {
+    setContactForm(prev => ({ ...prev, [field]: value }));
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSubmitted(true);
-    setIsSubmitting(false);
-    setContactForm({ email: '', message: '' });
+
+    try {
+      await apiClient.post('/contact', contactForm);
+
+      toast({
+        title: 'Message sent!',
+        description: "Thanks for reaching out. We'll get back to you soon.",
+      });
+
+      setContactForm(initialFormData);
+      setErrors({});
+    } catch (error: unknown) {
+      const message =
+        error instanceof APIError
+          ? error.message
+          : 'Failed to send message. Please try again later.';
+
+      toast({
+        title: 'Failed to send message',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -96,30 +181,54 @@ export function Footer() {
           {/* Contact Us Form */}
           <div>
             <h4 className="font-semibold mb-4">Contact Us</h4>
-            {submitted ? (
-              <p className="text-sm text-primary">Thanks! We'll get back to you soon.</p>
-            ) : (
-              <form onSubmit={handleContactSubmit} className="space-y-3">
+            <form onSubmit={handleContactSubmit} className="space-y-3">
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Your name"
+                  value={contactForm.name}
+                  onChange={e => handleChange('name', e.target.value)}
+                  className={`h-9 text-sm ${errors.name ? 'border-destructive' : ''}`}
+                />
+                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+              </div>
+              <div>
                 <Input
                   type="email"
                   placeholder="Your email"
                   value={contactForm.email}
-                  onChange={e => setContactForm({ ...contactForm, email: e.target.value })}
-                  required
-                  className="h-9 text-sm"
+                  onChange={e => handleChange('email', e.target.value)}
+                  className={`h-9 text-sm ${errors.email ? 'border-destructive' : ''}`}
                 />
+                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+              </div>
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Subject"
+                  value={contactForm.subject}
+                  onChange={e => handleChange('subject', e.target.value)}
+                  className={`h-9 text-sm ${errors.subject ? 'border-destructive' : ''}`}
+                />
+                {errors.subject && (
+                  <p className="text-xs text-destructive mt-1">{errors.subject}</p>
+                )}
+              </div>
+              <div>
                 <Textarea
                   placeholder="Your message"
                   value={contactForm.message}
-                  onChange={e => setContactForm({ ...contactForm, message: e.target.value })}
-                  required
-                  className="text-sm min-h-[80px] resize-none"
+                  onChange={e => handleChange('message', e.target.value)}
+                  className={`text-sm min-h-[80px] resize-none ${errors.message ? 'border-destructive' : ''}`}
                 />
-                <Button type="submit" size="sm" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? 'Sending...' : 'Send Message'}
-                </Button>
-              </form>
-            )}
+                {errors.message && (
+                  <p className="text-xs text-destructive mt-1">{errors.message}</p>
+                )}
+              </div>
+              <Button type="submit" size="sm" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? 'Sending...' : 'Send Message'}
+              </Button>
+            </form>
           </div>
         </div>
 

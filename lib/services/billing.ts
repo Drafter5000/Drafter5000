@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '../supabase-admin';
+import { getPlanByIdAdmin, getActivePlansAdmin } from '../plan-utils';
 
 export interface BillingStatus {
   organization_id: string;
@@ -57,6 +58,7 @@ export async function getBillingStatus(orgId: string): Promise<BillingStatus | n
   let subscriptionStatus = 'none';
   let planName = 'Free';
   let amountCents = 0;
+  let currency = 'USD';
 
   if (userIds.length > 0) {
     const { data: profiles } = await supabase
@@ -71,8 +73,13 @@ export async function getBillingStatus(orgId: string): Promise<BillingStatus | n
       if (activeProfile) {
         subscriptionStatus = activeProfile.subscription_status;
         planName = activeProfile.subscription_plan;
-        // Mock pricing - in real app this comes from Stripe
-        amountCents = planName === 'pro' ? 2900 : planName === 'enterprise' ? 9900 : 0;
+
+        // Fetch actual plan pricing from database
+        const plan = await getPlanByIdAdmin(planName);
+        if (plan) {
+          amountCents = plan.price_cents;
+          currency = plan.currency.toUpperCase();
+        }
       }
     }
   }
@@ -85,7 +92,7 @@ export async function getBillingStatus(orgId: string): Promise<BillingStatus | n
     billing_cycle: amountCents > 0 ? 'monthly' : 'none',
     next_billing_date: null, // Would come from Stripe
     amount_cents: amountCents,
-    currency: 'USD',
+    currency: currency,
     member_count: memberCount || 0,
   };
 }
@@ -101,6 +108,13 @@ export async function getPlatformBillingOverview(): Promise<PlatformBillingOverv
     .from('organizations')
     .select('id', { count: 'exact', head: true })
     .eq('is_active', true);
+
+  // Fetch all active plans to build a pricing lookup map
+  const plans = await getActivePlansAdmin();
+  const planPriceMap: Record<string, number> = {};
+  plans.forEach(plan => {
+    planPriceMap[plan.id] = plan.price_cents;
+  });
 
   // Get subscription stats from user_profiles
   const { data: profiles } = await supabase
@@ -121,12 +135,10 @@ export async function getPlatformBillingOverview(): Promise<PlatformBillingOverv
     const plan = profile.subscription_plan || 'free';
     subscriptionsByPlan[plan] = (subscriptionsByPlan[plan] || 0) + 1;
 
-    // Count active and calculate revenue
+    // Count active and calculate revenue using actual plan pricing
     if (profile.subscription_status === 'active') {
       activeSubscriptions++;
-      // Mock pricing
-      if (plan === 'pro') totalRevenueCents += 2900;
-      else if (plan === 'enterprise') totalRevenueCents += 9900;
+      totalRevenueCents += planPriceMap[plan] || 0;
     }
   });
 

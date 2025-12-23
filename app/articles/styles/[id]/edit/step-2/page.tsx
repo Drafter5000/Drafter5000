@@ -22,9 +22,17 @@ import {
   AlertCircle,
   Sparkles,
   RefreshCw,
+  Save,
+  Lock,
 } from 'lucide-react';
 import { isSubjectValid, isSubjectListValid } from '@/lib/onboarding-validation';
 import { apiClient } from '@/lib/api-client';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+interface TopicWithStatus {
+  topic: string;
+  status: string;
+}
 
 export default function EditStep2Page() {
   const router = useRouter();
@@ -41,11 +49,35 @@ export default function EditStep2Page() {
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  // Track topics with their statuses (to know which are generated/sent)
+  const [topicsWithStatus, setTopicsWithStatus] = useState<TopicWithStatus[]>([]);
+
   // AI suggestions state
   const [aiActive, setAiActive] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // Track all AI-generated topics during this session (includes added and ignored)
+  const [generatedTopicsHistory, setGeneratedTopicsHistory] = useState<string[]>([]);
+
+  // Fetch topics with status from API
+  useEffect(() => {
+    const fetchTopicsWithStatus = async () => {
+      try {
+        const response = await apiClient.get<{ topics: TopicWithStatus[] }>('/topics');
+        setTopicsWithStatus(response.topics || []);
+      } catch (err) {
+        console.error('Failed to fetch topics with status:', err);
+      }
+    };
+    fetchTopicsWithStatus();
+  }, []);
+
+  // Check if a topic is generated (has "Sent" status)
+  const isTopicGenerated = (subject: string): boolean => {
+    const topicData = topicsWithStatus.find(t => t.topic.toLowerCase() === subject.toLowerCase());
+    return topicData?.status?.toLowerCase() === 'sent';
+  };
 
   // Initialize from style data
   useEffect(() => {
@@ -78,12 +110,16 @@ export default function EditStep2Page() {
     try {
       const response = await apiClient.post<{ suggestions: string[] }>('/ai/suggestions', {
         user_id: user.id,
-        existing_topics: subjects,
+        chosen_topics: subjects,
+        generated_topics_history: generatedTopicsHistory,
         style_samples: editContext.style.style_samples,
       });
 
+      const newSuggestions = response.suggestions || [];
       setAiActive(true);
-      setAiSuggestions(response.suggestions || []);
+      setAiSuggestions(newSuggestions);
+      // Add new suggestions to history
+      setGeneratedTopicsHistory(prev => [...new Set([...prev, ...newSuggestions])]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to generate suggestions';
       setAiError(message);
@@ -116,8 +152,10 @@ export default function EditStep2Page() {
       // Update the style in context
       editContext?.updateStyle({ subjects });
 
-      // Navigate to next step
-      router.push(`/articles/styles/${styleId}/edit/step-3`);
+      // Navigate to next step, preserving returnTo param
+      const returnTo = editContext?.returnTo;
+      const nextUrl = `/articles/styles/${styleId}/edit/step-3${returnTo && returnTo !== `/articles/styles/${styleId}` ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
+      router.push(nextUrl);
     } catch (err) {
       setError('Failed to save changes');
     } finally {
@@ -128,7 +166,30 @@ export default function EditStep2Page() {
   const handleBack = () => {
     // Save current state before going back
     editContext?.updateStyle({ subjects });
-    router.push(`/articles/styles/${styleId}/edit/step-1`);
+    const returnTo = editContext?.returnTo;
+    const backUrl = `/articles/styles/${styleId}/edit/step-1${returnTo && returnTo !== `/articles/styles/${styleId}` ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
+    router.push(backUrl);
+  };
+
+  // Save changes and exit without going through all steps
+  const handleSaveAndExit = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Prepare the updated data
+      const updatedData = { subjects };
+
+      // Update the style in context
+      editContext?.updateStyle(updatedData);
+
+      // Save and redirect back to origin - pass the data directly to avoid async state issues
+      await editContext?.saveAndExit(updatedData);
+    } catch (err) {
+      console.error('Failed to save style:', err);
+      setError('Failed to save changes');
+      setLoading(false);
+    }
   };
 
   if (editContext?.loading) {
@@ -297,17 +358,27 @@ export default function EditStep2Page() {
             </div>
           ) : (
             <div className="space-y-1">
-              {subjects.map((subject, index) => (
-                <div key={index} className="flex items-center justify-between p-2 win95-raised">
-                  <div className="flex items-center gap-2">
-                    <Win95Badge variant="outline">{index + 1}</Win95Badge>
-                    <span className="text-[11px]">{subject}</span>
+              {subjects.map((subject, index) => {
+                const isGenerated = isTopicGenerated(subject);
+                return (
+                  <div key={index} className="flex items-center justify-between p-2 win95-raised">
+                    <div className="flex items-center gap-2">
+                      <Win95Badge variant="outline">{index + 1}</Win95Badge>
+                      <span className="text-[11px]">{subject}</span>
+                      {isGenerated && <Win95Badge variant="outline">🔒 Generated</Win95Badge>}
+                    </div>
+                    {!isGenerated && (
+                      <Win95Button
+                        onClick={() => removeSubject(index)}
+                        size="sm"
+                        disabled={loading}
+                      >
+                        ×
+                      </Win95Button>
+                    )}
                   </div>
-                  <Win95Button onClick={() => removeSubject(index)} size="sm" disabled={loading}>
-                    ×
-                  </Win95Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -316,9 +387,14 @@ export default function EditStep2Page() {
           <Win95Button onClick={handleBack} disabled={loading}>
             ← Back
           </Win95Button>
-          <Win95Button onClick={handleSubmit} disabled={!isValid || loading}>
-            {loading ? 'Saving...' : 'Next: Settings →'}
-          </Win95Button>
+          <div className="flex gap-2">
+            <Win95Button onClick={handleSaveAndExit} disabled={loading || editContext?.saving}>
+              {editContext?.saving ? 'Saving...' : '💾 Save & Exit'}
+            </Win95Button>
+            <Win95Button onClick={handleSubmit} disabled={!isValid || loading}>
+              {loading ? 'Saving...' : 'Next: Settings →'}
+            </Win95Button>
+          </div>
         </div>
       </div>
     );
@@ -342,7 +418,7 @@ export default function EditStep2Page() {
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
         {/* Your Topics Card */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
@@ -388,31 +464,53 @@ export default function EditStep2Page() {
               </div>
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                {subjects.map((subject, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-accent/30 transition-colors group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className="h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs"
-                      >
-                        {index + 1}
-                      </Badge>
-                      <span className="font-medium text-sm">{subject}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => removeSubject(index)}
-                      disabled={loading}
+                {subjects.map((subject, index) => {
+                  const isGenerated = isTopicGenerated(subject);
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-accent/30 transition-colors group cursor-pointer"
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className="h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs"
+                        >
+                          {index + 1}
+                        </Badge>
+                        <span className="font-medium text-sm">{subject}</span>
+                        {isGenerated && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Lock className="h-3 w-3" />
+                            Generated
+                          </Badge>
+                        )}
+                      </div>
+                      {isGenerated ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="h-8 w-8 flex items-center justify-center text-muted-foreground">
+                              <Lock className="h-4 w-4" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Generated topics cannot be removed</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => removeSubject(index)}
+                          disabled={loading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -540,19 +638,40 @@ export default function EditStep2Page() {
           Back
         </Button>
 
-        <Button onClick={handleSubmit} disabled={!isValid || loading} size="lg">
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Saving...
-            </>
-          ) : (
-            <>
-              Next: Settings
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleSaveAndExit}
+            disabled={loading || editContext?.saving}
+            size="lg"
+          >
+            {editContext?.saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save & Exit
+              </>
+            )}
+          </Button>
+
+          <Button onClick={handleSubmit} disabled={!isValid || loading} size="lg">
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Next: Settings
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

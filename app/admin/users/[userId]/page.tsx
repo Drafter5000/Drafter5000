@@ -113,7 +113,7 @@ export default function UserDetailsPage({ params }: { params: Promise<{ userId: 
             <p className="text-muted-foreground">{user.email}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           {user.is_active ? (
             <Button variant="destructive" onClick={handleDeactivate} disabled={updating}>
               {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -125,7 +125,7 @@ export default function UserDetailsPage({ params }: { params: Promise<{ userId: 
               Reactivate
             </Button>
           )}
-        </div>
+        </div> */}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

@@ -1,6 +1,6 @@
 import { getServerSupabaseUser, getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getGoogleAuth } from '@/lib/google-sheets';
+import { getGoogleAuth, formatDateForSheets, SHEETS_VALUE_INPUT_OPTION } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { type NextRequest, NextResponse } from 'next/server';
 import { checkSubscriptionAccess } from '@/lib/subscription-utils';
@@ -199,19 +199,91 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Topic already exists' }, { status: 409 });
     }
 
-    const currentDate = new Date().toISOString().split('T')[0];
+    const currentDate = formatDateForSheets(new Date());
     const clientName = style.display_name || style.name || '';
 
     // Add new topic row to customer sheet (tab) in Customers spreadsheet
     // Note: Subject column (C) is not populated from code - it should be managed separately
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${escapedSheetName}!A2`,
-      valueInputOption: 'RAW',
-      requestBody: {
-        values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
-      },
-    });
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${escapedSheetName}!A2`,
+        valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+        requestBody: {
+          values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
+        },
+      });
+    } catch (appendError: unknown) {
+      const errorMessage = appendError instanceof Error ? appendError.message : '';
+
+      // If sheet doesn't exist, create it and add the topic
+      if (errorMessage.includes('Unable to parse range') || errorMessage.includes('not found')) {
+        console.log(`Sheet "${sheetName}" not found, creating new sheet...`);
+
+        // Create the sheet with headers
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: sheetName,
+                    gridProperties: {
+                      rowCount: 100,
+                      columnCount: 8,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        });
+
+        // Add header row
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${escapedSheetName}!A1:F1`,
+          valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+          requestBody: {
+            values: [['Topic', 'Status', 'Subject', 'Article', 'Last Update', 'Client']],
+          },
+        });
+
+        // Now add the topic
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `${escapedSheetName}!A2`,
+          valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+          requestBody: {
+            values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
+          },
+        });
+
+        // Also sync existing subjects from article_styles to the new sheet
+        if (style.subjects && style.subjects.length > 0) {
+          const existingSubjectsRows = style.subjects
+            .filter((s: string) => s.toLowerCase() !== topic.toLowerCase())
+            .map((s: string) => [s, 'Needs Draft', '', '', currentDate, clientName]);
+
+          if (existingSubjectsRows.length > 0) {
+            await sheets.spreadsheets.values.append({
+              spreadsheetId,
+              range: `${escapedSheetName}!A2`,
+              valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+              requestBody: {
+                values: existingSubjectsRows,
+              },
+            });
+          }
+        }
+
+        console.log(`Sheet "${sheetName}" created and topics synced successfully`);
+      } else {
+        // Re-throw other errors
+        throw appendError;
+      }
+    }
 
     // Also update subjects in article_styles (only if not already present)
     const updatedSubjects = [...(style.subjects || []), topic];

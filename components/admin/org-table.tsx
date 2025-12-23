@@ -144,7 +144,7 @@ export function OrgTable({
                             View Details
                           </DropdownMenuItem>
                         </Link>
-                        <DropdownMenuItem onClick={() => onEdit?.(org.id)}>
+                        {/* <DropdownMenuItem onClick={() => onEdit?.(org.id)}>
                           <Settings className="mr-2 h-4 w-4" />
                           Edit Settings
                         </DropdownMenuItem>
@@ -154,7 +154,7 @@ export function OrgTable({
                         >
                           <Ban className="mr-2 h-4 w-4" />
                           {org.is_active ? 'Deactivate' : 'Reactivate'}
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

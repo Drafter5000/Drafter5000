@@ -61,6 +61,7 @@ export default function BillingPage() {
   const [plans, setPlans] = useState<SubscriptionPlanWithFeatures[]>([]);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [topupLoading, setTopupLoading] = useState(false);
 
   useEffect(() => {
     const fetchBillingData = async () => {
@@ -100,6 +101,22 @@ export default function BillingPage() {
   // Navigate to pricing page for renewal/upgrade
   const handleRenewSubscription = useCallback(() => {
     window.location.href = '/pricing';
+  }, []);
+
+  // Handle article top-up purchase
+  const handleTopup = useCallback(async (articlesCount: number) => {
+    try {
+      setTopupLoading(true);
+      const { url } = await apiClient.post<{ url: string }>('/stripe/topup', {
+        articles_count: articlesCount,
+      });
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Top-up error:', error);
+      setTopupLoading(false);
+    }
   }, []);
 
   // Check if usage limit is reached
@@ -241,6 +258,25 @@ export default function BillingPage() {
                       <span className="text-[24px] font-bold">${planDetails.price / 100}</span>
                       <span className="text-[11px]"> / month</span>
                     </div>
+                    {subscription?.current_period_end &&
+                      !subscriptionExpired &&
+                      usage?.plan !== 'free' && (
+                        <div className="win95-sunken p-2 mt-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[12px]">📅</span>
+                            <span className="text-[10px] font-bold">Next Payment</span>
+                          </div>
+                          <p className="text-[11px]">
+                            {new Date(subscription.current_period_end * 1000).toLocaleDateString(
+                              'en-US',
+                              { month: 'long', day: 'numeric', year: 'numeric' }
+                            )}
+                          </p>
+                          <p className="text-[9px] text-[var(--win95-button-shadow)] mt-1">
+                            💳 Auto-renewal: ${planDetails.price / 100} will be charged
+                          </p>
+                        </div>
+                      )}
                   </fieldset>
                 </div>
 
@@ -276,6 +312,27 @@ export default function BillingPage() {
                               ? `${usage.articles_limit - usage.articles_used} articles remaining`
                               : "You've reached your monthly limit"}
                           </p>
+                          {!usage.can_generate && (
+                            <div className="mt-3 pt-3 border-t border-[var(--win95-button-shadow)]">
+                              <p className="text-[10px] font-bold mb-2">Need more articles?</p>
+                              <div className="flex gap-2">
+                                <Win95Button
+                                  size="sm"
+                                  onClick={() => handleTopup(10)}
+                                  disabled={topupLoading}
+                                >
+                                  +10 ($9.99)
+                                </Win95Button>
+                                <Win95Button
+                                  size="sm"
+                                  onClick={() => handleTopup(25)}
+                                  disabled={topupLoading}
+                                >
+                                  +25 ($19.99)
+                                </Win95Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </fieldset>
@@ -293,7 +350,7 @@ export default function BillingPage() {
                           <h3 className="text-[12px] font-bold mb-1">Pro Plan</h3>
                           <p className="text-[20px] font-bold mb-1">$70/mo</p>
                           <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
-                            20 articles per month
+                            Up to 30 article per month
                           </p>
                           <Link href="/pricing">
                             <Win95Button className="w-full">Upgrade to Pro</Win95Button>
@@ -572,20 +629,26 @@ export default function BillingPage() {
                     <span className="text-muted-foreground">/ month</span>
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    {subscription?.current_period_end && (
-                      <div className="p-4 rounded-lg bg-secondary/50 border">
-                        <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          Next Billing Date
+                    {subscription?.current_period_end &&
+                      !subscriptionExpired &&
+                      usage?.plan !== 'free' && (
+                        <div className="p-4 rounded-lg bg-secondary/50 border">
+                          <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            Next Payment Date
+                          </div>
+                          <p className="font-semibold">
+                            {new Date(subscription.current_period_end * 1000).toLocaleDateString(
+                              'en-US',
+                              { month: 'long', day: 'numeric', year: 'numeric' }
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            <CreditCard className="h-3 w-3 inline mr-1" />
+                            Auto-renewal: ${planDetails.price / 100} will be charged
+                          </p>
                         </div>
-                        <p className="font-semibold">
-                          {new Date(subscription.current_period_end * 1000).toLocaleDateString(
-                            'en-US',
-                            { month: 'long', day: 'numeric', year: 'numeric' }
-                          )}
-                        </p>
-                      </div>
-                    )}
+                      )}
                     <div className="p-4 rounded-lg bg-secondary/50 border">
                       <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
                         <Zap className="h-4 w-4" />
@@ -649,13 +712,49 @@ export default function BillingPage() {
                           <Alert className="mt-4">
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription>
-                              Upgrade to Pro for 20 articles/month or Enterprise for 100
+                              Upgrade to Pro for 30 articles/month or Enterprise for 100
                               articles/month.
                               <Link href="/pricing" className="ml-2 text-primary hover:underline">
                                 View Plans →
                               </Link>
                             </AlertDescription>
                           </Alert>
+                        )}
+                        {!usage.can_generate && usage.plan !== 'free' && (
+                          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                            <p className="text-sm font-medium mb-3">
+                              Need more articles this month?
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTopup(10)}
+                                disabled={topupLoading}
+                              >
+                                {topupLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                ) : null}
+                                +10 Articles ($9.99)
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTopup(25)}
+                                disabled={topupLoading}
+                              >
+                                +25 Articles ($19.99)
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTopup(50)}
+                                disabled={topupLoading}
+                              >
+                                +50 Articles ($34.99)
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </>
                     )}
@@ -673,7 +772,9 @@ export default function BillingPage() {
                       <div className="p-6 rounded-lg border text-center">
                         <h3 className="font-bold mb-1">Pro Plan</h3>
                         <p className="text-3xl font-bold text-primary mb-1">$70/mo</p>
-                        <p className="text-sm text-muted-foreground mb-4">20 articles per month</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Up to 30 article per month
+                        </p>
                         <Link href="/pricing">
                           <Button className="w-full">Upgrade to Pro</Button>
                         </Link>

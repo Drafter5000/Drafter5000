@@ -35,19 +35,14 @@ import {
   Clock,
   PenTool,
   BookOpen,
+  Info,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { ArticleStyle } from '@/lib/types';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeleteDialog } from '@/components/articles/delete-dialog';
 // Tabs removed - using custom filter pills instead
 
@@ -112,6 +107,7 @@ function DashboardContent() {
   const context = useContext(DesignContext);
   const designMode: DesignMode = context?.designMode ?? 'modern';
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [style, setStyle] = useState<ArticleStyle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,8 +140,6 @@ function DashboardContent() {
   // Topics state
   const [topics, setTopics] = useState<Topic[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(true);
-  const [newTopic, setNewTopic] = useState('');
-  const [addingTopic, setAddingTopic] = useState(false);
   const [topicError, setTopicError] = useState<string | null>(null);
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
   const [editingTopic, setEditingTopic] = useState('');
@@ -175,13 +169,15 @@ function DashboardContent() {
       setTopicsLoading(true);
       const response = await apiClient.get<{ topics: Topic[]; sheetName?: string }>('/topics');
       if ((!response.topics || response.topics.length === 0) && styleData?.subjects?.length) {
+        const now = new Date();
+        const formattedDate = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
         const subjectTopics: Topic[] = styleData.subjects.map((subject, index) => ({
           rowIndex: index + 2,
           topic: subject,
           status: 'Needs Draft',
           subject: subject,
           article: '',
-          lastUpdate: new Date().toISOString().split('T')[0],
+          lastUpdate: formattedDate,
           client: styleData.display_name || styleData.name || '',
         }));
         setTopics(subjectTopics);
@@ -196,13 +192,15 @@ function DashboardContent() {
       }
       console.error('Failed to fetch topics:', err);
       if (styleData?.subjects?.length) {
+        const now = new Date();
+        const formattedDate = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
         const subjectTopics: Topic[] = styleData.subjects.map((subject, index) => ({
           rowIndex: index + 2,
           topic: subject,
           status: 'Needs Draft',
           subject: subject,
           article: '',
-          lastUpdate: new Date().toISOString().split('T')[0],
+          lastUpdate: formattedDate,
           client: styleData.display_name || styleData.name || '',
         }));
         setTopics(subjectTopics);
@@ -287,31 +285,6 @@ function DashboardContent() {
     fetchData();
   }, [user]);
 
-  const handleAddTopic = async () => {
-    if (!newTopic.trim()) return;
-    setAddingTopic(true);
-    setTopicError(null);
-    try {
-      await apiClient.post('/topics', { topic: newTopic.trim() });
-      setNewTopic('');
-      topicsFetchedRef.current = false;
-      await fetchTopics(style);
-    } catch (err: unknown) {
-      // Skip for 401/403 - redirect is already happening
-      if (err instanceof APIError && (err.status === 401 || err.status === 403)) {
-        return;
-      }
-      if (err instanceof Error && err.message.includes('already exists')) {
-        setTopicError('This topic already exists');
-      } else {
-        setTopicError('Failed to add topic');
-      }
-      setTimeout(() => setTopicError(null), 3000);
-    } finally {
-      setAddingTopic(false);
-    }
-  };
-
   const handleUpdateTopic = async (rowIndex: number, topic?: string, status?: string) => {
     setSavingTopic(true);
     setTopicError(null);
@@ -377,18 +350,19 @@ function DashboardContent() {
   const dismissPaymentSuccess = () => setShowPaymentSuccess(false);
 
   // Filter topics by status (case-insensitive for 'sent')
+  // Hide 'Needs to be sent' status from users - it's an internal status
+  const visibleTopics = topics.filter(t => t.status.toLowerCase() !== 'needs to be sent');
   const filteredTopics =
     activeTopicTab === 'all'
-      ? topics
+      ? visibleTopics
       : activeTopicTab === 'Sent'
-        ? topics.filter(t => t.status.toLowerCase() === 'sent')
-        : topics.filter(t => t.status === activeTopicTab);
+        ? visibleTopics.filter(t => t.status.toLowerCase() === 'sent')
+        : visibleTopics.filter(t => t.status === activeTopicTab);
   const displayedTopics = showAllTopics ? filteredTopics : filteredTopics.slice(0, 6);
   const topicCounts = {
-    all: topics.length,
-    'Needs Draft': topics.filter(t => t.status === 'Needs Draft').length,
-    'Needs to be sent': topics.filter(t => t.status === 'Needs to be sent').length,
-    Sent: topics.filter(t => t.status.toLowerCase() === 'sent').length,
+    all: visibleTopics.length,
+    'Needs Draft': visibleTopics.filter(t => t.status === 'Needs Draft').length,
+    Sent: visibleTopics.filter(t => t.status.toLowerCase() === 'sent').length,
   };
 
   // Win95 Design - keeping it simple
@@ -474,7 +448,7 @@ function DashboardContent() {
                   </Win95Alert>
                 )}
                 <div className="win95-sunken p-3">
-                  <h2 className="text-[14px] font-bold mb-1">Welcome back, {firstName}! 👋</h2>
+                  <h2 className="text-[14px] font-bold mb-1">Welcome {firstName}! 👋</h2>
                   <p className="text-[11px] text-[var(--win95-button-shadow)]">
                     Here's an overview of your article generation system
                   </p>
@@ -505,9 +479,11 @@ function DashboardContent() {
                 {style && (
                   <div className="win95-sunken p-3">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-bold">📄 {style.name}</span>
+                      <span className="text-[11px] font-bold">📄 Settings</span>
                       {!featuresDisabled ? (
-                        <Link href={`/articles/styles/${style.id}/edit`}>
+                        <Link
+                          href={`/articles/styles/${style.id}/edit?returnTo=${encodeURIComponent('/dashboard')}`}
+                        >
                           <Win95Button size="sm">✏️ Edit</Win95Button>
                         </Link>
                       ) : (
@@ -529,7 +505,7 @@ function DashboardContent() {
                       </div>
                       <div className="win95-raised p-2">
                         <span className="text-[10px]">✨</span>
-                        <p className="text-[11px] font-bold">{topics.length} topics</p>
+                        <p className="text-[11px] font-bold">{visibleTopics.length} topics</p>
                       </div>
                     </div>
                   </div>
@@ -781,7 +757,7 @@ function DashboardContent() {
               <div>
                 <p className="text-sm font-medium text-primary mb-1">Dashboard</p>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Welcome back, {firstName}! 👋
+                  Welcome {firstName}! 👋
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   Here's what's happening with your content today
@@ -799,86 +775,41 @@ function DashboardContent() {
               </Button>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/10 to-blue-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Generated</p>
-                      <p className="text-3xl font-bold mt-1">{data.metrics.articles_generated}</p>
-                      {data.metrics.trends.articles_generated && (
-                        <p
-                          className={`text-xs mt-1 flex items-center gap-1 ${data.metrics.trends.articles_generated.isPositive ? 'text-emerald-600' : 'text-red-600'}`}
-                        >
-                          <TrendingUp className="h-3 w-3" />
-                          {data.metrics.trends.articles_generated.value}% this month
-                        </p>
-                      )}
+            {/* Stats Grid - 2 compact boxes */}
+            <div className="flex flex-wrap gap-4">
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:shadow-md transition-shadow w-full sm:w-auto sm:min-w-[200px]">
+                <CardContent className="pt-5 pb-4 px-5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <Check className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Generated</p>
+                      <p className="text-2xl font-bold">{topicCounts.Sent}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/10 to-amber-500/5 hover:shadow-md transition-shadow w-full sm:w-auto sm:min-w-[200px]">
+                <CardContent className="pt-5 pb-4 px-5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                      <PenTool className="h-5 w-5 text-amber-600" />
+                    </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Sent</p>
-                      <p className="text-3xl font-bold mt-1">{data.metrics.articles_sent}</p>
-                      {data.metrics.trends.articles_sent && (
-                        <p
-                          className={`text-xs mt-1 flex items-center gap-1 ${data.metrics.trends.articles_sent.isPositive ? 'text-emerald-600' : 'text-red-600'}`}
-                        >
-                          <TrendingUp className="h-3 w-3" />
-                          {data.metrics.trends.articles_sent.value}% this month
-                        </p>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                      <Mail className="h-6 w-6 text-emerald-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/10 to-amber-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">In Draft</p>
-                      <p className="text-3xl font-bold mt-1">{data.metrics.draft_articles}</p>
-                      <p className="text-xs mt-1 text-muted-foreground">Awaiting review</p>
-                    </div>
-                    <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                      <PenTool className="h-6 w-6 text-amber-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-500/10 to-purple-500/5 hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Topics</p>
-                      <p className="text-3xl font-bold mt-1">{topics.length}</p>
-                      <p className="text-xs mt-1 text-muted-foreground flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                          {topicCounts['Needs Draft']} draft
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          {topicCounts.Sent} sent
-                        </span>
-                      </p>
-                    </div>
-                    <div className="h-12 w-12 rounded-2xl bg-purple-500/10 flex items-center justify-center">
-                      <Sparkles className="h-6 w-6 text-purple-600" />
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">In pipeline</p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Your AI will draft articles from these topics</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-2xl font-bold">{topicCounts['Needs Draft']}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -910,12 +841,14 @@ function DashboardContent() {
                               <FileText className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                              <h3 className="font-bold text-lg">{style.name}</h3>
+                              <h3 className="font-bold text-lg">Settings</h3>
                               <p className="text-sm text-muted-foreground">Your Writing Style</p>
                             </div>
                           </div>
                           {!featuresDisabled ? (
-                            <Link href={`/articles/styles/${style.id}/edit`}>
+                            <Link
+                              href={`/articles/styles/${style.id}/edit?returnTo=${encodeURIComponent('/dashboard')}`}
+                            >
                               <Button
                                 size="sm"
                                 variant="secondary"
@@ -931,7 +864,7 @@ function DashboardContent() {
                               variant="secondary"
                               disabled
                               className="gap-2"
-                              title="Active subscription required to edit style"
+                              title="Active subscription required to edit settings"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                               Edit
@@ -969,7 +902,7 @@ function DashboardContent() {
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                               Topics
                             </p>
-                            <p className="font-bold text-lg">{topics.length}</p>
+                            <p className="font-bold text-lg">{visibleTopics.length}</p>
                           </div>
                         </div>
                       </div>
@@ -1021,13 +954,13 @@ function DashboardContent() {
                               title="Active subscription required"
                             >
                               <Eye className="h-4 w-4" />
-                              View Details
+                              View Settings
                             </Button>
                           ) : (
                             <Link href={`/articles/styles/${style.id}`} className="flex-1">
                               <Button variant="outline" className="w-full gap-2 group/btn">
                                 <Eye className="h-4 w-4" />
-                                View Details
+                                View Settings
                                 <ArrowRight className="h-3.5 w-3.5 opacity-0 -ml-2 group-hover/btn:opacity-100 group-hover/btn:ml-0 transition-all" />
                               </Button>
                             </Link>
@@ -1086,49 +1019,37 @@ function DashboardContent() {
                     </Button>
                   </div>
 
-                  {/* Add Topic Input - Disabled when subscription not active or usage limit reached */}
+                  {/* Add Topic Button - Redirects to step-2 edit section for AI-assisted topic generation */}
                   <div className="flex gap-3 px-6">
-                    <div className="relative flex-1">
-                      <Input
-                        placeholder={
-                          usageLimitReached
-                            ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
-                            : featuresDisabled
-                              ? 'Active subscription required to add topics'
-                              : 'Enter a new topic to write about...'
-                        }
-                        value={newTopic}
-                        onChange={e => {
-                          setNewTopic(e.target.value);
-                          setTopicError(null);
-                        }}
-                        onKeyDown={e => e.key === 'Enter' && !featuresDisabled && handleAddTopic()}
-                        disabled={addingTopic || featuresDisabled}
-                        className={`h-10 ${topicError ? 'border-destructive' : ''}`}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleAddTopic}
-                      disabled={addingTopic || !newTopic.trim() || featuresDisabled}
-                      className="h-10 px-4 gap-2"
-                      title={
-                        usageLimitReached
-                          ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
-                          : featuresDisabled
-                            ? 'Active subscription required to add topics'
-                            : undefined
-                      }
-                    >
-                      {addingTopic ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4" /> Add
-                        </>
-                      )}
-                    </Button>
+                    {style ? (
+                      <Link
+                        href={`/articles/styles/${style.id}/edit/step-2?returnTo=${encodeURIComponent('/dashboard')}`}
+                        className="flex-1"
+                      >
+                        <Button
+                          variant="outline"
+                          disabled={featuresDisabled}
+                          className="w-full h-10 gap-2"
+                          title={
+                            usageLimitReached
+                              ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
+                              : featuresDisabled
+                                ? 'Active subscription required to add topics'
+                                : 'Add topics with AI assistance'
+                          }
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Topics
+                          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="outline" disabled className="flex-1 h-10 gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Topics
+                      </Button>
+                    )}
                   </div>
-                  {topicError && <p className="text-sm text-destructive px-6">{topicError}</p>}
 
                   {/* Status Filter Pills */}
                   <div className="flex flex-wrap gap-2 px-6 pt-4">
@@ -1141,23 +1062,15 @@ function DashboardContent() {
                       },
                       {
                         key: 'Needs Draft',
-                        label: 'Needs Draft',
+                        label: 'Topics in the pipeline',
                         count: topicCounts['Needs Draft'],
                         color:
                           'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400',
                         icon: <PenTool className="h-3 w-3" />,
                       },
                       {
-                        key: 'Needs to be sent',
-                        label: 'Needs to be sent',
-                        count: topicCounts['Needs to be sent'],
-                        color:
-                          'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
-                        icon: <Loader2 className="h-3 w-3" />,
-                      },
-                      {
                         key: 'Sent',
-                        label: 'Sent',
+                        label: 'Generated',
                         count: topicCounts.Sent,
                         color:
                           'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -1201,87 +1114,118 @@ function DashboardContent() {
                     </div>
                   ) : (
                     <div className="space-y-1 px-6 pt-4">
-                      {displayedTopics.map(topic => (
-                        <div
-                          key={topic.rowIndex}
-                          className="group flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          {editingRowIndex === topic.rowIndex ? (
-                            <div className="flex-1 flex gap-2">
-                              <Input
-                                value={editingTopic}
-                                onChange={e => setEditingTopic(e.target.value)}
-                                autoFocus
-                                className="flex-1"
-                                onKeyDown={e =>
-                                  e.key === 'Enter' &&
-                                  handleUpdateTopic(topic.rowIndex, editingTopic)
-                                }
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleUpdateTopic(topic.rowIndex, editingTopic)}
-                                disabled={savingTopic}
-                              >
-                                {savingTopic ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Check className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <Button size="sm" variant="ghost" onClick={cancelEditing}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start gap-2 mb-1">
-                                  <p className="font-medium text-sm">{topic.topic}</p>
-                                  <Badge
-                                    variant="outline"
-                                    className={`shrink-0 text-[10px] ${STATUS_COLORS[topic.status.toLowerCase() === 'sent' ? 'Sent' : topic.status]}`}
-                                  >
-                                    {topic.status.toLowerCase() === 'sent' ? 'sent' : topic.status}
-                                  </Badge>
-                                </div>
-                                {topic.article && (
-                                  <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
-                                    {topic.article}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground">{topic.lastUpdate}</p>
+                      {displayedTopics.map(topic => {
+                        const isGenerated = topic.status.toLowerCase() === 'sent';
+                        const TopicWrapper = isGenerated ? 'button' : 'div';
+
+                        return (
+                          <TopicWrapper
+                            key={topic.rowIndex}
+                            className={`group flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors w-full text-left ${isGenerated ? 'cursor-pointer' : ''}`}
+                            onClick={
+                              isGenerated
+                                ? () => router.push(`/articles/${topic.rowIndex}`)
+                                : undefined
+                            }
+                          >
+                            {editingRowIndex === topic.rowIndex ? (
+                              <div className="flex-1 flex gap-2" onClick={e => e.stopPropagation()}>
+                                <Input
+                                  value={editingTopic}
+                                  onChange={e => setEditingTopic(e.target.value)}
+                                  autoFocus
+                                  className="flex-1"
+                                  onKeyDown={e =>
+                                    e.key === 'Enter' &&
+                                    handleUpdateTopic(topic.rowIndex, editingTopic)
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleUpdateTopic(topic.rowIndex, editingTopic)}
+                                  disabled={savingTopic}
+                                >
+                                  {savingTopic ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Check className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                                  <X className="h-4 w-4" />
+                                </Button>
                               </div>
-                              {/* Edit/Delete buttons - Hidden when subscription not active */}
-                              {!featuresDisabled && (
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    onClick={() => startEditing(topic)}
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-red-500 hover:text-red-600"
-                                    onClick={() => openDeleteDialog(topic)}
-                                    disabled={deletingRowIndex === topic.rowIndex}
-                                  >
-                                    {deletingRowIndex === topic.rowIndex ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-4 w-4" />
+                            ) : (
+                              <>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start gap-2 mb-1">
+                                    <p
+                                      className={`font-medium text-sm ${isGenerated ? 'group-hover:text-primary transition-colors' : ''}`}
+                                    >
+                                      {topic.topic}
+                                    </p>
+                                    <Badge
+                                      variant="outline"
+                                      className={`shrink-0 text-[10px] ${STATUS_COLORS[isGenerated ? 'Sent' : topic.status]}`}
+                                    >
+                                      {isGenerated
+                                        ? 'Generated'
+                                        : topic.status === 'Needs Draft'
+                                          ? 'In pipeline'
+                                          : topic.status}
+                                    </Badge>
+                                  </div>
+                                  {topic.article && (
+                                    <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
+                                      {topic.article}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs text-muted-foreground">
+                                      {topic.lastUpdate}
+                                    </p>
+                                    {isGenerated && (
+                                      <span className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                        <ChevronRight className="h-3 w-3" />
+                                        View details
+                                      </span>
                                     )}
-                                  </Button>
+                                  </div>
                                 </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      ))}
+                                {/* Edit/Delete buttons - Hidden when subscription not active or topic is generated (Sent) */}
+                                {!featuresDisabled && !isGenerated && (
+                                  <div
+                                    className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8"
+                                      onClick={() => startEditing(topic)}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-red-500 hover:text-red-600"
+                                      onClick={() => openDeleteDialog(topic)}
+                                      disabled={deletingRowIndex === topic.rowIndex}
+                                    >
+                                      {deletingRowIndex === topic.rowIndex ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </TopicWrapper>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -1306,10 +1250,10 @@ function DashboardContent() {
                   )}
 
                   {/* Footer */}
-                  {topics.length > 0 && (
+                  {visibleTopics.length > 0 && (
                     <div className="flex items-center justify-between text-sm text-muted-foreground px-6 py-4">
                       <span>
-                        {topics.length} topic{topics.length !== 1 ? 's' : ''}
+                        {visibleTopics.length} topic{visibleTopics.length !== 1 ? 's' : ''}
                       </span>
                       <span className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />

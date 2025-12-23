@@ -6,10 +6,12 @@ const publicRoutes = [
   '/login',
   '/signup',
   '/pricing',
+  '/contact',
   '/auth/callback',
   '/admin/login',
   '/forgot-password',
   '/reset-password',
+  '/welcome',
 ];
 
 // Routes accessible without authentication (anonymous onboarding flow)
@@ -92,14 +94,26 @@ export async function middleware(request: NextRequest) {
 
   // Allow public routes for everyone
   if (publicRoutes.includes(pathname)) {
+    // Allow reset-password page for authenticated users (they need to be authenticated to reset)
+    // Don't redirect them away - they're in the middle of a password reset flow
+    if (pathname === '/reset-password') {
+      return supabaseResponse;
+    }
+
     // Redirect authenticated users away from login/signup
     if (user && (pathname === '/login' || pathname === '/signup')) {
-      // Check subscription status to determine where to redirect
+      // Check if user is a super admin - redirect to admin portal
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('subscription_status')
+        .select('subscription_status, is_super_admin')
         .eq('id', user.id)
         .single();
+
+      // Super admins should use the admin portal, not the user portal
+      if (profile?.is_super_admin) {
+        console.log('[Middleware] Super admin detected, redirecting to admin portal');
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
 
       // Active or trialing subscription grants access (treat trialing as active since no free trial)
       const hasActiveSubscription =
@@ -146,6 +160,24 @@ export async function middleware(request: NextRequest) {
   // Protect authenticated routes - redirect to login if not authenticated
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // Check if user is a super admin trying to access user portal routes
+  // Super admins should use the admin portal, not the user portal
+  const userPortalRoutes = ['/dashboard', '/articles', '/subscribe'];
+  const isUserPortalRoute = userPortalRoutes.some(route => pathname.startsWith(route));
+
+  if (isUserPortalRoute) {
+    const { data: adminCheck } = await supabase
+      .from('user_profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (adminCheck?.is_super_admin) {
+      console.log('[Middleware] Super admin trying to access user portal, redirecting to admin');
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
   }
 
   // For authenticated users, check subscription status and onboarding completion

@@ -195,12 +195,12 @@ CREATE POLICY "Users can view own articles" ON public.articles
 
 1. Create a Stripe account and get API keys from https://dashboard.stripe.com/test/apikeys
 2. Create two products in Stripe Dashboard:
-   - **Pro Plan**: $70/month (with 7-day trial)
+   - **Pro Plan**: $70/month
    - **Enterprise Plan**: $299/month
 3. Copy Price IDs to environment variables (`STRIPE_PRICE_PRO_ID`, `STRIPE_PRICE_ENTERPRISE_ID`)
 4. Set up webhook endpoint:
    - URL: `https://yourdomain.com/api/stripe/webhook`
-   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.trial_will_end`
+   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
 5. For local development, use Stripe CLI:
    ```bash
    stripe listen --forward-to localhost:3000/api/stripe/webhook

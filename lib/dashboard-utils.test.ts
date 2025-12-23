@@ -13,8 +13,6 @@ import {
 
 describe('dashboard-utils', () => {
   describe('Property 6: Status badge variant mapping', () => {
-    // **Feature: customer-dashboard, Property 6: Status badge variant mapping**
-    // **Validates: Requirements 3.3, 3.4, 3.5**
     it('should map "sent" to "default", "pending" to "secondary", and "draft" to "outline"', () => {
       const statusArbitrary = fc.constantFrom<ArticleStatus>('sent', 'pending', 'draft');
 

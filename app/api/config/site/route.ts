@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 // Default site configuration
 const DEFAULT_SITE_NAME = 'Drafter5000';
-const DEFAULT_LOGO_URL = '/logo/logo.png';
+const DEFAULT_LOGO_URL = '/logo/logo_new.png';
 
 export interface SiteConfig {
   siteName: string;

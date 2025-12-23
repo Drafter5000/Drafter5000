@@ -85,19 +85,36 @@ export default function LoginPage() {
 
     try {
       const supabase = getBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      router.push('/dashboard');
-      router.refresh();
+      // Check if user is a super admin - they should use the admin portal
+      if (authData.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('is_super_admin')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profile?.is_super_admin) {
+          // Sign out and redirect to admin login with error message
+          await supabase.auth.signOut();
+          setError('Admin users must use the Admin Portal to sign in.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Use window.location for a full page navigation to ensure
+      // the auth state is properly synced with the server
+      window.location.href = '/dashboard';
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to sign in';
       setError(message);
-    } finally {
       setLoading(false);
     }
   };
@@ -273,17 +290,17 @@ export default function LoginPage() {
             </form>
 
             {/* Social Login Separator */}
-            <div className="relative my-6">
+            {/* <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-white px-2 text-gray-500">or continue with</span>
               </div>
-            </div>
+            </div> */}
 
             {/* LinkedIn Login Button */}
-            <LinkedInLoginButton disabled={loading} />
+            {/* <LinkedInLoginButton disabled={loading} /> */}
 
             <div className="mt-6 text-center text-sm">
               <span className="text-gray-500">{"Don't have an account? "}</span>

@@ -7,6 +7,8 @@
  * Requirements: 1.3, 5.1, 5.2
  */
 
+import { formatDateForSheets } from '@/lib/utils/date-format';
+
 const DRAFT_SESSION_KEY = 'onboarding_draft_session';
 
 /**
@@ -40,7 +42,6 @@ export interface DraftSession {
   delivery_days: string[];
   current_step: 1 | 2 | 3;
   last_updated: string;
-  // User info fields (can be pre-filled from signup)
   name?: string;
   email?: string;
   job?: string;
@@ -190,12 +191,14 @@ export const DraftSessionService = {
    * @param subjects - Array of topic/subject strings
    */
   saveTopicEntries(subjects: string[]): void {
+    const formattedDate = formatDateForSheets(new Date());
+
     const topicEntries: TopicEntry[] = subjects.map(topic => ({
       topic,
       status: 'Needs Draft',
       subject: topic,
       article: '',
-      lastUpdate: new Date().toISOString(),
+      lastUpdate: formattedDate,
     }));
 
     this.save({

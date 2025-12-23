@@ -1,6 +1,16 @@
 import { google } from 'googleapis';
 
+// Re-export formatDateForSheets from shared utility for backward compatibility
+export { formatDateForSheets } from '@/lib/utils/date-format';
+
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
+
+/**
+ * Value input option for Google Sheets API
+ * USER_ENTERED: Values are parsed as if typed by a user (dates recognized, formulas executed)
+ * RAW: Values are stored as-is without parsing (may add apostrophe prefix to dates)
+ */
+export const SHEETS_VALUE_INPUT_OPTION = 'USER_ENTERED' as const;
 
 /**
  * Get Google Auth instance with proper credentials handling.
@@ -201,7 +211,7 @@ export async function appendToMainSheet(spreadsheetId: string, data: MainSheetRo
     const result = await sheets.spreadsheets.values.append({
       spreadsheetId,
       range,
-      valueInputOption: 'RAW',
+      valueInputOption: SHEETS_VALUE_INPUT_OPTION,
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
         values: [rowValues],
@@ -230,7 +240,7 @@ export async function appendToCustomersSheet(spreadsheetId: string, data: Custom
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: 'Customers!A:F',
-    valueInputOption: 'RAW',
+    valueInputOption: SHEETS_VALUE_INPUT_OPTION,
     requestBody: {
       values: [
         [data.question, data.status, data.subject, data.article, data.lastUpdate, data.client],
@@ -253,7 +263,7 @@ export async function appendOnboardingCustomer(
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: `${sheetRef}!A:F`,
-    valueInputOption: 'RAW',
+    valueInputOption: SHEETS_VALUE_INPUT_OPTION,
     requestBody: {
       values: [
         [
@@ -321,7 +331,7 @@ export async function createCustomerSheet(
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${escapedSheetName}!A1:H1`,
-        valueInputOption: 'RAW',
+        valueInputOption: SHEETS_VALUE_INPUT_OPTION,
         requestBody: {
           values: [headerRow],
         },

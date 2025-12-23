@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
       const styleData = {
         user_id: userId,
-        name: `${pendingData.display_name || 'User'}'s Style`,
+        name: 'Settings',
         style_samples: pendingData.style_samples || [],
         subjects: pendingData.subjects || [],
         email: userProfile?.email || '',

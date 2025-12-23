@@ -24,7 +24,7 @@ import {
   Loader2,
   LogOut,
   PenLine,
-  Shield,
+  ShieldCheck,
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -128,7 +128,7 @@ function SubscribeSkeleton() {
 }
 
 function formatPrice(priceCents: number): string {
-  return `${(priceCents / 100).toFixed(0)}`;
+  return `$${(priceCents / 100).toFixed(0)}`;
 }
 
 function getCtaText(plan: SubscriptionPlanWithFeatures): string {
@@ -278,14 +278,14 @@ function SubscribeContent() {
         </div>
 
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/50 text-sm font-medium border border-primary/20 mb-6">
               <Zap className="h-4 w-4 text-primary" />
-              <span>Choose Your Plan</span>
+              <span>Simple, Transparent Pricing</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Activate Your Writing Style</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Plans for every entrepreneur</h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Subscribe to unlock all features and start receiving your personalized articles
+              Choose the perfect plan for your content needs. Cancel anytime.
             </p>
           </div>
 
@@ -326,7 +326,7 @@ function SubscribeContent() {
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-6">
-                    <span className="text-5xl font-bold">${formatPrice(plan.price_cents)}</span>
+                    <span className="text-5xl font-bold">{formatPrice(plan.price_cents)}</span>
                     <span className="text-muted-foreground"> / month</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-3">
@@ -369,14 +369,14 @@ function SubscribeContent() {
             ))}
           </div>
 
-          <div className="mt-12 flex items-center justify-center gap-8">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Shield className="h-5 w-5" />
-              <span>Secure checkout</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-5 w-5" />
-              <span>Cancel anytime</span>
+          {/* Money-Back Guarantee */}
+          <div className="mt-12 max-w-md mx-auto">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+              <ShieldCheck className="h-6 w-6 text-green-600 shrink-0" />
+              <p className="text-sm text-green-800">
+                7-day guarantee. If you're not happy, we'll refund you completely. No questions
+                asked.
+              </p>
             </div>
           </div>
         </div>

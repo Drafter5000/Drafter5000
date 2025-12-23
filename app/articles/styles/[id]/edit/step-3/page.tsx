@@ -5,8 +5,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { EditStyleContext } from '../layout';
 import { useAuth } from '@/components/auth-provider';
-import { apiClient } from '@/lib/api-client';
-import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,7 +32,6 @@ import {
   Globe,
   User,
   Mail,
-  Briefcase,
   ArrowLeft,
   Loader2,
   AlertCircle,
@@ -63,7 +60,6 @@ export default function EditStep3Page() {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [job, setJob] = useState('');
   const [frequency, setFrequency] = useState<DayCode[]>([]);
   const [language, setLanguage] = useState('en');
   const [loading, setLoading] = useState(false);
@@ -71,46 +67,23 @@ export default function EditStep3Page() {
   const [success, setSuccess] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
-  // Initialize from style data and user profile
+  // Initialize from style data
   useEffect(() => {
-    const initializeData = async () => {
-      if (editContext?.style && !initialized) {
-        const style = editContext.style;
-        setName(style.name || '');
-        setEmail(style.email || '');
-        setFrequency((style.delivery_days || []) as DayCode[]);
-        setLanguage(style.preferred_language || 'en');
+    if (editContext?.style && !initialized) {
+      const style = editContext.style;
+      setName(style.name || '');
+      setEmail(style.email || user?.email || '');
+      setFrequency((style.delivery_days || []) as DayCode[]);
+      setLanguage(style.preferred_language || 'en');
 
-        if (style.display_name) {
-          const parts = style.display_name.trim().split(/\s+/);
-          setFirstName(parts[0] || '');
-          setLastName(parts.slice(1).join(' ') || '');
-        }
-
-        // Fetch user profile to get job
-        if (user) {
-          try {
-            const profile = await apiClient.get<UserProfile>(`/users/${user.id}/profile`);
-            setJob(profile.job || '');
-            // Also set email and name from profile if not in style
-            if (!style.email && profile.email) {
-              setEmail(profile.email);
-            }
-            if (!style.display_name && profile.display_name) {
-              const parts = profile.display_name.trim().split(/\s+/);
-              setFirstName(parts[0] || '');
-              setLastName(parts.slice(1).join(' ') || '');
-            }
-          } catch (err) {
-            console.error('Failed to fetch user profile:', err);
-          }
-        }
-
-        setInitialized(true);
+      if (style.display_name) {
+        const parts = style.display_name.trim().split(/\s+/);
+        setFirstName(parts[0] || '');
+        setLastName(parts.slice(1).join(' ') || '');
       }
-    };
 
-    initializeData();
+      setInitialized(true);
+    }
   }, [editContext?.style, initialized, user]);
 
   const handleToggleDay = (dayId: DayCode) => {
@@ -137,23 +110,29 @@ export default function EditStep3Page() {
     setSuccess(false);
 
     try {
-      // Update the style in context with all settings
-      editContext?.updateStyle({
+      // Prepare the updated style data
+      const updatedStyleData = {
         name: name.trim(),
         email,
         display_name: `${firstName} ${lastName}`.trim(),
         preferred_language: language,
         delivery_days: frequency,
-      });
+      };
 
-      // Save to API
-      await editContext?.saveStyle();
+      // Update local context state
+      editContext?.updateStyle(updatedStyleData);
+
+      // Save to API with the updated data directly (don't rely on async state update)
+      await editContext?.saveStyle(updatedStyleData);
 
       setSuccess(true);
       setTimeout(() => {
-        router.push(`/articles/styles/${styleId}`);
+        // Redirect to the return URL (dashboard or style details)
+        const returnTo = editContext?.returnTo || `/articles/styles/${styleId}`;
+        window.location.href = returnTo;
       }, 1500);
     } catch (err) {
+      console.error('Failed to save style:', err);
       setError('Failed to save changes');
     } finally {
       setLoading(false);
@@ -169,7 +148,9 @@ export default function EditStep3Page() {
       preferred_language: language,
       delivery_days: frequency,
     });
-    router.push(`/articles/styles/${styleId}/edit/step-2`);
+    const returnTo = editContext?.returnTo;
+    const backUrl = `/articles/styles/${styleId}/edit/step-2${returnTo && returnTo !== `/articles/styles/${styleId}` ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
+    router.push(backUrl);
   };
 
   if (editContext?.loading) {
@@ -294,7 +275,6 @@ export default function EditStep3Page() {
                 <Win95Input label="First Name" value={firstName} disabled={true} />
                 <Win95Input label="Last Name" value={lastName} disabled={true} />
               </div>
-              <Win95Input label="Job Title" value={job} disabled={true} />
             </div>
           </div>
 
@@ -399,17 +379,6 @@ export default function EditStep3Page() {
                 <Label>Last Name</Label>
                 <Input value={lastName} disabled={true} className="bg-muted" />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Briefcase className="h-3 w-3" /> Job Title
-              </Label>
-              <Input
-                value={job}
-                disabled={true}
-                placeholder="Your job title"
-                className="bg-muted"
-              />
             </div>
           </CardContent>
         </Card>

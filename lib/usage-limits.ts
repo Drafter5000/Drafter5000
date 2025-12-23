@@ -1,6 +1,8 @@
 import { getServerSupabaseClient } from './supabase-client';
 import { getSupabaseAdmin } from './supabase-admin';
 import { getArticlesLimitForPlan } from './plan-utils';
+import { getGoogleAuth } from './google-sheets';
+import { google } from 'googleapis';
 import type { UsageLimitResult, IncrementUsageResult } from './types';
 
 /**
@@ -53,7 +55,10 @@ export async function checkUsageLimit(userId: string): Promise<UsageLimitResult>
   }
 
   const used = subscription.articles_used || 0;
-  const limit = subscription.articles_limit || (await getArticlesLimitForPlan(plan));
+  // Always fetch the limit from the plan to ensure it's up-to-date
+  const planLimit = await getArticlesLimitForPlan(plan);
+  // Use the higher of subscription limit or plan limit (in case plan was updated)
+  const limit = Math.max(subscription.articles_limit || 0, planLimit);
 
   return {
     canGenerate: used < limit,
@@ -114,7 +119,10 @@ export async function checkUsageLimitAdmin(userId: string): Promise<UsageLimitRe
   }
 
   const used = subscription.articles_used || 0;
-  const limit = subscription.articles_limit || (await getArticlesLimitForPlanAdmin(plan));
+  // Always fetch the limit from the plan to ensure it's up-to-date
+  const planLimit = await getArticlesLimitForPlanAdmin(plan);
+  // Use the higher of subscription limit or plan limit (in case plan was updated)
+  const limit = Math.max(subscription.articles_limit || 0, planLimit);
 
   return {
     canGenerate: used < limit,
@@ -249,4 +257,86 @@ export async function setUsageLimit(userId: string, limit: number): Promise<bool
   }
 
   return true;
+}
+
+/**
+ * Sync usage from Google Sheets by counting "Sent" articles (case-insensitive).
+ * This ensures the database usage matches the actual sent articles in the sheet.
+ */
+export async function syncUsageFromSheets(userId: string): Promise<{
+  success: boolean;
+  articlesUsed: number;
+  error?: string;
+}> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    // Get user's article style to find their sheet name
+    const { data: style, error: styleError } = await supabase
+      .from('article_styles')
+      .select('display_name, name')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (styleError || !style) {
+      return { success: false, articlesUsed: 0, error: 'No active style found' };
+    }
+
+    const sheetName = style.display_name || style.name || userId;
+    const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
+
+    if (!spreadsheetId) {
+      return { success: false, articlesUsed: 0, error: 'Google Sheets not configured' };
+    }
+
+    const escapedSheetName =
+      sheetName.includes(' ') || sheetName.includes("'")
+        ? `'${sheetName.replace(/'/g, "''")}'`
+        : sheetName;
+
+    const auth = getGoogleAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Get all status values from column B (Status column)
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${escapedSheetName}!B:B`,
+    });
+
+    const rows = response.data.values || [];
+
+    // Count "Sent" articles (case-insensitive, skip header row)
+    const sentCount = rows.filter(
+      (row, index) => index > 0 && row[0] && row[0].toString().toLowerCase().trim() === 'sent'
+    ).length;
+
+    console.log(
+      `[UsageSync] User ${userId}: Found ${sentCount} sent articles in sheet "${sheetName}"`
+    );
+
+    // Update the database with the actual count
+    const { error: updateError } = await supabase
+      .from('subscriptions')
+      .update({
+        articles_used: sentCount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId);
+
+    if (updateError) {
+      console.error('[UsageSync] Failed to update usage:', updateError);
+      return { success: false, articlesUsed: sentCount, error: 'Failed to update database' };
+    }
+
+    console.log(`[UsageSync] Updated usage for user ${userId}: ${sentCount} articles`);
+    return { success: true, articlesUsed: sentCount };
+  } catch (error) {
+    console.error('[UsageSync] Error syncing usage from sheets:', error);
+    return {
+      success: false,
+      articlesUsed: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }

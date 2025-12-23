@@ -11,7 +11,7 @@ Each topic should be:
 - Different from the existing topics but in a similar professional domain
 - Formatted like: "Why [Problem/Observation]—And [Solution/Insight]"
 
-Return ONLY a JSON array of topic strings, nothing else.', 'AI system prompt for topic generation with dynamic variables: {{job_title}}, {{count}}, {{existing_topics}}, {{style_samples}}'),
+Return ONLY a JSON array of topic strings, nothing else.', 'AI system prompt for topic generation with dynamic variables: {{job_title}}, {{count}}, {{existing_topics}}, {{chosen_topics}}, {{generated_topics_history}}, {{style_samples}}'),
   ('ai_user_prompt', 'Here are the existing topic ideas:
 {{existing_topics}}
 

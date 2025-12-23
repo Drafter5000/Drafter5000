@@ -18,6 +18,7 @@ const navLinks = [
   { name: 'How it Works', href: '#how-it-works' },
   { name: 'Testimonials', href: '#customer-stories' },
   { name: 'Pricing', href: '/pricing' },
+  { name: 'Contact', href: '/contact' },
 ];
 
 interface MarketingHeaderProps {

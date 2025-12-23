@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
 
   // Handle password reset flow - redirect to reset-password page
   if (type === 'recovery' || next === '/reset-password') {
+    console.log('[Auth Callback] Password reset flow detected', { code: !!code, type, next });
+
     if (code) {
       const cookieStore = await cookies();
       const supabase = createServerClient(
@@ -33,10 +35,19 @@ export async function GET(request: NextRequest) {
         }
       );
 
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (!error) {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      console.log('[Auth Callback] Exchange result:', {
+        success: !error,
+        hasSession: !!data?.session,
+        error: error?.message,
+      });
+
+      if (!error && data?.session) {
         return NextResponse.redirect(`${origin}/reset-password`);
       }
+
+      // If code exchange failed, log the error and redirect with details
+      console.error('[Auth Callback] Code exchange failed:', error?.message);
     }
     return NextResponse.redirect(`${origin}/forgot-password?error=invalid_reset_link`);
   }

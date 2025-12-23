@@ -132,12 +132,12 @@ export default function AdminOrganizationsPage() {
           <h1 className="text-3xl font-bold">Organizations</h1>
           <p className="text-muted-foreground">Manage all organizations in the system</p>
         </div>
-        <Link href="/admin/organizations/new">
+        {/* <Link href="/admin/organizations/new">
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
             Add Organization
           </Button>
-        </Link>
+        </Link> */}
       </div>
 
       <OrgTable

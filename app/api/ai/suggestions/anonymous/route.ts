@@ -9,7 +9,16 @@ import { generateTopicSuggestions } from '@/lib/services/openai';
  */
 export async function POST(request: NextRequest) {
   try {
-    const { style_samples, existing_topics = [] } = await request.json();
+    const {
+      style_samples,
+      existing_topics = [],
+      chosen_topics,
+      generated_topics_history = [],
+    } = await request.json();
+
+    // Support both old (existing_topics) and new (chosen_topics + generated_topics_history) API
+    const chosenTopics = chosen_topics || existing_topics;
+    const generatedHistory = generated_topics_history;
 
     if (!style_samples || !Array.isArray(style_samples) || style_samples.length === 0) {
       return NextResponse.json(
@@ -31,7 +40,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate AI suggestions based on style samples
-    const suggestions = await generateTopicSuggestions(validSamples, existing_topics, 8);
+    const suggestions = await generateTopicSuggestions(
+      validSamples,
+      chosenTopics,
+      8,
+      undefined,
+      generatedHistory
+    );
 
     return NextResponse.json({ suggestions });
   } catch (error: unknown) {

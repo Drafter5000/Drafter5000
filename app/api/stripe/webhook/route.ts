@@ -48,6 +48,62 @@ export async function POST(request: NextRequest) {
         const planIdFromMetadata = session.metadata?.plan_id;
         const hasPendingStyle = session.metadata?.pending_style === 'true';
 
+        // Handle article top-up (one-time payment)
+        if (session.metadata?.type === 'article_topup' && session.mode === 'payment') {
+          const articlesCount = parseInt(session.metadata?.articles_count || '0', 10);
+          const topupUserId = session.metadata?.user_id;
+
+          if (topupUserId && articlesCount > 0) {
+            console.log(
+              `Processing article top-up: user=${topupUserId}, articles=${articlesCount}`
+            );
+
+            // Get current subscription and add articles to the limit
+            const { data: currentSub, error: subError } = await supabase
+              .from('subscriptions')
+              .select('articles_limit, articles_used')
+              .eq('user_id', topupUserId)
+              .single();
+
+            if (currentSub && !subError) {
+              const newLimit = (currentSub.articles_limit || 0) + articlesCount;
+
+              await supabase
+                .from('subscriptions')
+                .update({
+                  articles_limit: newLimit,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', topupUserId);
+
+              console.log(
+                `Article limit increased: user=${topupUserId}, old=${currentSub.articles_limit}, new=${newLimit}`
+              );
+
+              // Record the top-up payment
+              const amountTotal = session.amount_total || 0;
+              const currency = session.currency || 'usd';
+              const paymentIntentId = session.payment_intent;
+
+              if (paymentIntentId) {
+                await supabase.from('payments').insert({
+                  user_id: topupUserId,
+                  stripe_payment_intent_id: paymentIntentId as string,
+                  amount_cents: amountTotal,
+                  currency: currency,
+                  status: 'succeeded',
+                  description: `Article top-up: ${articlesCount} additional articles`,
+                  paid_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              }
+            } else {
+              console.error('Failed to find subscription for top-up:', subError);
+            }
+          }
+          break;
+        }
+
         if (!subscriptionId) break;
 
         // Retrieve the full subscription object from Stripe
@@ -231,7 +287,7 @@ export async function POST(request: NextRequest) {
                   .from('article_styles')
                   .insert({
                     user_id: profileId,
-                    name: `${displayName}'s Style`,
+                    name: 'Settings',
                     style_samples: styleSamples,
                     subjects: subjects,
                     email: userProfile?.email || '',

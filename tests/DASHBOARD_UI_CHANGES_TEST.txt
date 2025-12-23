@@ -1,0 +1,465 @@
+DASHBOARD UI CHANGES - MANUAL TESTING GUIDE
+============================================
+Date: December 17, 2025
+
+SUMMARY OF CHANGES
+------------------
+1. Your Topics box now shows only 3 filter categories: All, Topics in the pipeline, Generated
+2. Topics with "Needs to be sent" status are hidden from users (internal status)
+3. Status labels renamed for user-friendliness:
+   - "Needs Draft" → displays as "In pipeline" on badges
+   - "Sent" → displays as "Generated" on badges
+4. Style card title renamed from "[name]'s Style" to "Settings"
+5. Dashboard header: "Settings" link removed, only "Dashboard" and "Billing" remain
+
+TESTING STEPS
+-------------
+
+TEST 1: Dashboard Header Navigation
+-----------------------------------
+1. Log in to the application
+2. Navigate to /dashboard
+3. Verify header shows:
+   [✓] "Dashboard" link (always visible)
+   [✓] "Billing" link
+   [✓] "Sign Out" button
+   [✗] "Settings" link should NOT be visible in header
+4. Click "Billing" - should navigate to /dashboard/billing
+5. Click "Dashboard" - should stay on /dashboard
+
+TEST 2: Your Topics Box - Filter Categories
+-------------------------------------------
+1. On the dashboard, locate the "Your Topics" section
+2. Verify only 3 filter pills are visible:
+   [✓] "All" - shows count of all visible topics
+   [✓] "Topics in the pipeline" - shows count of topics with "Needs Draft" status
+   [✓] "Generated" - shows count of topics with "Sent" status
+3. Click each filter and verify topics are filtered correctly
+4. Verify "Needs to be sent" topics are NOT visible in any filter
+
+TEST 3: Topic Status Badge Labels
+---------------------------------
+1. View topics in the "Your Topics" section
+2. For topics with "Needs Draft" status:
+   [✓] Badge should display "In pipeline"
+3. For topics with "Sent" status:
+   [✓] Badge should display "Generated"
+4. Topics with "Needs to be sent" status should NOT appear at all
+
+TEST 4: Style Card Title
+------------------------
+1. On the dashboard, locate the style/settings card (left side)
+2. Verify the card title shows "Settings" instead of "[name]'s Style"
+3. Verify "Your Writing Style" subtitle is still visible
+4. Verify Edit button still works and navigates to style edit page
+
+TEST 5: Stats Grid
+------------------
+1. Verify the stats grid shows 2 cards:
+   [✓] "Generated" - count of articles with "Sent" status
+   [✓] "Topics in the pipeline" - count of topics with "Needs Draft" status
+2. Verify counts match the filter pill counts
+
+TEST 6: Sync Button Functionality
+---------------------------------
+1. Locate the "Sync" button in the "Your Topics" section header
+2. Click the button
+3. Verify:
+   [✓] Button shows loading state (spinning icon)
+   [✓] Topics are refreshed from the backend
+   [✓] Button returns to normal state after sync completes
+
+TEST 7: Win95 Design Mode (if applicable)
+-----------------------------------------
+1. Switch to Win95 design mode (if available)
+2. Verify:
+   [✓] Header shows "Dashboard" and "Billing" buttons (no "Settings")
+   [✓] Style card shows "Settings" as title
+   [✓] Topics count uses visible topics only
+
+EXPECTED RESULTS
+----------------
+- All filter categories work correctly
+- Internal status "Needs to be sent" is hidden from users
+- User-friendly labels are displayed instead of internal terms
+- Navigation is simplified with Settings removed from header
+- Style card is renamed to "Settings"
+
+NOTES
+-----
+- Settings page is still accessible via /dashboard/settings URL directly
+- The Sync button refreshes topics from Google Sheets
+- All changes apply to both Modern and Win95 design modes
+
+================================================================================
+
+ADMIN USER RESTRICTION - MANUAL TESTING GUIDE
+=============================================
+
+SUMMARY OF CHANGES
+------------------
+Super admin users are now restricted from accessing the user portal.
+They must use the Admin Portal (/admin) instead.
+
+TESTING STEPS
+-------------
+
+TEST 1: Super Admin Login via User Portal
+-----------------------------------------
+1. Go to /login (user login page)
+2. Enter super admin credentials (e.g., admin@drafter.com / Admin@123)
+3. Click "Sign In"
+4. Expected Result:
+   [✓] Login should fail with error message: "Admin users must use the Admin Portal to sign in."
+   [✓] User should remain on the login page
+   [✓] User should NOT be redirected to dashboard
+
+TEST 2: Super Admin Direct URL Access
+-------------------------------------
+1. Log in as super admin via /admin/login
+2. Try to manually navigate to /dashboard in the browser URL
+3. Expected Result:
+   [✓] Should be automatically redirected to /admin
+   [✓] Should NOT see the user dashboard
+
+TEST 3: Super Admin Access to Other User Routes
+-----------------------------------------------
+1. While logged in as super admin, try to access:
+   - /dashboard
+   - /dashboard/billing
+   - /dashboard/settings
+   - /articles
+   - /subscribe
+2. Expected Result:
+   [✓] All routes should redirect to /admin
+
+TEST 4: Regular User Login (Control Test)
+-----------------------------------------
+1. Go to /login
+2. Enter regular user credentials
+3. Click "Sign In"
+4. Expected Result:
+   [✓] Should successfully log in
+   [✓] Should be redirected to /dashboard (if has subscription)
+   [✓] Should be redirected to /subscribe (if no subscription)
+
+TEST 5: Admin Portal Access for Super Admin
+-------------------------------------------
+1. Go to /admin/login
+2. Enter super admin credentials
+3. Click "Sign In"
+4. Expected Result:
+   [✓] Should successfully log in
+   [✓] Should be redirected to /admin dashboard
+   [✓] Should have full admin access
+
+EXPECTED RESULTS
+----------------
+- Super admins cannot access user portal routes
+- Super admins are redirected to admin portal
+- Regular users can still access user portal normally
+- Clear error message when super admin tries to use user login
+
+================================================================================
+
+STYLE EDITING FLOW - MANUAL TESTING GUIDE
+=========================================
+
+SUMMARY OF CHANGES
+------------------
+1. Added "Save & Exit" button to each step of the style editing flow
+2. Users can now save changes without going through all 3 steps
+3. After editing, users are redirected back to where they clicked "Edit"
+   - If clicked from Dashboard → returns to Dashboard
+   - If clicked from View Details → returns to View Details page
+
+TESTING STEPS
+-------------
+
+TEST 1: Save & Exit from Step 1 (Writing Samples)
+-------------------------------------------------
+1. From the Dashboard, click "Edit" on the Settings card
+2. On Step 1 (Writing Samples), make a change to one of the samples
+3. Click "Save & Exit" button
+4. Expected Result:
+   [✓] Changes should be saved
+   [✓] User should be redirected back to Dashboard (not View Details)
+
+TEST 2: Save & Exit from Step 2 (Topics)
+----------------------------------------
+1. From the Dashboard, click "Edit" on the Settings card
+2. Navigate to Step 2 (Topics)
+3. Add or remove a topic
+4. Click "Save & Exit" button
+5. Expected Result:
+   [✓] Changes should be saved
+   [✓] User should be redirected back to Dashboard
+
+TEST 3: Save & Exit from Step 3 (Settings)
+------------------------------------------
+1. From the Dashboard, click "Edit" on the Settings card
+2. Navigate to Step 3 (Settings)
+3. Change the delivery days or language
+4. Click "Save Changes" button
+5. Expected Result:
+   [✓] Changes should be saved
+   [✓] User should be redirected back to Dashboard
+
+TEST 4: Edit from View Details Page
+-----------------------------------
+1. Go to /articles/styles/[id] (View Details page)
+2. Click "Edit" button
+3. Make any change on any step
+4. Click "Save & Exit" or complete all steps
+5. Expected Result:
+   [✓] User should be redirected back to View Details page (not Dashboard)
+
+TEST 5: Navigation Between Steps Preserves Return URL
+-----------------------------------------------------
+1. From Dashboard, click "Edit"
+2. Navigate through steps using "Next" and "Back" buttons
+3. Complete the flow or click "Save & Exit"
+4. Expected Result:
+   [✓] Return URL should be preserved throughout navigation
+   [✓] Final redirect should go to Dashboard
+
+TEST 6: Step Navigation Links
+-----------------------------
+1. From Dashboard, click "Edit"
+2. Click directly on step indicators (Step 1, Step 2, Step 3)
+3. Expected Result:
+   [✓] Should navigate to the clicked step
+   [✓] Return URL should be preserved
+
+EXPECTED RESULTS
+----------------
+- "Save & Exit" button available on all edit steps
+- Changes are saved immediately without requiring all steps
+- Users return to their origin page (Dashboard or View Details)
+- Step navigation preserves the return URL
+
+
+================================================================================
+
+PASSWORD RESET FLOW - MANUAL TESTING GUIDE
+==========================================
+
+SUMMARY OF CHANGES
+------------------
+1. Reset password page now properly handles Supabase recovery links
+2. Added session validation before showing the password reset form
+3. Shows loading state while verifying the reset link
+4. Shows error state with "Request New Reset Link" button if link is invalid/expired
+5. Middleware updated to allow authenticated users on /reset-password page
+
+TESTING STEPS
+-------------
+
+TEST 1: Request Password Reset
+------------------------------
+1. Go to /login
+2. Click "Forgot password?"
+3. Enter a valid email address
+4. Click "Send Reset Link"
+5. Expected Result:
+   [✓] Success message should appear
+   [✓] Email should be sent with reset link
+
+TEST 2: Click Reset Link from Email
+-----------------------------------
+1. Open the password reset email
+2. Click the reset link
+3. Expected Result:
+   [✓] Should show "Verifying reset link..." loading state briefly
+   [✓] Should then show the "Set New Password" form
+   [✓] Should NOT redirect to landing page or dashboard
+
+TEST 3: Set New Password
+------------------------
+1. After clicking reset link, on the reset password page
+2. Enter a new password that meets requirements:
+   - At least 8 characters
+   - One uppercase letter
+   - One lowercase letter
+   - One number
+   - One special character
+3. Confirm the password
+4. Click "Reset Password"
+5. Expected Result:
+   [✓] Password should be updated
+   [✓] Success message should appear
+   [✓] "Continue to Login" button should be shown
+
+TEST 4: Expired/Invalid Reset Link
+----------------------------------
+1. Use an old/expired reset link or manually navigate to /reset-password
+2. Expected Result:
+   [✓] Should show "Link Expired" error page
+   [✓] Should show "Request New Reset Link" button
+   [✓] Should show "Back to Login" link
+
+TEST 5: Password Requirements Validation
+----------------------------------------
+1. On the reset password page, start typing a password
+2. Expected Result:
+   [✓] Password requirements checklist should appear
+   [✓] Requirements should turn green as they are met
+   [✓] Submit button should be disabled until all requirements are met
+
+EXPECTED RESULTS
+----------------
+- Reset link from email opens the password reset form
+- Invalid/expired links show appropriate error message
+- Password requirements are clearly displayed
+- Successful reset redirects to login page
+
+
+================================================================================
+
+TOPICS API - SHEET CREATION FIX
+===============================
+
+SUMMARY OF CHANGES
+------------------
+Fixed the issue where adding a topic would fail if the user's Google Sheet 
+didn't exist yet. Now the API will:
+1. Attempt to add the topic to the existing sheet
+2. If the sheet doesn't exist, create a new sheet with headers
+3. Sync all existing subjects from article_styles to the new sheet
+4. Add the new topic
+
+TESTING STEPS
+-------------
+
+TEST 1: Add Topic When Sheet Exists
+-----------------------------------
+1. Log in as a user who already has a Google Sheet
+2. Go to Dashboard
+3. Add a new topic in the "Your Topics" section
+4. Expected Result:
+   [✓] Topic should be added successfully
+   [✓] Topic should appear in the list
+
+TEST 2: Add Topic When Sheet Doesn't Exist
+------------------------------------------
+1. Log in as a new user or a user whose sheet was deleted
+2. Go to Dashboard
+3. Add a new topic in the "Your Topics" section
+4. Expected Result:
+   [✓] Sheet should be created automatically
+   [✓] Headers should be added to the sheet
+   [✓] Existing subjects from article_styles should be synced
+   [✓] New topic should be added
+   [✓] No error should be shown to the user
+
+TEST 3: Verify Sheet Structure
+------------------------------
+1. After adding a topic (when sheet was created)
+2. Open Google Sheets and check the customer spreadsheet
+3. Expected Result:
+   [✓] New sheet tab should exist with user's display name
+   [✓] Header row should contain: Topic, Status, Subject, Article, Last Update, Client
+   [✓] All topics should be listed with "Needs Draft" status
+
+EXPECTED RESULTS
+----------------
+- No "Unable to parse range" errors
+- Sheet is created automatically when needed
+- Existing subjects are synced to the new sheet
+- User experience is seamless
+
+
+================================================================================
+
+WELCOME PAGE AFTER PAYMENT - MANUAL TESTING GUIDE
+=================================================
+
+SUMMARY OF CHANGES
+------------------
+After completing Stripe payment, users are now redirected to a static welcome 
+page instead of directly to the dashboard. This page:
+1. Shows a congratulations message
+2. Displays when their first article will be generated (next delivery day at 09:00 EST)
+3. Shows the email address where articles will be delivered
+4. Has a manual "Go to Dashboard" button (no auto-redirect)
+
+TESTING STEPS
+-------------
+
+TEST 1: New User Payment Flow
+-----------------------------
+1. Create a new account or use a test account without subscription
+2. Complete the onboarding flow (steps 1-3)
+3. Complete Stripe payment with test card (4242 4242 4242 4242)
+4. Expected Result:
+   [✓] Payment verification steps should complete
+   [✓] Should redirect to /welcome page (NOT /dashboard)
+   [✓] Should NOT auto-redirect to dashboard
+
+TEST 2: Welcome Page Content
+----------------------------
+1. After payment, on the /welcome page
+2. Verify the following elements are displayed:
+   [✓] Green checkmark success icon
+   [✓] "Congratulations! 🎉" heading
+   [✓] Personalized greeting with user's display name
+   [✓] "Your first article" card showing next delivery day
+   [✓] Time shown as "at 09:00 EST"
+   [✓] "Delivered to" card showing user's email address
+   [✓] "Your AI is ready" message
+   [✓] "Go to Dashboard" button
+
+TEST 3: Next Delivery Day Calculation
+-------------------------------------
+1. On the welcome page, check the "Your first article" section
+2. Expected Result:
+   [✓] Shows the correct next delivery day based on user's settings
+   [✓] If today is a delivery day and before 9 AM, shows "Today"
+   [✓] If tomorrow is a delivery day, shows "Tomorrow"
+   [✓] Otherwise shows the day name (e.g., "Monday")
+
+TEST 4: Manual Dashboard Navigation
+-----------------------------------
+1. On the welcome page
+2. Click "Go to Dashboard" button
+3. Expected Result:
+   [✓] Should navigate to /dashboard
+   [✓] Dashboard should load correctly
+   [✓] User should see their settings and topics
+
+TEST 5: Direct Welcome Page Access
+----------------------------------
+1. Log in as a user with active subscription
+2. Navigate directly to /welcome in the browser
+3. Expected Result:
+   [✓] Page should load and show user's information
+   [✓] Should display correct delivery day and email
+
+TEST 6: Welcome Page Without Auth
+---------------------------------
+1. Log out of the application
+2. Navigate directly to /welcome
+3. Expected Result:
+   [✓] Page should load (it's a public route)
+   [✓] Should show default/fallback content if no user data
+
+TEST 7: Loading State
+---------------------
+1. On slow connection or during data fetch
+2. Expected Result:
+   [✓] Should show skeleton loading state
+   [✓] Should not flash or show errors
+
+EXPECTED RESULTS
+----------------
+- Payment flow redirects to /welcome instead of /dashboard
+- Welcome page is static (no auto-redirect countdown)
+- User sees clear next steps and delivery information
+- Manual "Go to Dashboard" button works correctly
+- Page handles both authenticated and unauthenticated states
+
+NOTES
+-----
+- The welcome page fetches user data from article_styles to get delivery_days
+- Delivery time is always 09:00 EST
+- The page uses the same Header component as other pages

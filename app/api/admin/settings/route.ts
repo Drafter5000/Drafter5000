@@ -16,7 +16,7 @@ interface AppSettings {
 
 const defaultSettings: AppSettings = {
   siteName: 'Drafter5000',
-  logoUrl: '/logo/logo.png',
+  logoUrl: '/logo/logo_new.png',
   supportEmail: '',
   maintenanceMode: false,
   allowRegistration: true,

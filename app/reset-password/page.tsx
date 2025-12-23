@@ -1,14 +1,12 @@
 'use client';
 
-import type React from 'react';
-import { useState, useEffect } from 'react';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { checkPasswordRequirements, validatePassword } from '@/lib/password-validation';
 import { getBrowserSupabaseClient } from '@/lib/supabase-browser';
-import { validatePassword, checkPasswordRequirements } from '@/lib/password-validation';
 import {
   AlertCircle,
   ArrowRight,
@@ -21,6 +19,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -31,11 +31,55 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
+  const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
   const requirements = checkPasswordRequirements(password);
 
   useEffect(() => {
     setMounted(true);
+
+    // Check if user has a valid session for password reset
+    const checkSession = async () => {
+      const supabase = getBrowserSupabaseClient();
+
+      // Handle hash fragment from Supabase (for recovery links)
+      // Supabase sends recovery links with hash fragments like #access_token=...&type=recovery
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+
+        if (type === 'recovery' && accessToken) {
+          // Set the session from the hash fragment
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+
+          if (!error) {
+            // Clear the hash from URL for cleaner display
+            window.history.replaceState(null, '', window.location.pathname);
+            setIsValidSession(true);
+            return;
+          }
+        }
+      }
+
+      // Check if there's an existing valid session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        setIsValidSession(true);
+      } else {
+        setIsValidSession(false);
+        setError('Invalid or expired reset link. Please request a new password reset.');
+      }
+    };
+
+    checkSession();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +112,60 @@ export default function ResetPasswordPage() {
       setLoading(false);
     }
   };
+
+  // Show loading state while checking session
+  if (isValidSession === null) {
+    return (
+      <div className="min-h-screen bg-white overflow-hidden relative">
+        <Header />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <main className="pt-32 pb-20 px-6 relative z-10">
+          <div className="flex flex-col items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+            <p className="text-gray-500">Verifying reset link...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Show error state if session is invalid
+  if (isValidSession === false) {
+    return (
+      <div className="min-h-screen bg-white overflow-hidden relative">
+        <Header />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <main className="pt-32 pb-20 px-6 relative z-10">
+          <Card className="max-w-md mx-auto border border-gray-200 shadow-2xl shadow-gray-200/50 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center pb-2 pt-8">
+              <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-gradient-to-br from-destructive to-destructive/80 mb-4 mx-auto shadow-xl shadow-destructive/30">
+                <AlertCircle className="h-10 w-10 text-white" />
+              </div>
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                Link Expired
+              </CardTitle>
+              <CardDescription className="text-base text-gray-500">
+                This password reset link is invalid or has expired
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-8 pb-8">
+              <Link href="/forgot-password">
+                <Button className="w-full h-12 text-base shadow-lg shadow-primary/25 gap-2 group transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5">
+                  Request New Reset Link
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+              <div className="mt-4 text-center">
+                <Link href="/login" className="text-sm text-primary font-medium hover:underline">
+                  Back to Login
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   if (success) {
     return (

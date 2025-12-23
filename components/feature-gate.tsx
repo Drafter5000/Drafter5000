@@ -1,7 +1,6 @@
 /**
  * Feature Gate Component
  * Wraps features and conditionally disables them based on subscription status
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 
 'use client';
@@ -19,7 +18,6 @@ export interface FeatureGateProps {
   fallback?: React.ReactNode;
   showTooltip?: boolean;
   tooltipMessage?: string;
-  /** If true, clicking on disabled content will show renewal modal */
   showModalOnClick?: boolean;
 }
 

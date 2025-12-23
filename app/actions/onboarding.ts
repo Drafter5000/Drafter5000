@@ -1,6 +1,10 @@
 'use server';
 
-import { appendOnboardingCustomer, createCustomerSheet } from '@/lib/google-sheets';
+import {
+  appendOnboardingCustomer,
+  createCustomerSheet,
+  formatDateForSheets,
+} from '@/lib/google-sheets';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
 import type { OnboardingData } from '@/lib/types';
 
@@ -73,7 +77,7 @@ export async function completeOnboarding(userId: string, onboardingData: Partial
           {
             email: onboardingData.email || '',
             display_name: onboardingData.display_name || '',
-            created_at: new Date().toISOString(),
+            created_at: formatDateForSheets(new Date()),
             preferred_language: onboardingData.preferred_language || 'English',
             delivery_days: (onboardingData.delivery_days || []).join(','),
             status: 'active',

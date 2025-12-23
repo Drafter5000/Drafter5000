@@ -1,16 +1,15 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useContext } from 'react';
+import { useAuth } from '@/components/auth-provider';
+import { DesignContext } from '@/components/design-provider';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/components/auth-provider';
-import { useSiteConfigContext } from '@/components/site-config-provider';
-import { DesignContext } from '@/components/design-provider';
-import { Sparkles, Monitor } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useContext, useEffect, useState } from 'react';
 
 export function Header() {
   const { user, loading } = useAuth();
