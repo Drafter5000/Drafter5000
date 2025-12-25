@@ -85,14 +85,23 @@ export async function generateTopicSuggestions(
   const systemPrompt = substituteVariables(promptConfig.systemPrompt, variables);
   const userPrompt = substituteVariables(promptConfig.userPrompt, variables);
 
+  // Always append JSON format instruction to ensure proper response format
+  // This is required regardless of admin prompt configuration
+  const jsonInstruction = `\n\nIMPORTANT: You MUST generate exactly ${count} topic suggestions as a JSON array. The job title is "${jobTitle}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`;
+  const finalUserPrompt = userPrompt + jsonInstruction;
+
+  // Ensure system prompt has core instructions for topic generation
+  const systemSuffix = `\n\nCore requirement: Always generate ${count} unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "${jobTitle}". Output must be a valid JSON array of strings.`;
+  const finalSystemPrompt = systemPrompt + systemSuffix;
+
   const messages: OpenAIMessage[] = [
     {
       role: 'system',
-      content: systemPrompt,
+      content: finalSystemPrompt,
     },
     {
       role: 'user',
-      content: userPrompt,
+      content: finalUserPrompt,
     },
   ];
 
@@ -106,7 +115,7 @@ export async function generateTopicSuggestions(
       model: 'gpt-4o-mini',
       messages,
       temperature: 0.8,
-      max_tokens: 500,
+      max_tokens: 2000,
     }),
   });
 

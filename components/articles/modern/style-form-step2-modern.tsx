@@ -118,7 +118,7 @@ export function StyleFormStep2Modern({
       )}
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export function StyleFormStep2Modern({
             </div>
             <CardDescription>Type a topic and press Enter or click &apos;+&apos;</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-1 flex flex-col">
             {/* Topic example */}
             <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm">
               <p className="text-muted-foreground mb-1">Example format:</p>
@@ -157,9 +157,9 @@ export function StyleFormStep2Modern({
               </Button>
             </div>
 
-            <div className="min-h-[240px] max-h-[280px] overflow-y-auto space-y-2">
+            <div className="min-h-[200px] max-h-[240px] overflow-y-auto space-y-2 flex-1">
               {subjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
                   <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
                     <Lightbulb className="h-6 w-6 text-muted-foreground" />
                   </div>
@@ -193,7 +193,7 @@ export function StyleFormStep2Modern({
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20">
+        <Card className="border-primary/20 flex flex-col">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -231,7 +231,7 @@ export function StyleFormStep2Modern({
                 : 'Get AI-powered topic ideas based on your writing style'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex flex-col">
             {aiError && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -239,7 +239,7 @@ export function StyleFormStep2Modern({
               </Alert>
             )}
             {!aiActive ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="flex flex-col items-center justify-center flex-1 min-h-[280px] text-center">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
@@ -253,14 +253,14 @@ export function StyleFormStep2Modern({
                 )}
               </div>
             ) : (
-              <div className="space-y-2 max-h-[280px] overflow-y-auto">
+              <div className="space-y-2 min-h-[280px] max-h-[350px] overflow-y-auto flex-1">
                 {aiLoading ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="flex flex-col items-center justify-center h-full min-h-[280px] text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
                     <p className="text-sm text-muted-foreground">Generating new ideas...</p>
                   </div>
                 ) : aiSuggestions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="flex flex-col items-center justify-center h-full min-h-[280px] text-center">
                     <Sparkles className="h-6 w-6 text-primary mb-3" />
                     <p className="text-sm font-medium text-primary">All suggestions added!</p>
                     <Button

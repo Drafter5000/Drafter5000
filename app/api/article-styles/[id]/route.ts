@@ -82,7 +82,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     console.log('Updated style subjects count:', style.subjects?.length);
     console.log('Updated style samples count:', style.style_samples?.length);
 
-    // Sync to Google Sheets (non-blocking)
+    // Sync to Google Sheets (blocking - wait for completion before returning)
+    // This ensures the dashboard shows updated data immediately after redirect
     console.log('Triggering Google Sheets sync for style:', style.id);
     console.log('Style data for sync:', {
       email: style.email,
@@ -93,17 +94,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       samples_count: style.style_samples?.length,
     });
 
-    updateStyleInSheets(style)
-      .then(result => {
-        if (result.success) {
-          console.log('Google Sheets sync completed successfully for style:', style.id);
-        } else {
-          console.error('Google Sheets sync failed:', result.error);
-        }
-      })
-      .catch(err => {
-        console.error('Failed to sync update to sheets:', err);
-      });
+    try {
+      const syncResult = await updateStyleInSheets(style);
+      if (syncResult.success) {
+        console.log('Google Sheets sync completed successfully for style:', style.id);
+      } else {
+        console.error('Google Sheets sync failed:', syncResult.error);
+      }
+    } catch (err) {
+      console.error('Failed to sync update to sheets:', err);
+      // Don't fail the request if sheets sync fails - data is saved in DB
+    }
 
     return NextResponse.json(style);
   } catch (error: unknown) {

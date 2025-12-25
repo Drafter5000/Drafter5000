@@ -113,6 +113,7 @@ export default function EditStep2Page() {
         chosen_topics: subjects,
         generated_topics_history: generatedTopicsHistory,
         style_samples: editContext.style.style_samples,
+        job: editContext.job,
       });
 
       const newSuggestions = response.suggestions || [];
