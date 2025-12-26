@@ -147,7 +147,7 @@ export function UserTable({
                             View Details
                           </DropdownMenuItem>
                         </Link>
-                        <DropdownMenuItem
+                        {/* <DropdownMenuItem
                           onClick={() => onRoleChange?.(user.id, UserRoleType.CUSTOMER_ADMIN)}
                         >
                           <UserCog className="mr-2 h-4 w-4" />
@@ -159,7 +159,7 @@ export function UserTable({
                         >
                           <Ban className="mr-2 h-4 w-4" />
                           {user.is_active ? 'Deactivate' : 'Reactivate'}
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

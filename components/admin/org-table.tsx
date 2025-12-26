@@ -18,15 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { AdminOrgView, PaginatedResult } from '@/lib/types';
-import {
-  Ban,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  MoreHorizontal,
-  Search,
-  Settings,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, MoreHorizontal, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { OrgTableSkeleton } from './table-skeleton';

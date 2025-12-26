@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Settings, Shield, Database, CreditCard, Image } from 'lucide-react';
+import { Loader2, Save, Settings, CreditCard, Image, Phone } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PasswordResetForm } from '@/components/admin/password-reset-form';
+import { ContactSettingsForm } from '@/components/admin/contact-settings-form';
 
 interface AppSettings {
   siteName: string;
@@ -85,226 +87,167 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage application settings and configurations</p>
-        </div>
-        <Button onClick={handleSave} disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save Changes
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-muted-foreground">Manage application settings and configurations</p>
       </div>
 
-      {message && (
-        <div
-          className={`p-4 rounded-lg border ${
-            message.type === 'success'
-              ? 'bg-green-500/10 border-green-500/30 text-green-600'
-              : 'bg-destructive/10 border-destructive/30 text-destructive'
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general" className="gap-2">
+            <Settings className="h-4 w-4" />
+            General
+          </TabsTrigger>
+          <TabsTrigger value="contact" className="gap-2">
+            <Phone className="h-4 w-4" />
+            Contact Page
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-6">
-        {/* General Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-primary" />
-              General Settings
-            </CardTitle>
-            <CardDescription>Basic application configuration</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="siteName">Site Name</Label>
-              <Input
-                id="siteName"
-                value={settings.siteName}
-                onChange={e => setSettings({ ...settings, siteName: e.target.value })}
-                placeholder="My Application"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="supportEmail">Support Email</Label>
-              <Input
-                id="supportEmail"
-                type="email"
-                value={settings.supportEmail}
-                onChange={e => setSettings({ ...settings, supportEmail: e.target.value })}
-                placeholder="support@example.com"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="general" className="space-y-6">
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save Changes
+            </Button>
+          </div>
 
-        {/* Branding Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Image className="h-5 w-5 text-primary" />
-              Branding
-            </CardTitle>
-            <CardDescription>Customize your application branding</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="logoUrl">Logo URL</Label>
-              <Input
-                id="logoUrl"
-                value={settings.logoUrl}
-                onChange={e => setSettings({ ...settings, logoUrl: e.target.value })}
-                placeholder="/logo/logo_new.png"
-              />
-              <p className="text-xs text-muted-foreground">
-                Path to your logo image (e.g., /logo/logo_new.png or a full URL)
-              </p>
+          {message && (
+            <div
+              className={`p-4 rounded-lg border ${
+                message.type === 'success'
+                  ? 'bg-green-500/10 border-green-500/30 text-green-600'
+                  : 'bg-destructive/10 border-destructive/30 text-destructive'
+              }`}
+            >
+              {message.text}
             </div>
-            {settings.logoUrl && (
-              <div className="p-4 rounded-lg border bg-muted/50">
-                <p className="text-xs text-muted-foreground mb-2">Preview:</p>
-                <img
-                  src={settings.logoUrl}
-                  alt="Logo preview"
-                  className="h-12 object-contain"
-                  onError={e => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
 
-        {/* Security Settings */}
-        {/* <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Security Settings
-            </CardTitle>
-            <CardDescription>Authentication and access controls</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Allow Registration</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow new users to register accounts
-                </p>
-              </div>
-              <Switch
-                checked={settings.allowRegistration}
-                onCheckedChange={checked =>
-                  setSettings({ ...settings, allowRegistration: checked })
-                }
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Require Email Verification</Label>
-                <p className="text-sm text-muted-foreground">
-                  Users must verify email before accessing the app
-                </p>
-              </div>
-              <Switch
-                checked={settings.requireEmailVerification}
-                onCheckedChange={checked =>
-                  setSettings({ ...settings, requireEmailVerification: checked })
-                }
-              />
-            </div>
-          </CardContent>
-        </Card> */}
+          <div className="grid gap-6">
+            {/* General Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-primary" />
+                  General Settings
+                </CardTitle>
+                <CardDescription>Basic application configuration</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="siteName">Site Name</Label>
+                  <Input
+                    id="siteName"
+                    value={settings.siteName}
+                    onChange={e => setSettings({ ...settings, siteName: e.target.value })}
+                    placeholder="My Application"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="supportEmail">Support Email</Label>
+                  <Input
+                    id="supportEmail"
+                    type="email"
+                    value={settings.supportEmail}
+                    onChange={e => setSettings({ ...settings, supportEmail: e.target.value })}
+                    placeholder="support@example.com"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* System Settings */}
-        {/* <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5 text-primary" />
-              System Settings
-            </CardTitle>
-            <CardDescription>System-wide configurations</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Maintenance Mode</Label>
-                <p className="text-sm text-muted-foreground">
-                  Temporarily disable access for non-admin users
-                </p>
-              </div>
-              <Switch
-                checked={settings.maintenanceMode}
-                onCheckedChange={checked => setSettings({ ...settings, maintenanceMode: checked })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="maxUsers">Max Users Per Organization</Label>
-              <Input
-                id="maxUsers"
-                type="number"
-                min={1}
-                value={settings.maxUsersPerOrg}
-                onChange={e =>
-                  setSettings({ ...settings, maxUsersPerOrg: parseInt(e.target.value) || 1 })
-                }
-                className="w-32"
-              />
-            </div>
-          </CardContent>
-        </Card> */}
+            {/* Branding Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5 text-primary" />
+                  Branding
+                </CardTitle>
+                <CardDescription>Customize your application branding</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="logoUrl">Logo URL</Label>
+                  <Input
+                    id="logoUrl"
+                    value={settings.logoUrl}
+                    onChange={e => setSettings({ ...settings, logoUrl: e.target.value })}
+                    placeholder="/logo/logo_new.png"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Path to your logo image (e.g., /logo/logo_new.png or a full URL)
+                  </p>
+                </div>
+                {settings.logoUrl && (
+                  <div className="p-4 rounded-lg border bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                    <img
+                      src={settings.logoUrl}
+                      alt="Logo preview"
+                      className="h-12 object-contain"
+                      onError={e => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Subscription Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
-              Subscription Settings
-            </CardTitle>
-            <CardDescription>Configure trial and subscription options</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Free Trial</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow new subscribers to start with a free trial period
-                </p>
-              </div>
-              <Switch
-                checked={settings.trialEnabled}
-                onCheckedChange={checked => setSettings({ ...settings, trialEnabled: checked })}
-              />
-            </div>
-            {settings.trialEnabled && (
-              <div className="grid gap-2">
-                <Label htmlFor="trialDays">Trial Period (Days)</Label>
-                <Input
-                  id="trialDays"
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={settings.trialDays}
-                  onChange={e =>
-                    setSettings({ ...settings, trialDays: parseInt(e.target.value) || 7 })
-                  }
-                  className="w-32"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Number of days for the free trial (1-30 days)
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            {/* Subscription Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Subscription Settings
+                </CardTitle>
+                <CardDescription>Configure trial and subscription options</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Free Trial</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Allow new subscribers to start with a free trial period
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.trialEnabled}
+                    onCheckedChange={checked => setSettings({ ...settings, trialEnabled: checked })}
+                  />
+                </div>
+                {settings.trialEnabled && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="trialDays">Trial Period (Days)</Label>
+                    <Input
+                      id="trialDays"
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={settings.trialDays}
+                      onChange={e =>
+                        setSettings({ ...settings, trialDays: parseInt(e.target.value) || 7 })
+                      }
+                      className="w-32"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Number of days for the free trial (1-30 days)
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Password Reset */}
-        <PasswordResetForm />
-      </div>
+            {/* Password Reset */}
+            <PasswordResetForm />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="contact">
+          <ContactSettingsForm />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

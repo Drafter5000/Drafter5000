@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { ContactForm } from '@/components/contact';
 import { MarketingHeader } from '@/components/marketing-header';
 import { Footer } from '@/components/landing/footer';
-import { Mail, MapPin, Clock } from 'lucide-react';
+import { ContactInfo } from '@/components/contact-info';
 
 export const metadata: Metadata = {
   title: 'Contact Us',
@@ -40,50 +40,7 @@ export default function ContactPage() {
                 </p>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Mail className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1">Email</h3>
-                    <a
-                      href="mailto:support@example.com"
-                      className="text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      support@example.com
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1">Location</h3>
-                    <p className="text-muted-foreground">
-                      123 Business Street
-                      <br />
-                      San Francisco, CA 94102
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1">Business Hours</h3>
-                    <p className="text-muted-foreground">
-                      Monday - Friday
-                      <br />
-                      9:00 AM - 6:00 PM PST
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <ContactInfo />
 
               {/* FAQ Link */}
               <div className="pt-6 border-t">
