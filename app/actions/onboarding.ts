@@ -1,7 +1,11 @@
 'use server';
 
+import {
+  appendOnboardingCustomer,
+  createCustomerSheet,
+  formatDateForSheets,
+} from '@/lib/google-sheets';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
-import { appendCustomerToSheet, createCustomerSheet } from '@/lib/google-sheets';
 import type { OnboardingData } from '@/lib/types';
 
 export async function saveOnboardingStep1(userId: string, styleSamples: string[]) {
@@ -67,14 +71,18 @@ export async function completeOnboarding(userId: string, onboardingData: Partial
 
     if (process.env.GOOGLE_SHEETS_CONFIG_SPREADSHEET_ID) {
       try {
-        await appendCustomerToSheet(process.env.GOOGLE_SHEETS_CONFIG_SPREADSHEET_ID, 'Customers', {
-          email: onboardingData.email || '',
-          display_name: onboardingData.display_name || '',
-          created_at: new Date().toISOString(),
-          preferred_language: onboardingData.preferred_language || 'English',
-          delivery_days: (onboardingData.delivery_days || []).join(','),
-          status: 'active',
-        });
+        await appendOnboardingCustomer(
+          process.env.GOOGLE_SHEETS_CONFIG_SPREADSHEET_ID,
+          'Customers',
+          {
+            email: onboardingData.email || '',
+            display_name: onboardingData.display_name || '',
+            created_at: formatDateForSheets(new Date()),
+            preferred_language: onboardingData.preferred_language || 'English',
+            delivery_days: (onboardingData.delivery_days || []).join(','),
+            status: 'active',
+          }
+        );
 
         // Create subject sheet for customer
         const sheetName = `${userId}-subjects`;
@@ -95,14 +103,9 @@ export async function completeOnboarding(userId: string, onboardingData: Partial
       }
     }
 
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'active',
-      })
-      .eq('id', userId);
-
-    if (profileError) throw profileError;
+    // Note: subscription_status is now managed by Stripe webhooks
+    // We don't update it here anymore - it should already be 'active' or 'trialing'
+    // from the Stripe checkout completion
 
     return { success: true };
   } catch (error) {

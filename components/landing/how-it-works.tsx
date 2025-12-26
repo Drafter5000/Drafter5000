@@ -31,7 +31,7 @@ const steps = [
     number: '03',
     title: 'Set Schedule',
     description:
-      'Pick the days and frequency for article delivery. Daily, weekly, or custom schedules available.',
+      'Pick the days and frequency for article delivery. Customize your content calendar to match your publishing needs.',
     highlight: 'Flexible delivery',
     color: 'bg-amber-500',
     lightColor: 'bg-amber-500/10',
@@ -52,7 +52,10 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section className="py-24 px-6 bg-gradient-to-b from-background to-secondary/20 relative overflow-hidden">
+    <section
+      id="how-it-works"
+      className="py-24 px-6 bg-gradient-to-b from-background to-secondary/20 relative overflow-hidden"
+    >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
@@ -77,7 +80,7 @@ export function HowItWorksSection() {
             {/* Connection Line */}
             <div className="absolute top-16 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-violet-500/30 via-amber-500/30 to-emerald-500/30" />
 
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-4 gap-6 items-stretch">
               {steps.map((step, index) => (
                 <motion.div
                   key={index}
@@ -85,7 +88,7 @@ export function HowItWorksSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="relative"
+                  className="relative flex flex-col"
                 >
                   {/* Step Circle */}
                   <div className="flex justify-center mb-8">
@@ -101,16 +104,16 @@ export function HowItWorksSection() {
                   </div>
 
                   {/* Content */}
-                  <div className="text-center">
+                  <div className="text-center h-full flex flex-col items-center">
                     <span className={`inline-block text-xs font-bold ${step.textColor} mb-2`}>
                       STEP {step.number}
                     </span>
                     <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed flex-1">
                       {step.description}
                     </p>
                     <span
-                      className={`inline-block text-xs font-medium ${step.textColor} ${step.lightColor} px-3 py-1 rounded-full`}
+                      className={`text-xs font-medium ${step.textColor} ${step.lightColor} px-3 py-1 rounded-full`}
                     >
                       {step.highlight}
                     </span>
@@ -194,10 +197,10 @@ export function HowItWorksSection() {
             Ready to get started? It only takes 5 minutes.
           </p>
           <a
-            href="/signup"
+            href="/articles/generate/step-1"
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors"
           >
-            Start Free Trial
+            Get Started
             <ArrowRight className="h-4 w-4" />
           </a>
         </motion.div>

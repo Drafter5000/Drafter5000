@@ -1,0 +1,302 @@
+import { getServerSupabaseUser, getServerSupabaseClient } from '@/lib/supabase-client';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getGoogleAuth, formatDateForSheets, SHEETS_VALUE_INPUT_OPTION } from '@/lib/google-sheets';
+import { google } from 'googleapis';
+import { type NextRequest, NextResponse } from 'next/server';
+import { checkSubscriptionAccess } from '@/lib/subscription-utils';
+import { checkUsageLimit } from '@/lib/usage-limits';
+
+export interface Topic {
+  rowIndex: number;
+  topic: string;
+  status: string;
+  subject: string;
+  article: string;
+  lastUpdate: string;
+  client: string;
+}
+
+/**
+ * GET /api/topics
+ * Fetch topics from the user's Google Sheet
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getServerSupabaseUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Get user's article style to find their sheet name
+    const { data: style, error: styleError } = await supabaseAdmin
+      .from('article_styles')
+      .select('display_name, name, user_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (styleError || !style) {
+      return NextResponse.json({ topics: [], message: 'No active style found' });
+    }
+
+    const sheetName = style.display_name || style.name || user.id;
+    // Use Customers spreadsheet for customer sheets (tabs)
+    const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
+
+    if (!spreadsheetId) {
+      return NextResponse.json({ error: 'Google Sheets not configured' }, { status: 500 });
+    }
+
+    // Escape sheet name for use in ranges
+    const escapedSheetName =
+      sheetName.includes(' ') || sheetName.includes("'")
+        ? `'${sheetName.replace(/'/g, "''")}'`
+        : sheetName;
+
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Fetch all data from the customer sheet (tab) in Customers spreadsheet
+    try {
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${escapedSheetName}!A2:F`,
+      });
+
+      const rows = response.data.values || [];
+      const topics: Topic[] = rows.map((row, index) => ({
+        rowIndex: index + 2, // +2 because we start from row 2 (1-indexed, skip header)
+        topic: row[0] || '',
+        status: row[1] || 'Needs Draft',
+        subject: row[2] || '',
+        article: row[3] || '',
+        lastUpdate: row[4] || '',
+        client: row[5] || '',
+      }));
+
+      return NextResponse.json({ topics, sheetName });
+    } catch (sheetsError: unknown) {
+      // If sheet doesn't exist, return empty topics array instead of error
+      const errorMessage = sheetsError instanceof Error ? sheetsError.message : '';
+      if (errorMessage.includes('Unable to parse range') || errorMessage.includes('not found')) {
+        console.log(
+          `Sheet "${sheetName}" not found in Customers spreadsheet, returning empty topics`
+        );
+        return NextResponse.json({ topics: [], sheetName, message: 'Sheet not yet created' });
+      }
+      throw sheetsError;
+    }
+  } catch (error: unknown) {
+    console.error('Failed to fetch topics:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch topics';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/topics
+ * Add a new topic to the user's Google Sheet
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getServerSupabaseUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check subscription status before allowing topic creation
+    const supabase = await getServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single();
+
+    const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+    if (!subscriptionCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Subscription required',
+          message: subscriptionCheck.message,
+          subscription_status: subscriptionCheck.status,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check usage limits before allowing topic creation
+    const usageCheck = await checkUsageLimit(user.id);
+    if (!usageCheck.canGenerate) {
+      return NextResponse.json(
+        {
+          error: 'Usage limit reached',
+          message: `You've reached your monthly limit of ${usageCheck.articlesLimit} articles. Please upgrade your plan to add more topics.`,
+          articles_used: usageCheck.articlesUsed,
+          articles_limit: usageCheck.articlesLimit,
+        },
+        { status: 403 }
+      );
+    }
+
+    const { topic } = await request.json();
+    if (!topic || typeof topic !== 'string') {
+      return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Get user's article style
+    const { data: style, error: styleError } = await supabaseAdmin
+      .from('article_styles')
+      .select('display_name, name, subjects')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (styleError || !style) {
+      return NextResponse.json({ error: 'No active style found' }, { status: 404 });
+    }
+
+    const sheetName = style.display_name || style.name || user.id;
+    // Use Customers spreadsheet for customer sheets (tabs)
+    const spreadsheetId = process.env.GOOGLE_SHEETS_CUSTOMER_CONFIG_ID;
+
+    if (!spreadsheetId) {
+      return NextResponse.json({ error: 'Google Sheets not configured' }, { status: 500 });
+    }
+
+    const escapedSheetName =
+      sheetName.includes(' ') || sheetName.includes("'")
+        ? `'${sheetName.replace(/'/g, "''")}'`
+        : sheetName;
+
+    const auth = getGoogleAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Check if topic already exists in the sheet (prevent duplicates)
+    let existingTopics: string[] = [];
+    try {
+      const existingData = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${escapedSheetName}!A:A`,
+      });
+      existingTopics = (existingData.data.values || [])
+        .flat()
+        .map((t: string) => t?.toLowerCase?.() || '');
+    } catch {
+      // Sheet might not exist yet, continue
+    }
+
+    // Check if topic already exists (case-insensitive)
+    if (existingTopics.includes(topic.toLowerCase())) {
+      return NextResponse.json({ error: 'Topic already exists' }, { status: 409 });
+    }
+
+    // Check if topic already exists in article_styles subjects
+    if (style.subjects?.some((s: string) => s.toLowerCase() === topic.toLowerCase())) {
+      return NextResponse.json({ error: 'Topic already exists' }, { status: 409 });
+    }
+
+    const currentDate = formatDateForSheets(new Date());
+    const clientName = style.display_name || style.name || '';
+
+    // Add new topic row to customer sheet (tab) in Customers spreadsheet
+    // Note: Subject column (C) is not populated from code - it should be managed separately
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${escapedSheetName}!A2`,
+        valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+        requestBody: {
+          values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
+        },
+      });
+    } catch (appendError: unknown) {
+      const errorMessage = appendError instanceof Error ? appendError.message : '';
+
+      // If sheet doesn't exist, create it and add the topic
+      if (errorMessage.includes('Unable to parse range') || errorMessage.includes('not found')) {
+        console.log(`Sheet "${sheetName}" not found, creating new sheet...`);
+
+        // Create the sheet with headers
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: sheetName,
+                    gridProperties: {
+                      rowCount: 100,
+                      columnCount: 8,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        });
+
+        // Add header row
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${escapedSheetName}!A1:F1`,
+          valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+          requestBody: {
+            values: [['Topic', 'Status', 'Subject', 'Article', 'Last Update', 'Client']],
+          },
+        });
+
+        // Now add the topic
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `${escapedSheetName}!A2`,
+          valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+          requestBody: {
+            values: [[topic, 'Needs Draft', '', '', currentDate, clientName]],
+          },
+        });
+
+        // Also sync existing subjects from article_styles to the new sheet
+        if (style.subjects && style.subjects.length > 0) {
+          const existingSubjectsRows = style.subjects
+            .filter((s: string) => s.toLowerCase() !== topic.toLowerCase())
+            .map((s: string) => [s, 'Needs Draft', '', '', currentDate, clientName]);
+
+          if (existingSubjectsRows.length > 0) {
+            await sheets.spreadsheets.values.append({
+              spreadsheetId,
+              range: `${escapedSheetName}!A2`,
+              valueInputOption: SHEETS_VALUE_INPUT_OPTION,
+              requestBody: {
+                values: existingSubjectsRows,
+              },
+            });
+          }
+        }
+
+        console.log(`Sheet "${sheetName}" created and topics synced successfully`);
+      } else {
+        // Re-throw other errors
+        throw appendError;
+      }
+    }
+
+    // Also update subjects in article_styles (only if not already present)
+    const updatedSubjects = [...(style.subjects || []), topic];
+    await supabaseAdmin
+      .from('article_styles')
+      .update({ subjects: updatedSubjects, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+
+    return NextResponse.json({ success: true, topic });
+  } catch (error: unknown) {
+    console.error('Failed to add topic:', error);
+    const message = error instanceof Error ? error.message : 'Failed to add topic';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

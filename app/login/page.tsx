@@ -2,17 +2,23 @@
 
 import type React from 'react';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { Header } from '@/components/header';
+import { LinkedInLoginButton } from '@/components/linkedin-login-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { getBrowserSupabaseClient } from '@/lib/supabase-browser';
+import { AlertCircle, ArrowRight, Loader2, Lock, LogIn, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,120 +27,253 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [mounted, setMounted] = useState(false);
 
-  // Redirect if already logged in
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!authLoading && user) {
       router.push('/dashboard');
     }
   }, [user, authLoading, router]);
 
-  // Show loading while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+          <Loader2 className="h-10 w-10 animate-spin text-primary relative z-10" />
+        </div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  // Don't render login form if user is logged in (will redirect)
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const validateForm = (): boolean => {
+    const errors: FieldErrors = {};
+
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setLoading(true);
     setError(null);
 
     try {
       const supabase = getBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      // Auth state change will trigger redirect via useEffect
-      router.push('/dashboard');
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
-    } finally {
+      // Check if user is a super admin - they should use the admin portal
+      if (authData.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('is_super_admin')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profile?.is_super_admin) {
+          // Sign out and redirect to admin login with error message
+          await supabase.auth.signOut();
+          setError('Admin users must use the Admin Portal to sign in.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Use window.location for a full page navigation to ensure
+      // the auth state is properly synced with the server
+      window.location.href = '/dashboard';
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in';
+      setError(message);
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+    <div className="min-h-screen bg-white overflow-hidden relative">
       <Header />
-      <main className="pt-32 pb-20 px-6 relative overflow-hidden">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-40 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-40 right-20 w-96 h-96 bg-accent/30 rounded-full blur-3xl" />
-        </div>
 
-        <Card className="max-w-md mx-auto border-2 shadow-2xl shadow-primary/5">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+
+      {/* Floating 3D shapes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className={`absolute top-32 left-[10%] w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 shadow-lg transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}
+          style={{
+            transform: mounted
+              ? 'perspective(500px) rotateX(15deg) rotateY(-15deg) translateY(0)'
+              : 'translateY(-40px)',
+            animation: mounted ? 'float 6s ease-in-out infinite' : 'none',
+          }}
+        />
+        <div
+          className={`absolute top-48 right-[15%] w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400/30 to-blue-500/10 shadow-lg transition-all duration-1000 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}
+          style={{
+            transform: mounted
+              ? 'perspective(500px) rotateX(-10deg) rotateY(20deg)'
+              : 'translateY(-40px)',
+            animation: mounted ? 'float 7s ease-in-out infinite reverse' : 'none',
+          }}
+        />
+        <div
+          className={`absolute bottom-40 left-[20%] w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-400/20 to-violet-500/10 shadow-lg transition-all duration-1000 delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+          style={{
+            transform: mounted
+              ? 'perspective(500px) rotateX(20deg) rotateY(10deg)'
+              : 'translateY(40px)',
+            animation: mounted ? 'float 8s ease-in-out infinite' : 'none',
+          }}
+        />
+        <div
+          className={`absolute bottom-56 right-[12%] w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400/25 to-emerald-500/10 shadow-lg transition-all duration-1000 delay-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+          style={{
+            transform: mounted
+              ? 'perspective(500px) rotateX(-15deg) rotateY(-20deg)'
+              : 'translateY(40px)',
+            animation: mounted ? 'float 5s ease-in-out infinite reverse' : 'none',
+          }}
+        />
+      </div>
+
+      <main className="pt-32 pb-20 px-6 relative z-10">
+        <Card
+          className={`max-w-md mx-auto border border-gray-200 shadow-2xl shadow-gray-200/50 bg-white/80 backdrop-blur-sm transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          style={{
+            transform: mounted
+              ? 'perspective(1000px) rotateX(2deg)'
+              : 'perspective(1000px) rotateX(5deg) translateY(20px)',
+          }}
+        >
           <CardHeader className="text-center pb-2 pt-8">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 mb-4 mx-auto">
-              <LogIn className="h-8 w-8 text-primary" />
+            <div
+              className={`inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-gradient-to-br from-primary to-primary/80 mb-4 mx-auto shadow-xl shadow-primary/30 transition-all duration-700 delay-200 ${mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+              style={{
+                transform: mounted
+                  ? 'perspective(500px) rotateX(-10deg) rotateY(10deg)'
+                  : 'scale(0.75)',
+              }}
+            >
+              <LogIn className="h-10 w-10 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription className="text-base">Sign in to your Drafter account</CardDescription>
+            <CardTitle
+              className={`text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent transition-all duration-700 delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              Welcome back
+            </CardTitle>
+            <CardDescription
+              className={`text-base text-gray-500 transition-all duration-700 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              Sign in to your Drafter account
+            </CardDescription>
           </CardHeader>
+
           <CardContent className="px-8 pb-8">
             <form onSubmit={handleLogin} className="space-y-5">
               {error && (
-                <div className="flex gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+                <div className="flex gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm animate-in fade-in slide-in-from-top-2 duration-300">
                   <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                   <p>{error}</p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  Email
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium flex items-center gap-2 text-gray-700"
+                >
+                  <Mail className="h-3.5 w-3.5 text-gray-400" />
+                  Email <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
+                  onChange={e => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
+                  }}
                   disabled={loading}
-                  className="h-12"
+                  className={`h-12 bg-gray-50/50 border-gray-200 focus:bg-white transition-colors ${fieldErrors.email ? 'border-destructive focus:border-destructive' : ''}`}
                 />
+                {fieldErrors.email && (
+                  <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1 duration-200">
+                    {fieldErrors.email}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
-                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                  Password
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="password"
+                    className="text-sm font-medium flex items-center gap-2 text-gray-700"
+                  >
+                    <Lock className="h-3.5 w-3.5 text-gray-400" />
+                    Password <span className="text-destructive">*</span>
+                  </Label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
+                  onChange={e => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password)
+                      setFieldErrors(prev => ({ ...prev, password: undefined }));
+                  }}
                   disabled={loading}
-                  className="h-12"
+                  className={`h-12 bg-gray-50/50 border-gray-200 focus:bg-white transition-colors ${fieldErrors.password ? 'border-destructive focus:border-destructive' : ''}`}
                 />
+                {fieldErrors.password && (
+                  <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1 duration-200">
+                    {fieldErrors.password}
+                  </p>
+                )}
               </div>
 
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 text-base shadow-lg shadow-primary/20 mt-2 gap-2"
+                className="w-full h-12 text-base shadow-lg shadow-primary/25 mt-2 gap-2 group transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
               >
                 {loading ? (
                   <>
@@ -142,20 +281,65 @@ export default function LoginPage() {
                     Signing in...
                   </>
                 ) : (
-                  'Sign In'
+                  <>
+                    Sign In
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </>
                 )}
               </Button>
             </form>
 
+            {/* Social Login Separator */}
+            {/* <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">or continue with</span>
+              </div>
+            </div> */}
+
+            {/* LinkedIn Login Button */}
+            {/* <LinkedInLoginButton disabled={loading} /> */}
+
             <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">{"Don't have an account? "}</span>
-              <Link href="/signup" className="text-primary font-medium hover:underline">
-                Sign up free
+              <span className="text-gray-500">{"Don't have an account? "}</span>
+              <Link
+                href="/articles/generate/step-1"
+                className="text-primary font-medium hover:underline"
+              >
+                Get started
               </Link>
             </div>
+
+            {/* <div className="mt-4 pt-4 border-t border-gray-100">
+              <Link href="/admin/login">
+                <Button
+                  variant="ghost"
+                  className="w-full h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 gap-2 group"
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin Portal
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+            </div> */}
           </CardContent>
         </Card>
       </main>
+
+      {/* CSS for floating animation */}
+      <style jsx global>{`
+        @keyframes float {
+          0%,
+          100% {
+            transform: perspective(500px) rotateX(15deg) rotateY(-15deg) translateY(0px);
+          }
+          50% {
+            transform: perspective(500px) rotateX(15deg) rotateY(-15deg) translateY(-20px);
+          }
+        }
+      `}</style>
     </div>
   );
 }

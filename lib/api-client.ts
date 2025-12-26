@@ -1,8 +1,26 @@
+export class APIError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+  }
+}
+
 export class APIClient {
   private baseUrl: string;
 
   constructor(baseUrl = '/api') {
     this.baseUrl = baseUrl;
+  }
+
+  private handleUnauthorized(): never {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    const error = new APIError('Unauthorized', 401);
+    throw error;
   }
 
   async request<T>(
@@ -22,33 +40,45 @@ export class APIClient {
     try {
       response = await fetch(url.toString(), {
         ...requestInit,
+        credentials: 'include', // Ensure cookies are sent with requests
         headers: {
           'Content-Type': 'application/json',
           ...requestInit.headers,
         },
       });
     } catch (networkError) {
-      throw new Error('Network error. Please check your connection.');
+      throw new APIError('Network error. Please check your connection.', 0);
     }
 
     const contentType = response.headers.get('content-type') || '';
     const isJson = contentType.includes('application/json');
 
     if (!response.ok) {
+      if (response.status === 401) {
+        this.handleUnauthorized();
+      }
+
+      if (response.status === 403) {
+        this.handleUnauthorized();
+      }
+
       if (isJson) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || errorData.message || `Request failed: ${response.status}`
+        throw new APIError(
+          errorData.error || errorData.message || `Request failed: ${response.status}`,
+          response.status
         );
       }
-      throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+      throw new APIError(
+        `Request failed: ${response.status} ${response.statusText}`,
+        response.status
+      );
     }
 
     if (isJson) {
       return response.json();
     }
 
-    // For successful non-JSON responses, return empty object
     return {} as T;
   }
 

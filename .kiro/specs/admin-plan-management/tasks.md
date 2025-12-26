@@ -1,0 +1,140 @@
+# Implementation Plan
+
+- [x] 1. Create database seed script for default admin user
+  - [x] 1.1 Create SQL migration script to seed default admin user (admin@drafter.com with password Admin@123)
+    - Create script at `scripts/11-seed-default-admin.sql`
+    - Insert user into auth.users and user_profiles with is_super_admin=true
+    - Add to default organization as super_admin role
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+  - [x] 1.2 Create TypeScript bootstrap script for admin user creation
+    - Create script at `scripts/seed-admin-user.ts`
+    - Use Supabase Admin API to create auth user
+    - Create corresponding user_profile with is_super_admin=true
+    - _Requirements: 6.1, 6.2, 6.3_
+
+- [x] 2. Implement plan features API endpoints
+  - [x] 2.1 Create GET/POST endpoint for plan features at `/api/admin/plans/[id]/features`
+    - List all features for a plan
+    - Add new feature with text and sort_order
+    - _Requirements: 5.1, 5.2_
+  - [x] 2.2 Create DELETE endpoint for removing features at `/api/admin/plans/[id]/features/[featureId]`
+    - Delete feature by ID
+    - Verify feature belongs to the plan
+    - _Requirements: 5.3_
+  - [x] 2.3 Create POST endpoint for reordering features at `/api/admin/plans/[id]/features/reorder`
+    - Accept array of feature IDs in new order
+    - Update sort_order for each feature
+    - _Requirements: 5.4_
+  - [ ]\* 2.4 Write property test for feature operations
+    - **Property 8: Feature addition persistence**
+    - **Validates: Requirements 5.2**
+  - [ ]\* 2.5 Write property test for feature deletion
+    - **Property 9: Feature deletion persistence**
+    - **Validates: Requirements 5.3**
+
+- [x] 3. Implement password reset API endpoint
+  - [x] 3.1 Create password validation utility function
+    - Validate minimum 8 characters
+    - Validate at least one uppercase, lowercase, number, special character
+    - Return validation result with specific error messages
+    - _Requirements: 7.2_
+  - [x] 3.2 Create POST endpoint at `/api/admin/settings/password`
+    - Validate current password
+    - Validate new password meets requirements
+    - Update password via Supabase Auth Admin API
+    - _Requirements: 7.2, 7.3_
+  - [ ]\* 3.3 Write property test for password validation
+    - **Property 10: Password validation rules**
+    - **Validates: Requirements 7.2**
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Create admin plans list page
+  - [x] 5.1 Create PlanTable component
+    - Display plans in a table with columns: name, price, status, visibility, actions
+    - Add visual indicators for active/inactive and visible/hidden states
+    - Add quick toggle switches for is_active and is_visible
+    - _Requirements: 1.1, 1.2, 1.3_
+  - [x] 5.2 Create plans list page at `/admin/plans/page.tsx`
+    - Fetch plans from API
+    - Display PlanTable component
+    - Add "Create New Plan" button
+    - Handle loading and error states
+    - _Requirements: 1.1, 1.4_
+  - [x] 5.3 Update admin sidebar to include Plans navigation item
+    - Add Plans link between Organizations and Settings
+    - Use CreditCard icon
+    - _Requirements: 1.1_
+
+- [x] 6. Create plan edit page and form
+  - [x] 6.1 Create PlanForm component
+    - Form fields for all plan properties (name, description, price, currency, articles_per_month, etc.)
+    - Checkbox for is_active, is_visible, is_highlighted
+    - Select for cta_type
+    - Stripe sync checkbox option
+    - Form validation
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [x] 6.2 Create PlanFeatureManager component
+    - Display list of features with drag-and-drop reordering
+    - Add new feature input
+    - Delete feature button
+    - _Requirements: 5.1, 5.2, 5.3, 5.4_
+  - [x] 6.3 Create plan edit page at `/admin/plans/[id]/edit/page.tsx`
+    - Fetch plan data including features
+    - Display PlanForm and PlanFeatureManager
+    - Handle form submission
+    - Show success/error messages
+    - _Requirements: 2.1, 2.2, 2.4_
+  - [ ]\* 6.4 Write property test for plan update persistence
+    - **Property 2: Plan update persistence**
+    - **Validates: Requirements 2.2**
+
+- [x] 7. Create plan creation page
+  - [x] 7.1 Create plan creation page at `/admin/plans/new/page.tsx`
+    - Display PlanForm in create mode
+    - Handle form submission to POST /api/admin/plans
+    - Redirect to plans list on success
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+  - [ ]\* 7.2 Write property test for plan creation
+    - **Property 11: Plan creation persistence**
+    - **Validates: Requirements 8.2**
+
+- [x] 8. Implement plan toggle functionality
+  - [x] 8.1 Add inline toggle handlers to PlanTable
+    - Handle is_active toggle with API call
+    - Handle is_visible toggle with API call
+    - Show loading state during update
+    - Refresh data after successful toggle
+    - _Requirements: 3.1, 3.2, 3.3, 4.1, 4.2_
+  - [ ]\* 8.2 Write property test for active status toggle
+    - **Property 4: Active status toggle persistence**
+    - **Validates: Requirements 3.1**
+  - [ ]\* 8.3 Write property test for visibility toggle
+    - **Property 5: Visibility toggle persistence**
+    - **Validates: Requirements 4.1**
+
+- [x] 9. Enhance admin settings page with password reset
+  - [x] 9.1 Create PasswordResetForm component
+    - Current password field
+    - New password field with requirements display
+    - Confirm password field
+    - Submit button with loading state
+    - Success/error message display
+    - _Requirements: 7.1, 7.2, 7.3, 7.4_
+  - [x] 9.2 Update settings page to include password reset section
+    - Add PasswordResetForm component
+    - Add section header and description
+    - _Requirements: 7.1_
+
+- [x] 10. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 11. Update admin layout for plans page title
+  - [x] 11.1 Update getPageTitle function in admin layout
+    - Add case for /admin/plans routes
+    - Return "Plans" for plans pages
+    - _Requirements: 1.1_
+
+- [x] 12. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

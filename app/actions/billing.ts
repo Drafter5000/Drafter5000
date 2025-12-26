@@ -1,8 +1,9 @@
 'use server';
 
+import { getStripeClient } from '@/lib/stripe-client';
 import { getServerSupabaseClient } from '@/lib/supabase-client';
-import { getStripeClient, SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 import type { UserProfile } from '@/lib/types';
+import { checkUsageLimit, syncUsageFromSheets } from '@/lib/usage-limits';
 
 export async function createCheckoutSession(userId: string, planId: 'pro' | 'enterprise') {
   try {
@@ -36,16 +37,16 @@ export async function createCheckoutSession(userId: string, planId: 'pro' | 'ent
         },
       ],
       subscription_data: {
-        trial_period_days: planId === 'pro' ? 7 : 0,
         metadata: {
           user_id: userId,
           plan_id: planId,
         },
       },
+      payment_method_collection: 'always',
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/dashboard/billing?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/pricing`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/dashboard?payment_success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL}/subscribe`,
       metadata: {
         user_id: userId,
         plan_id: planId,
@@ -146,33 +147,22 @@ export async function reactivateSubscription(userId: string) {
 
 export async function getUsageStats(userId: string) {
   try {
-    const supabase = await getServerSupabaseClient();
+    // Sync usage from Google Sheets first (count "Sent" articles)
+    // This ensures the database reflects the actual sent articles in the sheet
+    await syncUsageFromSheets(userId);
 
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('subscription_plan')
-      .eq('id', userId)
-      .single();
-
-    const plan = profile?.subscription_plan || 'free';
-    const planDetails = SUBSCRIPTION_PLANS[plan as keyof typeof SUBSCRIPTION_PLANS];
-
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { count: articlesUsed } = await supabase
-      .from('articles')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth.toISOString());
+    // Get usage from database (now synced with sheets)
+    const usage = await checkUsageLimit(userId);
 
     return {
-      plan,
-      articles_used: articlesUsed || 0,
-      articles_limit: planDetails.articles_per_month,
-      percentage_used: Math.round(((articlesUsed || 0) / planDetails.articles_per_month) * 100),
-      can_generate: (articlesUsed || 0) < planDetails.articles_per_month,
+      plan: usage.plan,
+      articles_used: usage.articlesUsed,
+      articles_limit: usage.articlesLimit,
+      percentage_used:
+        usage.articlesLimit > 0 ? Math.round((usage.articlesUsed / usage.articlesLimit) * 100) : 0,
+      can_generate: usage.canGenerate,
+      usage_reset_at: usage.usageResetAt,
+      period_end: usage.periodEnd,
     };
   } catch (error) {
     console.error('[Billing] Usage stats error:', error);

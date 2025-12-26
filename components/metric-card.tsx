@@ -1,36 +1,39 @@
-import { Card, CardContent } from '@/components/ui/card';
-import type { LucideIcon } from 'lucide-react';
+'use client';
+
+import { Win95Badge } from '@/components/win95';
+import { LucideIcon } from 'lucide-react';
+
+interface TrendData {
+  value: number;
+  isPositive: boolean;
+}
 
 interface MetricCardProps {
   title: string;
-  value: string | number;
-  description?: string;
+  value: number;
+  description: string;
   icon: LucideIcon;
-  trend?: { value: number; isPositive: boolean };
+  trend?: TrendData;
 }
 
 export function MetricCard({ title, value, description, icon: Icon, trend }: MetricCardProps) {
   return (
-    <Card className="border-2">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground font-medium">{title}</p>
-            <p className="text-3xl font-bold mt-2">{value}</p>
-            {description && <p className="text-sm text-muted-foreground mt-2">{description}</p>}
-            {trend && (
-              <p
-                className={`text-sm font-medium mt-3 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}
-              >
-                {trend.isPositive ? '↑' : '↓'} {trend.value}% from last month
-              </p>
-            )}
-          </div>
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Icon className="h-6 w-6 text-primary" />
-          </div>
+    <div className="win95-raised p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[11px] font-bold">{title}</span>
+        <div className="win95-sunken p-1">
+          <Icon className="h-4 w-4" />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="text-[24px] font-bold mb-1">{value}</div>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-[var(--win95-button-shadow)]">{description}</span>
+        {trend && (
+          <Win95Badge variant={trend.isPositive ? 'default' : 'secondary'}>
+            {trend.isPositive ? '↑' : '↓'} {trend.value}%
+          </Win95Badge>
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Header } from '@/components/header';
+import { MarketingHeader } from '@/components/marketing-header';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,8 +12,9 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, Zap, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Zap, AlertCircle, CheckCircle2, XCircle, ShieldCheck } from 'lucide-react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/components/auth-provider';
 import { usePlans } from '@/hooks/use-plans';
@@ -51,19 +52,38 @@ function formatPrice(priceCents: number): string {
   return `$${(priceCents / 100).toFixed(0)}`;
 }
 
-function getCtaText(plan: SubscriptionPlanWithFeatures): string {
+function getCtaText(plan: SubscriptionPlanWithFeatures, isNewUser: boolean): string {
   if (plan.cta_text) return plan.cta_text;
   if (plan.price_cents === 0) return 'Get Started';
   if (plan.cta_type === 'email') return 'Contact Sales';
-  return 'Start Free Trial';
+  return isNewUser ? 'Select Plan' : 'Subscribe Now';
 }
 
-export default function PricingPage() {
+function PricingContent() {
   const { user } = useAuth();
   const { plans, loading, error } = usePlans();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Check for URL parameters indicating signup success or payment cancellation
+  // Requirements: 6.4, 8.3
+  const fromSignup = searchParams.get('from') === 'signup';
+  const paymentCancelled = searchParams.get('cancelled') === 'true';
+  const paymentError = searchParams.get('error');
+
+  useEffect(() => {
+    if (fromSignup || paymentCancelled || paymentError) {
+      const timer = setTimeout(() => {
+        window.history.replaceState({}, '', '/pricing');
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [fromSignup, paymentCancelled, paymentError]);
 
   const handleCheckout = async (plan: SubscriptionPlanWithFeatures) => {
+    setCheckoutError(null);
+
     // Handle email CTA type
     if (plan.cta_type === 'email') {
       window.location.href = 'mailto:sales@drafter.com';
@@ -72,13 +92,13 @@ export default function PricingPage() {
 
     // Handle signup CTA type (free plan)
     if (plan.cta_type === 'signup' || plan.price_cents === 0) {
-      window.location.href = user ? '/dashboard' : '/signup';
+      window.location.href = user ? '/dashboard' : '/articles/generate/step-1';
       return;
     }
 
     // Handle checkout CTA type
     if (!user) {
-      window.location.href = '/signup';
+      window.location.href = '/articles/generate/step-1';
       return;
     }
 
@@ -90,6 +110,10 @@ export default function PricingPage() {
       window.location.href = sessionUrl;
     } catch (err) {
       console.error('Checkout error:', err);
+      // Requirements: 8.3
+      const message =
+        err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
+      setCheckoutError(message);
     } finally {
       setCheckoutLoading(null);
     }
@@ -97,7 +121,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <Header />
+      <MarketingHeader hideNavLinks />
       <main className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-40 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
@@ -110,11 +134,71 @@ export default function PricingPage() {
               <Zap className="h-4 w-4 text-primary" />
               <span>Simple, Transparent Pricing</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Plans for every creator</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              {fromSignup ? 'Choose Your Plan' : 'Plans for every entrepreneur'}
+            </h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Start free and upgrade anytime. No credit card required to get started.
+              {fromSignup
+                ? 'Your account is ready! Select a plan to activate your personalized articles.'
+                : 'Choose the perfect plan for your content needs. Cancel anytime.'}
             </p>
           </div>
+
+          {/* Success message after signup */}
+          {fromSignup && (
+            <div className="max-w-md mx-auto mb-8 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-green-800">Account created successfully!</p>
+                <p className="text-sm text-green-700">
+                  Select a plan below to start receiving your personalized articles.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Payment cancelled message */}
+          {paymentCancelled && (
+            <div className="max-w-md mx-auto mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-3">
+              <XCircle className="h-5 w-5 text-yellow-600 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-yellow-800">Payment cancelled</p>
+                <p className="text-sm text-yellow-700">
+                  No worries! You can select a plan whenever you're ready.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Payment error message */}
+          {paymentError && (
+            <div className="max-w-md mx-auto mb-8 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-destructive">Payment failed</p>
+                <p className="text-sm text-destructive/80">{decodeURIComponent(paymentError)}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Checkout error message */}
+          {checkoutError && (
+            <div className="max-w-md mx-auto mb-8 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-destructive">Checkout Error</p>
+                <p className="text-sm text-destructive/80">{checkoutError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setCheckoutError(null)}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="max-w-md mx-auto mb-8 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3">
@@ -123,7 +207,17 @@ export default function PricingPage() {
             </div>
           )}
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <div
+            className={`grid gap-6 mx-auto ${
+              !loading && plans.length === 1
+                ? 'grid-cols-1 max-w-sm justify-center'
+                : !loading && plans.length === 2
+                  ? 'grid-cols-1 md:grid-cols-2 max-w-3xl'
+                  : !loading && plans.length === 4
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
+                    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'
+            }`}
+          >
             {loading ? (
               <>
                 <PlanCardSkeleton />
@@ -176,7 +270,7 @@ export default function PricingPage() {
                       variant={plan.is_highlighted ? 'default' : 'outline'}
                       className="w-full gap-2 shadow-lg shadow-primary/20"
                     >
-                      {checkoutLoading === plan.id ? 'Processing...' : getCtaText(plan)}
+                      {checkoutLoading === plan.id ? 'Processing...' : getCtaText(plan, fromSignup)}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -184,28 +278,48 @@ export default function PricingPage() {
             )}
           </div>
 
-          <div className="mt-20 max-w-3xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Free Trial</CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  Start with our Free plan. No credit card required. Upgrade anytime.
-                </CardContent>
-              </Card>
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">Money-Back Guarantee</CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  30-day guarantee. If you're not happy, we'll refund you completely.
-                </CardContent>
-              </Card>
+          {/* Money-Back Guarantee */}
+          <div className="mt-12 max-w-md mx-auto">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+              <ShieldCheck className="h-6 w-6 text-green-600 shrink-0" />
+              <p className="text-sm text-green-800">
+                7-day guarantee. If you're not happy, we'll refund you completely. No questions
+                asked.
+              </p>
             </div>
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+function PricingPageFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <MarketingHeader hideNavLinks />
+      <main className="pt-32 pb-20 px-6 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Skeleton className="h-8 w-48 mx-auto mb-6" />
+            <Skeleton className="h-12 w-96 mx-auto mb-4" />
+            <Skeleton className="h-6 w-80 mx-auto" />
+          </div>
+          <div className="grid gap-6 mx-auto grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl">
+            <PlanCardSkeleton />
+            <PlanCardSkeleton />
+            <PlanCardSkeleton />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<PricingPageFallback />}>
+      <PricingContent />
+    </Suspense>
   );
 }

@@ -1,23 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext, useCallback } from 'react';
 import { useAuth } from '@/components/auth-provider';
+import { DesignContext, type DesignMode } from '@/components/design-provider';
 import { ProtectedRoute } from '@/components/protected-route';
 import { DashboardHeader } from '@/components/dashboard-header';
+import { Win95Window, Win95Button, Win95Badge, Win95Progress } from '@/components/win95';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api-client';
+import { SubscriptionExpirationBanner } from '@/components/subscription-expiration-banner';
+import { isSubscriptionExpired, formatExpirationDate } from '@/lib/subscription-utils';
 import {
   CreditCard,
   Calendar,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
-  ExternalLink,
-  Loader2,
   Zap,
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
+  XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { SubscriptionPlanWithFeatures } from '@/lib/types';
@@ -37,6 +44,8 @@ interface SubscriptionData {
   current_period_end?: number;
   cancel_at_period_end?: boolean;
   canceled_at?: number;
+  is_expired?: boolean;
+  expiration_date?: string;
 }
 
 interface PlansResponse {
@@ -45,11 +54,14 @@ interface PlansResponse {
 
 export default function BillingPage() {
   const { user } = useAuth();
+  const context = useContext(DesignContext);
+  const designMode: DesignMode = context?.designMode ?? 'modern';
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlanWithFeatures[]>([]);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [topupLoading, setTopupLoading] = useState(false);
 
   useEffect(() => {
     const fetchBillingData = async () => {
@@ -75,7 +87,7 @@ export default function BillingPage() {
     fetchBillingData();
   }, [user]);
 
-  const handleManageSubscription = async () => {
+  const handleManageSubscription = useCallback(async () => {
     try {
       setPortalLoading(true);
       const { url } = await apiClient.post<{ url: string }>('/stripe/portal', {});
@@ -84,24 +96,31 @@ export default function BillingPage() {
       console.error('Portal error:', error);
       setPortalLoading(false);
     }
-  };
+  }, []);
 
-  if (loading) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background">
-          <DashboardHeader />
-          <main className="pt-24 pb-20 px-6">
-            <div className="max-w-5xl mx-auto">
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            </div>
-          </main>
-        </div>
-      </ProtectedRoute>
-    );
-  }
+  // Navigate to pricing page for renewal/upgrade
+  const handleRenewSubscription = useCallback(() => {
+    window.location.href = '/pricing';
+  }, []);
+
+  // Handle article top-up purchase
+  const handleTopup = useCallback(async (articlesCount: number) => {
+    try {
+      setTopupLoading(true);
+      const { url } = await apiClient.post<{ url: string }>('/stripe/topup', {
+        articles_count: articlesCount,
+      });
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Top-up error:', error);
+      setTopupLoading(false);
+    }
+  }, []);
+
+  // Check if usage limit is reached
+  const usageLimitReached = usage ? !usage.can_generate : false;
 
   const currentPlan = plans.find(p => p.id === usage?.plan) || plans.find(p => p.id === 'free');
   const planDetails = currentPlan
@@ -112,225 +131,667 @@ export default function BillingPage() {
         features: currentPlan.features.map(f => f.feature_text),
       }
     : { name: 'Free', price: 0, articles_per_month: 2, features: [] };
-  const statusColor =
-    subscription?.status === 'active'
-      ? 'bg-green-500/10 text-green-600 border-green-500/20'
-      : subscription?.status === 'past_due'
-        ? 'bg-red-500/10 text-red-600 border-red-500/20'
-        : subscription?.status === 'canceled'
-          ? 'bg-gray-500/10 text-gray-600 border-gray-500/20'
-          : 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+
+  // Check if subscription is expired - Requirements: 1.2, 5.4
+  const subscriptionExpired = subscription ? isSubscriptionExpired(subscription.status) : false;
+  const expirationDate = subscription?.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : subscription?.expiration_date
+      ? new Date(subscription.expiration_date)
+      : null;
+
+  // Win95 Design
+  if (designMode === 'win95') {
+    if (loading) {
+      return (
+        <ProtectedRoute>
+          <div className="min-h-screen p-4">
+            <div className="max-w-4xl mx-auto">
+              <DashboardHeader />
+              <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
+                <div className="text-center py-8">
+                  <span className="text-[11px] win95-loading">Loading billing data...</span>
+                </div>
+              </Win95Window>
+            </div>
+          </div>
+        </ProtectedRoute>
+      );
+    }
+
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen p-4">
+          <div className="max-w-4xl mx-auto">
+            <DashboardHeader />
+
+            <Win95Window title="Billing & Usage" icon={<span>💳</span>}>
+              <div className="space-y-4">
+                {/* Subscription Expiration Banner - Requirements: 1.2, 4.2 */}
+                {subscriptionExpired && (
+                  <SubscriptionExpirationBanner
+                    expirationDate={expirationDate}
+                    onRenewClick={handleManageSubscription}
+                    isRenewing={portalLoading}
+                    status={subscription?.status === 'past_due' ? 'past_due' : 'canceled'}
+                    type="expired"
+                  />
+                )}
+                {/* Usage Limit Reached Banner */}
+                {!subscriptionExpired && usageLimitReached && usage && (
+                  <SubscriptionExpirationBanner
+                    onRenewClick={handleManageSubscription}
+                    isRenewing={portalLoading}
+                    type="limit_reached"
+                    usageData={{
+                      articles_used: usage.articles_used,
+                      articles_limit: usage.articles_limit,
+                    }}
+                  />
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="win95-sunken p-2 flex items-center gap-2">
+                    <span className="text-[16px]">💳</span>
+                    <div>
+                      <h2 className="text-[12px] font-bold">Billing & Usage</h2>
+                      <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                        Manage your subscription and track usage
+                      </p>
+                    </div>
+                  </div>
+                  {/* Show Renew button for expired/limit reached, Manage for active */}
+                  {subscriptionExpired || usageLimitReached ? (
+                    <Win95Button onClick={handleManageSubscription} disabled={portalLoading}>
+                      {portalLoading
+                        ? 'Loading...'
+                        : subscriptionExpired
+                          ? '🔄 Renew Subscription'
+                          : '📈 Upgrade Plan'}
+                    </Win95Button>
+                  ) : (
+                    usage?.plan !== 'free' && (
+                      <Win95Button onClick={handleManageSubscription} disabled={portalLoading}>
+                        {portalLoading ? 'Loading...' : '💳 Manage Subscription'}
+                      </Win95Button>
+                    )
+                  )}
+                </div>
+
+                <div className="win95-groupbox">
+                  <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                    <legend className="win95-groupbox-title font-bold">📋 Current Plan</legend>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="text-[14px] font-bold">{planDetails.name} Plan</h3>
+                        <p className="text-[10px] text-[var(--win95-button-shadow)]">
+                          {subscriptionExpired
+                            ? `Expired${expirationDate ? ` on ${formatExpirationDate(expirationDate)}` : ''}`
+                            : usageLimitReached
+                              ? 'Monthly limit reached - upgrade for more articles'
+                              : usage?.plan === 'free'
+                                ? 'Get started with basic features'
+                                : 'Your current subscription'}
+                        </p>
+                      </div>
+                      {/* Status badge - don't show Active when limit reached */}
+                      <div className="flex gap-2">
+                        {subscriptionExpired ? (
+                          <Win95Badge variant="secondary" className="text-red-600">
+                            ⚠️ Expired
+                          </Win95Badge>
+                        ) : usageLimitReached ? (
+                          <Win95Badge variant="secondary" className="text-amber-600">
+                            ⚠️ Limit Reached
+                          </Win95Badge>
+                        ) : (
+                          <Win95Badge
+                            variant={subscription?.status === 'active' ? 'default' : 'secondary'}
+                          >
+                            {subscription?.status === 'active'
+                              ? '✓ Active'
+                              : subscription?.status || 'Active'}
+                          </Win95Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="win95-sunken p-2 mb-3">
+                      <span className="text-[24px] font-bold">${planDetails.price / 100}</span>
+                      <span className="text-[11px]"> / month</span>
+                    </div>
+                    {subscription?.current_period_end &&
+                      !subscriptionExpired &&
+                      usage?.plan !== 'free' && (
+                        <div className="win95-sunken p-2 mt-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[12px]">📅</span>
+                            <span className="text-[10px] font-bold">Next Payment</span>
+                          </div>
+                          <p className="text-[11px]">
+                            {new Date(subscription.current_period_end * 1000).toLocaleDateString(
+                              'en-US',
+                              { month: 'long', day: 'numeric', year: 'numeric' }
+                            )}
+                          </p>
+                          <p className="text-[9px] text-[var(--win95-button-shadow)] mt-1">
+                            💳 Auto-renewal: ${planDetails.price / 100} will be charged
+                          </p>
+                        </div>
+                      )}
+                  </fieldset>
+                </div>
+
+                {usage && (
+                  <div className="win95-groupbox">
+                    <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                      <legend className="win95-groupbox-title font-bold">
+                        {subscriptionExpired ? '⚠️ Plan Expired' : '⚡ Usage This Month'}
+                      </legend>
+                      {subscriptionExpired ? (
+                        <div className="text-center py-2">
+                          <p className="text-[11px] font-bold text-red-600 mb-2">
+                            Your subscription has expired
+                          </p>
+                          <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+                            Renew your plan to continue generating articles
+                          </p>
+                          <Win95Button onClick={handleRenewSubscription} className="w-full">
+                            🔄 Renew Subscription
+                          </Win95Button>
+                        </div>
+                      ) : (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold">Articles Generated</span>
+                            <span className="text-[11px]">
+                              {usage.articles_used} / {usage.articles_limit}
+                            </span>
+                          </div>
+                          <Win95Progress value={usage.percentage_used} />
+                          <p className="text-[10px] text-[var(--win95-button-shadow)] mt-1">
+                            {usage.can_generate
+                              ? `${usage.articles_limit - usage.articles_used} articles remaining`
+                              : "You've reached your monthly limit"}
+                          </p>
+                          {!usage.can_generate && (
+                            <div className="mt-3 pt-3 border-t border-[var(--win95-button-shadow)]">
+                              <p className="text-[10px] font-bold mb-2">Need more articles?</p>
+                              <div className="flex gap-2">
+                                <Win95Button
+                                  size="sm"
+                                  onClick={() => handleTopup(10)}
+                                  disabled={topupLoading}
+                                >
+                                  +10 ($9.99)
+                                </Win95Button>
+                                <Win95Button
+                                  size="sm"
+                                  onClick={() => handleTopup(25)}
+                                  disabled={topupLoading}
+                                >
+                                  +25 ($19.99)
+                                </Win95Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </fieldset>
+                  </div>
+                )}
+
+                {usage?.plan === 'free' && (
+                  <div className="win95-groupbox">
+                    <fieldset className="border border-[var(--win95-button-shadow)] p-3">
+                      <legend className="win95-groupbox-title font-bold">
+                        🚀 Upgrade Your Plan
+                      </legend>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div className="win95-raised p-3 text-center">
+                          <h3 className="text-[12px] font-bold mb-1">Pro Plan</h3>
+                          <p className="text-[20px] font-bold mb-1">$70/mo</p>
+                          <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+                            Up to 30 article per month
+                          </p>
+                          <Link href="/pricing">
+                            <Win95Button className="w-full">Upgrade to Pro</Win95Button>
+                          </Link>
+                        </div>
+                        <div className="win95-raised p-3 text-center">
+                          <h3 className="text-[12px] font-bold mb-1">Enterprise Plan</h3>
+                          <p className="text-[20px] font-bold mb-1">$299/mo</p>
+                          <p className="text-[10px] text-[var(--win95-button-shadow)] mb-3">
+                            100 articles per month
+                          </p>
+                          <Link href="/pricing">
+                            <Win95Button className="w-full">Upgrade to Enterprise</Win95Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </fieldset>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <Link href="/dashboard">
+                    <Win95Button size="sm">← Back to Dashboard</Win95Button>
+                  </Link>
+                </div>
+              </div>
+            </Win95Window>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  // Modern Design
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-background">
+          <DashboardHeader />
+          <main className="pt-8 pb-20 px-6">
+            <div className="max-w-4xl mx-auto">
+              {/* Header Skeleton */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-7 w-40" />
+                    <Skeleton className="h-4 w-56" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 w-40 rounded-md" />
+                  <Skeleton className="h-10 w-24 rounded-md" />
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Current Plan Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-5 w-5 rounded" />
+                          <Skeleton className="h-6 w-28" />
+                        </div>
+                        <Skeleton className="h-4 w-48" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <Skeleton className="h-10 w-20" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-lg bg-secondary/50 border space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded" />
+                          <Skeleton className="h-4 w-28" />
+                        </div>
+                        <Skeleton className="h-5 w-36" />
+                      </div>
+                      <div className="p-4 rounded-lg bg-secondary/50 border space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <Skeleton className="h-5 w-28" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Usage Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-5 rounded" />
+                      <Skeleton className="h-6 w-36" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-2">
+                      <Skeleton className="h-5 w-36" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <Skeleton className="h-3 w-full rounded-full" />
+                    <Skeleton className="h-4 w-40 mt-2" />
+                  </CardContent>
+                </Card>
+
+                {/* Upgrade Card Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-44" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {[1, 2].map(i => (
+                        <div key={i} className="p-6 rounded-lg border text-center space-y-3">
+                          <Skeleton className="h-5 w-24 mx-auto" />
+                          <Skeleton className="h-9 w-28 mx-auto" />
+                          <Skeleton className="h-4 w-36 mx-auto" />
+                          <Skeleton className="h-10 w-full rounded-md" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </main>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <div className="min-h-screen bg-background">
         <DashboardHeader />
+        <main className="pt-8 pb-20 px-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Subscription Expiration Banner - Requirements: 1.2, 4.2 */}
+            {subscriptionExpired && (
+              <SubscriptionExpirationBanner
+                expirationDate={expirationDate}
+                onRenewClick={handleManageSubscription}
+                isRenewing={portalLoading}
+                status={subscription?.status === 'past_due' ? 'past_due' : 'canceled'}
+                type="expired"
+              />
+            )}
+            {/* Usage Limit Reached Banner */}
+            {!subscriptionExpired && usageLimitReached && usage && (
+              <SubscriptionExpirationBanner
+                onRenewClick={handleManageSubscription}
+                isRenewing={portalLoading}
+                type="limit_reached"
+                usageData={{
+                  articles_used: usage.articles_used,
+                  articles_limit: usage.articles_limit,
+                }}
+              />
+            )}
 
-        <main className="pt-10 pb-20 px-6">
-          <div className="max-w-5xl mx-auto space-y-8">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-2">Billing & Usage</h2>
-                <p className="text-muted-foreground text-lg">
-                  Manage your subscription and track usage
-                </p>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">Billing & Usage</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Manage your subscription and track usage
+                  </p>
+                </div>
               </div>
-              {usage?.plan !== 'free' && (
-                <Button
-                  onClick={handleManageSubscription}
-                  disabled={portalLoading}
-                  className="gap-2"
-                >
-                  {portalLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4" />
-                      Manage Subscription
-                    </>
-                  )}
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {/* Show Renew/Upgrade button for expired/limit reached, Manage for active */}
+                {subscriptionExpired || usageLimitReached ? (
+                  <Button onClick={handleManageSubscription} disabled={portalLoading}>
+                    {portalLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading...
+                      </>
+                    ) : subscriptionExpired ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Renew Subscription
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Upgrade Plan
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  usage?.plan !== 'free' && (
+                    <Button onClick={handleManageSubscription} disabled={portalLoading}>
+                      {portalLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Manage Subscription'
+                      )}
+                    </Button>
+                  )
+                )}
+                <Link href="/dashboard">
+                  <Button variant="outline" className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                </Link>
+              </div>
             </div>
 
-            {/* Current Plan Card */}
-            <Card className="border-2">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-2xl mb-2">{planDetails.name} Plan</CardTitle>
-                    <CardDescription>
-                      {usage?.plan === 'free'
-                        ? 'Get started with basic features'
-                        : 'Your current subscription'}
-                    </CardDescription>
-                  </div>
-                  <Badge className={`${statusColor} border`}>
-                    {subscription?.status === 'active' && <CheckCircle className="h-3 w-3 mr-1" />}
-                    {subscription?.status === 'past_due' && (
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                    )}
-                    {subscription?.status || 'Active'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">${planDetails.price / 100}</span>
-                  <span className="text-muted-foreground">/ month</span>
-                </div>
-
-                {subscription?.cancel_at_period_end && (
-                  <div className="flex gap-3 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-600">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Subscription Canceling</p>
-                      <p className="text-sm">
-                        Your subscription will end on{' '}
-                        {subscription.current_period_end &&
-                          new Date(subscription.current_period_end * 1000).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {subscription?.status === 'past_due' && (
-                  <div className="flex gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Payment Failed</p>
-                      <p className="text-sm">
-                        Please update your payment method to continue your subscription
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  {subscription?.current_period_end && (
-                    <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                        <Calendar className="h-4 w-4" />
-                        <p className="text-xs uppercase tracking-wider font-medium">
-                          Next Billing Date
-                        </p>
-                      </div>
-                      <p className="font-semibold">
-                        {new Date(subscription.current_period_end * 1000).toLocaleDateString(
-                          'en-US',
-                          {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                          }
-                        )}
-                      </p>
-                    </div>
-                  )}
-                  <div className="p-4 rounded-lg bg-secondary/50 border border-border/30">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <TrendingUp className="h-4 w-4" />
-                      <p className="text-xs uppercase tracking-wider font-medium">Articles Limit</p>
-                    </div>
-                    <p className="font-semibold">{planDetails.articles_per_month} per month</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Features included:</p>
-                  <ul className="grid md:grid-cols-2 gap-2">
-                    {planDetails.features.map(feature => (
-                      <li key={feature} className="flex items-start gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Usage Card */}
-            {usage && (
-              <Card className="border-2">
+            <div className="space-y-6">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    Usage This Month
-                  </CardTitle>
-                  <CardDescription>Track your article generation usage</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Articles Generated</span>
-                      <span className="text-sm text-muted-foreground">
-                        {usage.articles_used} / {usage.articles_limit}
-                      </span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        Current Plan
+                      </CardTitle>
+                      <CardDescription>
+                        {subscriptionExpired
+                          ? `Expired${expirationDate ? ` on ${formatExpirationDate(expirationDate)}` : ''}`
+                          : usageLimitReached
+                            ? 'Monthly limit reached - upgrade for more articles'
+                            : usage?.plan === 'free'
+                              ? 'Get started with basic features'
+                              : 'Your current subscription'}
+                      </CardDescription>
                     </div>
-                    <Progress value={usage.percentage_used} className="h-3" />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {usage.can_generate
-                        ? `${usage.articles_limit - usage.articles_used} articles remaining`
-                        : "You've reached your monthly limit"}
-                    </p>
+                    {/* Status badge - don't show Active when limit reached */}
+                    <div className="flex gap-2">
+                      {subscriptionExpired ? (
+                        <Badge variant="destructive">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Expired
+                        </Badge>
+                      ) : usageLimitReached ? (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Limit Reached
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant={subscription?.status === 'active' ? 'default' : 'secondary'}
+                        >
+                          {subscription?.status === 'active' ? (
+                            <>
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Active
+                            </>
+                          ) : (
+                            subscription?.status || 'Active'
+                          )}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-4xl font-bold">${planDetails.price / 100}</span>
+                    <span className="text-muted-foreground">/ month</span>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {subscription?.current_period_end &&
+                      !subscriptionExpired &&
+                      usage?.plan !== 'free' && (
+                        <div className="p-4 rounded-lg bg-secondary/50 border">
+                          <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            Next Payment Date
+                          </div>
+                          <p className="font-semibold">
+                            {new Date(subscription.current_period_end * 1000).toLocaleDateString(
+                              'en-US',
+                              { month: 'long', day: 'numeric', year: 'numeric' }
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            <CreditCard className="h-3 w-3 inline mr-1" />
+                            Auto-renewal: ${planDetails.price / 100} will be charged
+                          </p>
+                        </div>
+                      )}
+                    <div className="p-4 rounded-lg bg-secondary/50 border">
+                      <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                        <Zap className="h-4 w-4" />
+                        Articles Limit
+                      </div>
+                      <p className="font-semibold">{planDetails.articles_per_month} per month</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  {!usage.can_generate && usage.plan === 'free' && (
-                    <div className="flex gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                      <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-primary" />
-                      <div className="flex-1">
-                        <p className="font-medium text-primary">
-                          Upgrade to generate more articles
+              {usage && (
+                <Card className={subscriptionExpired ? 'border-destructive/50' : ''}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {subscriptionExpired ? (
+                        <>
+                          <XCircle className="h-5 w-5 text-destructive" />
+                          <span className="text-destructive">Plan Expired</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-5 w-5 text-amber-500" />
+                          Usage This Month
+                        </>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {subscriptionExpired ? (
+                      <div className="text-center py-4">
+                        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+                          <XCircle className="h-8 w-8 text-destructive" />
+                        </div>
+                        <h3 className="font-semibold text-lg mb-2">
+                          Your subscription has expired
+                        </h3>
+                        <p className="text-muted-foreground mb-4">
+                          Renew your plan to continue generating articles and access all features.
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Upgrade to Pro for 20 articles/month or Enterprise for 100 articles/month
+                        <Button onClick={handleRenewSubscription} className="gap-2">
+                          <RefreshCw className="h-4 w-4" />
+                          Renew Subscription
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">Articles Generated</span>
+                          <span className="text-muted-foreground">
+                            {usage.articles_used} / {usage.articles_limit}
+                          </span>
+                        </div>
+                        <Progress value={usage.percentage_used} className="h-3" />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {usage.can_generate
+                            ? `${usage.articles_limit - usage.articles_used} articles remaining`
+                            : "You've reached your monthly limit"}
+                        </p>
+                        {!usage.can_generate && usage.plan === 'free' && (
+                          <Alert className="mt-4">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              Upgrade to Pro for 30 articles/month or Enterprise for 100
+                              articles/month.
+                              <Link href="/pricing" className="ml-2 text-primary hover:underline">
+                                View Plans →
+                              </Link>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                        {!usage.can_generate && usage.plan !== 'free' && (
+                          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                            <p className="text-sm font-medium mb-3">
+                              Need more articles this month?
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTopup(10)}
+                                disabled={topupLoading}
+                              >
+                                {topupLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                ) : null}
+                                +10 Articles ($9.99)
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTopup(25)}
+                                disabled={topupLoading}
+                              >
+                                +25 Articles ($19.99)
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTopup(50)}
+                                disabled={topupLoading}
+                              >
+                                +50 Articles ($34.99)
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {usage?.plan === 'free' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>🚀 Upgrade Your Plan</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="p-6 rounded-lg border text-center">
+                        <h3 className="font-bold mb-1">Pro Plan</h3>
+                        <p className="text-3xl font-bold text-primary mb-1">$70/mo</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Up to 30 article per month
                         </p>
                         <Link href="/pricing">
-                          <Button size="sm" className="mt-3 gap-2">
-                            View Plans <ExternalLink className="h-3 w-3" />
-                          </Button>
+                          <Button className="w-full">Upgrade to Pro</Button>
+                        </Link>
+                      </div>
+                      <div className="p-6 rounded-lg border text-center">
+                        <h3 className="font-bold mb-1">Enterprise Plan</h3>
+                        <p className="text-3xl font-bold text-primary mb-1">$299/mo</p>
+                        <p className="text-sm text-muted-foreground mb-4">100 articles per month</p>
+                        <Link href="/pricing">
+                          <Button className="w-full">Upgrade to Enterprise</Button>
                         </Link>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Upgrade Options */}
-            {usage?.plan === 'free' && (
-              <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
-                <CardHeader>
-                  <CardTitle>Upgrade Your Plan</CardTitle>
-                  <CardDescription>Get more articles and advanced features</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="p-4 rounded-lg bg-background border-2 border-border">
-                      <h3 className="font-bold text-lg mb-2">Pro Plan</h3>
-                      <p className="text-3xl font-bold mb-3">$70/mo</p>
-                      <p className="text-sm text-muted-foreground mb-4">20 articles per month</p>
-                      <Link href="/pricing">
-                        <Button className="w-full">Upgrade to Pro</Button>
-                      </Link>
-                    </div>
-                    <div className="p-4 rounded-lg bg-background border-2 border-border">
-                      <h3 className="font-bold text-lg mb-2">Enterprise Plan</h3>
-                      <p className="text-3xl font-bold mb-3">$299/mo</p>
-                      <p className="text-sm text-muted-foreground mb-4">100 articles per month</p>
-                      <Link href="/pricing">
-                        <Button className="w-full">Upgrade to Enterprise</Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </main>
       </div>

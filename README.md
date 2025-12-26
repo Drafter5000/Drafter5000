@@ -195,12 +195,12 @@ CREATE POLICY "Users can view own articles" ON public.articles
 
 1. Create a Stripe account and get API keys from https://dashboard.stripe.com/test/apikeys
 2. Create two products in Stripe Dashboard:
-   - **Pro Plan**: $70/month (with 7-day trial)
+   - **Pro Plan**: $70/month
    - **Enterprise Plan**: $299/month
 3. Copy Price IDs to environment variables (`STRIPE_PRICE_PRO_ID`, `STRIPE_PRICE_ENTERPRISE_ID`)
 4. Set up webhook endpoint:
    - URL: `https://yourdomain.com/api/stripe/webhook`
-   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.trial_will_end`
+   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
 5. For local development, use Stripe CLI:
    ```bash
    stripe listen --forward-to localhost:3000/api/stripe/webhook
@@ -217,6 +217,273 @@ See `docs/STRIPE_INTEGRATION.md` for complete setup guide.
    - Spreadsheet 1: Customer config tracking
    - Spreadsheet 2: Individual customer article sheets
 5. Copy sheet IDs to environment variables
+
+### LLM Provider Setup
+
+Drafter supports multiple LLM providers for AI-powered article generation. You can configure one or more providers based on your needs.
+
+#### Supported Providers
+
+| Provider  | Models                                             | API Key Prefix |
+| --------- | -------------------------------------------------- | -------------- |
+| OpenAI    | GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo    | `sk-`          |
+| Anthropic | Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus | `sk-ant-`      |
+| Google AI | Gemini 1.5 Pro, Gemini 1.5 Flash                   | `AI`           |
+| xAI       | Grok Beta                                          | `xai-`         |
+
+#### Current LLM_PROVIDERS Configuration
+
+The current provider configuration is defined in `lib/services/llm-providers.ts`:
+
+```typescript
+export const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
+  openai: {
+    id: 'openai',
+    name: 'OpenAI',
+    apiKeyPrefix: 'sk-',
+    apiEndpoint: 'https://api.openai.com/v1/chat/completions',
+    models: [
+      {
+        id: 'gpt-4o',
+        name: 'GPT-4o',
+        contextWindow: 128000,
+        pricingTier: 'premium',
+        inputPricePerMillion: 2.5,
+        outputPricePerMillion: 10,
+      },
+      {
+        id: 'gpt-4o-mini',
+        name: 'GPT-4o Mini',
+        contextWindow: 128000,
+        pricingTier: 'standard',
+        inputPricePerMillion: 0.15,
+        outputPricePerMillion: 0.6,
+      },
+      {
+        id: 'gpt-4-turbo',
+        name: 'GPT-4 Turbo',
+        contextWindow: 128000,
+        pricingTier: 'premium',
+        inputPricePerMillion: 10,
+        outputPricePerMillion: 30,
+      },
+      {
+        id: 'gpt-3.5-turbo',
+        name: 'GPT-3.5 Turbo',
+        contextWindow: 16385,
+        pricingTier: 'standard',
+        inputPricePerMillion: 0.5,
+        outputPricePerMillion: 1.5,
+      },
+    ],
+  },
+  anthropic: {
+    id: 'anthropic',
+    name: 'Anthropic',
+    apiKeyPrefix: 'sk-ant-',
+    apiEndpoint: 'https://api.anthropic.com/v1/messages',
+    models: [
+      {
+        id: 'claude-3-5-sonnet-20241022',
+        name: 'Claude 3.5 Sonnet',
+        contextWindow: 200000,
+        pricingTier: 'premium',
+        inputPricePerMillion: 3,
+        outputPricePerMillion: 15,
+      },
+      {
+        id: 'claude-3-5-haiku-20241022',
+        name: 'Claude 3.5 Haiku',
+        contextWindow: 200000,
+        pricingTier: 'standard',
+        inputPricePerMillion: 0.8,
+        outputPricePerMillion: 4,
+      },
+      {
+        id: 'claude-3-opus-20240229',
+        name: 'Claude 3 Opus',
+        contextWindow: 200000,
+        pricingTier: 'premium',
+        inputPricePerMillion: 15,
+        outputPricePerMillion: 75,
+      },
+    ],
+  },
+  xai: {
+    id: 'xai',
+    name: 'xAI',
+    apiKeyPrefix: 'xai-',
+    apiEndpoint: 'https://api.x.ai/v1/chat/completions',
+    models: [
+      {
+        id: 'grok-beta',
+        name: 'Grok Beta',
+        contextWindow: 131072,
+        pricingTier: 'premium',
+        inputPricePerMillion: 5,
+        outputPricePerMillion: 15,
+      },
+    ],
+  },
+  google: {
+    id: 'google',
+    name: 'Google AI',
+    apiKeyPrefix: 'AI',
+    apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
+    models: [
+      {
+        id: 'gemini-1.5-pro',
+        name: 'Gemini 1.5 Pro',
+        contextWindow: 2097152,
+        pricingTier: 'premium',
+        inputPricePerMillion: 1.25,
+        outputPricePerMillion: 5,
+      },
+      {
+        id: 'gemini-1.5-flash',
+        name: 'Gemini 1.5 Flash',
+        contextWindow: 1048576,
+        pricingTier: 'standard',
+        inputPricePerMillion: 0.075,
+        outputPricePerMillion: 0.3,
+      },
+    ],
+  },
+};
+```
+
+#### Configuration Steps
+
+1. **Get API Keys** from your preferred provider(s):
+   - OpenAI: https://platform.openai.com/api-keys
+   - Anthropic: https://console.anthropic.com/settings/keys
+   - Google AI: https://aistudio.google.com/app/apikey
+   - xAI: https://console.x.ai
+
+2. **Add to Environment Variables** (`.env.local`):
+
+   ```env
+   # OpenAI (default provider)
+   OPENAI_API_KEY=sk-...
+
+   # Optional: Additional providers
+   ANTHROPIC_API_KEY=sk-ant-...
+   GOOGLE_AI_API_KEY=AI...
+   XAI_API_KEY=xai-...
+   ```
+
+3. **Configure via Admin Dashboard** (recommended):
+   - Navigate to Admin > Settings > LLM Providers
+   - Enter API keys for each provider you want to use
+   - Keys are securely stored in the database (`app_config` table)
+   - Use the masked key display to verify configuration
+
+#### Switching Providers
+
+To change the active LLM provider:
+
+1. **Via Admin UI**: Go to Admin > Settings > LLM Providers and configure the desired provider's API key
+2. **Via Environment**: Set the appropriate API key environment variable
+3. **Per-Request**: The playground feature allows selecting different providers/models for testing
+
+#### API Key Validation
+
+The system validates API keys based on:
+
+- Minimum length (10 characters)
+- Provider-specific prefix (e.g., `sk-` for OpenAI)
+- Format validation before saving
+
+#### Adding a New Provider or Model
+
+To add a new LLM provider or model, update the `LLM_PROVIDERS` configuration in `lib/services/llm-providers.ts`:
+
+**Adding a New Provider:**
+
+```typescript
+// In lib/services/llm-providers.ts
+export const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
+  // ... existing providers
+
+  // Add new provider
+  newprovider: {
+    id: 'newprovider',
+    name: 'New Provider Name',
+    apiKeyPrefix: 'np-', // Expected API key prefix
+    apiEndpoint: 'https://api.newprovider.com/v1/chat/completions',
+    models: [
+      {
+        id: 'model-id',
+        name: 'Model Display Name',
+        contextWindow: 128000,
+        pricingTier: 'standard', // 'standard' or 'premium'
+        inputPricePerMillion: 1.0,
+        outputPricePerMillion: 2.0,
+      },
+    ],
+  },
+};
+```
+
+**Adding a New Model to Existing Provider:**
+
+```typescript
+// Find the provider in LLM_PROVIDERS and add to its models array
+openai: {
+  // ... existing config
+  models: [
+    // ... existing models
+    {
+      id: 'gpt-5',  // Model ID used in API calls
+      name: 'GPT-5',  // Display name in UI
+      contextWindow: 256000,
+      pricingTier: 'premium',
+      inputPricePerMillion: 5.0,
+      outputPricePerMillion: 15.0,
+    },
+  ],
+},
+```
+
+**Configuration Fields:**
+
+| Field                            | Description                              |
+| -------------------------------- | ---------------------------------------- |
+| `id`                             | Unique identifier (lowercase, no spaces) |
+| `name`                           | Display name shown in UI                 |
+| `apiKeyPrefix`                   | Expected prefix for API key validation   |
+| `apiEndpoint`                    | Provider's API endpoint URL              |
+| `models[].id`                    | Model identifier used in API requests    |
+| `models[].name`                  | Model display name                       |
+| `models[].contextWindow`         | Maximum token context window             |
+| `models[].pricingTier`           | `'standard'` or `'premium'`              |
+| `models[].inputPricePerMillion`  | Cost per million input tokens (USD)      |
+| `models[].outputPricePerMillion` | Cost per million output tokens (USD)     |
+
+**After Adding a Provider:**
+
+1. Add the corresponding environment variable to `.env.example`:
+
+   ```env
+   NEWPROVIDER_API_KEY=np-...
+   ```
+
+2. If the provider uses a non-OpenAI-compatible API format, update the API call logic in `lib/services/playground.ts`
+
+3. Restart the development server to pick up changes
+
+#### Troubleshooting
+
+**API Key Not Working**
+
+- Verify the key starts with the correct prefix for your provider
+- Check that the key has not expired or been revoked
+- Ensure sufficient credits/quota on your provider account
+
+**Provider Not Available**
+
+- Confirm the API key is saved in Admin > Settings > LLM Providers
+- Check the `app_config` table for the key entry (`llm_api_key_<provider>`)
 
 ## Deployment
 
@@ -252,11 +519,16 @@ See `docs/STRIPE_INTEGRATION.md` for complete setup guide.
 - `POST /api/auth/login` - Sign in
 - `POST /api/auth/logout` - Sign out
 
-### Onboarding
+### Article Styles
 
-- `POST /api/onboarding/step-1` - Save style samples
-- `POST /api/onboarding/step-2` - Save subjects
-- `POST /api/onboarding/step-3` - Complete onboarding (provisions Sheets)
+- `GET /api/article-styles` - List all article styles
+- `POST /api/article-styles` - Create new article style
+- `GET /api/article-styles/[id]` - Get single style
+- `PUT /api/article-styles/[id]` - Update style
+- `DELETE /api/article-styles/[id]` - Delete style
+- `POST /api/article-styles/step-1` - Save style samples (wizard)
+- `POST /api/article-styles/step-2` - Save subjects (wizard)
+- `POST /api/article-styles/step-3` - Complete style creation (wizard)
 
 ### Dashboard
 

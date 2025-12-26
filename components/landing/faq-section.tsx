@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { HelpCircle, Plus, Minus } from 'lucide-react';
 import { useState } from 'react';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 
 const faqs = [
   {
@@ -21,14 +22,8 @@ const faqs = [
       'Drafter can write about virtually any topic. You can choose from AI-suggested topics based on your niche, or add your own custom topics. Our AI is trained on diverse subjects and can adapt to your specific industry.',
   },
   {
-    question: 'Is the content plagiarism-free?',
-    answer:
-      'Yes, 100%. Every article is generated from scratch based on your style and topics. All content passes plagiarism detection tools and is completely original.',
-  },
-  {
     question: 'How many articles can I generate per month?',
-    answer:
-      'It depends on your plan. The free tier includes 5 articles/month, Pro includes 50 articles/month, and Enterprise offers unlimited generation. Check our pricing page for full details.',
+    answer: 'One per day, automatically sent to you by email.',
   },
   {
     question: 'Can I cancel my subscription anytime?',
@@ -83,6 +78,7 @@ function FAQItem({
 }
 
 export function FAQSection() {
+  const { siteName } = useSiteConfigContext();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
@@ -105,7 +101,9 @@ export function FAQSection() {
               questions
             </span>
           </h2>
-          <p className="text-xl text-muted-foreground">Everything you need to know about Drafter</p>
+          <p className="text-xl text-muted-foreground">
+            Everything you need to know about {siteName}
+          </p>
         </motion.div>
 
         <div className="bg-card rounded-3xl border border-border p-8">

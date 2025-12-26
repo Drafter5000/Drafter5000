@@ -1,15 +1,15 @@
--- Seed Default Organization
+-- Seed Drafter Organization
 -- This creates the initial organization for MVP
 -- Super admin is created via environment variable during app bootstrap
 
 -- ===========================================
--- CREATE DEFAULT ORGANIZATION
+-- CREATE DRAFTER ORGANIZATION
 -- ===========================================
 INSERT INTO organizations (id, name, slug, settings, is_active)
 VALUES (
   '00000000-0000-0000-0000-000000000001',
-  'Default Organization',
-  'default',
+  'Drafter',
+  'drafter',
   '{"is_default": true, "allow_signups": true}',
   true
 )

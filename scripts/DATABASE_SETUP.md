@@ -33,31 +33,52 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-### 3. Run Database Migration
+### 3. First-Time Database Setup
 
-Execute the schema in Supabase SQL Editor:
+For a fresh database, run the initialization script:
 
 ```bash
-bun run db:migrate
+# First, run the setup SQL manually in Supabase Dashboard > SQL Editor
+# Copy contents of scripts/00-setup-migrations.sql and execute it
+
+# Then initialize the database
+bun run db:init
+
+# Or initialize with Stripe sync
+bun run db:init:stripe
 ```
 
-Or manually:
+The `db:init` script will:
+
+1. Check your Supabase connection
+2. Run all SQL migrations in order
+3. Create the default organization
+4. Seed subscription plans
+
+### Alternative: Manual Migration
+
+If you prefer to run migrations manually:
 
 1. Go to Supabase Dashboard > SQL Editor
-2. Copy contents of `scripts/01-schema.sql`
-3. Run the query
+2. Copy contents of `scripts/00-setup-migrations.sql` and run it (one-time setup)
+3. Run `bun run db:migrate` to apply all pending migrations
 
 ---
 
 ## Database Commands
 
-| Command              | Description                                 |
-| -------------------- | ------------------------------------------- |
-| `bun run db:migrate` | Apply database migrations to Supabase       |
-| `bun run db:reset`   | Reset database (drops and recreates tables) |
-| `bun run db:seed`    | Seed database with sample data              |
-| `bun run db:studio`  | Open Supabase Studio (local dev)            |
-| `bun run db:types`   | Generate TypeScript types from schema       |
+| Command                   | Description                                    |
+| ------------------------- | ---------------------------------------------- |
+| `bun run db:init`         | Initialize database from scratch (recommended) |
+| `bun run db:init:stripe`  | Initialize database and sync with Stripe       |
+| `bun run db:init:force`   | Force re-run all migrations                    |
+| `bun run db:migrate`      | Apply pending database migrations              |
+| `bun run db:reset`        | Reset database (drops and recreates tables)    |
+| `bun run db:bootstrap`    | Ensure default org and admin config exists     |
+| `bun run db:studio`       | Open Supabase Studio (local dev)               |
+| `bun run db:types`        | Generate TypeScript types from schema          |
+| `bun run stripe:sync`     | Sync subscription plans with Stripe            |
+| `bun run stripe:sync:dry` | Preview Stripe sync without making changes     |
 
 ---
 

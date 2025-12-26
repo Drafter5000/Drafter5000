@@ -4,8 +4,10 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Zap, Shield } from 'lucide-react';
 import Link from 'next/link';
+import { useSiteConfigContext } from '@/components/site-config-provider';
 
 export function CTASection() {
+  const { siteName } = useSiteConfigContext();
   return (
     <section className="py-32 px-6 relative overflow-hidden">
       {/* Animated background */}
@@ -50,12 +52,12 @@ export function CTASection() {
           </h2>
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Join thousands of writers who are already saving time and creating better content with
-            Drafter. Start your free trial today.
+            Join entrepreneurs who are saving time and creating better content with {siteName}.
+            Defibrillate your LinkedIn today.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Link href="/onboarding/step-1">
+            <Link href="/articles/generate/step-1">
               <Button
                 size="lg"
                 className="gap-2 shadow-2xl shadow-primary/30 text-lg px-10 h-14 rounded-2xl"
@@ -74,7 +76,7 @@ export function CTASection() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+          {/* <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
               <span>No credit card required</span>
@@ -87,7 +89,7 @@ export function CTASection() {
               <Sparkles className="h-5 w-5 text-primary" />
               <span>Cancel anytime</span>
             </div>
-          </div>
+          </div> */}
         </motion.div>
       </div>
     </section>

@@ -33,3 +33,19 @@ export async function getServerSupabaseSession() {
   } = await supabase.auth.getSession();
   return session;
 }
+
+/**
+ * Securely get the authenticated user by contacting the Supabase Auth server.
+ * This is more secure than getSession() as it validates the token.
+ */
+export async function getServerSupabaseUser() {
+  const supabase = await getServerSupabaseClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) {
+    return null;
+  }
+  return user;
+}

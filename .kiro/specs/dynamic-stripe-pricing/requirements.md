@@ -47,7 +47,7 @@ This feature transforms the currently hardcoded Stripe subscription pricing syst
 2. WHEN displaying a plan THEN the System SHALL show the plan name, description, price, articles_per_month, and all associated features
 3. WHEN a plan has is_highlighted set to true THEN the System SHALL display that plan with visual emphasis and a "Most Popular" badge
 4. WHEN the free plan is displayed THEN the System SHALL show "Get Started" as the call-to-action button text
-5. WHEN a paid plan is displayed THEN the System SHALL show "Start Free Trial" as the call-to-action button text
+5. WHEN a paid plan is displayed THEN the System SHALL show "Subscribe Now" as the call-to-action button text
 6. WHEN the enterprise plan is displayed THEN the System SHALL show "Contact Sales" as the call-to-action button text and link to email
 
 ### Requirement 4

@@ -23,15 +23,46 @@ export function countWords(text: string): number {
 
 /**
  * Validates whether the style samples array enables the continue button.
- * At least one non-empty (after trimming) sample is required.
+ * All 3 non-empty (after trimming) samples are required.
  *
  * @param samples - Array of style sample strings (typically 3)
- * @returns true if at least one sample has non-zero length after trimming
+ * @returns true if all 3 samples have non-zero length after trimming
  *
  * Requirements: 1.3, 1.5
  */
 export function isStyleSampleValid(samples: string[]): boolean {
-  return samples.some(sample => sample.trim().length > 0);
+  // Require exactly 3 articles, all non-empty
+  if (samples.length < 3) {
+    return false;
+  }
+  return samples.slice(0, 3).every(sample => sample.trim().length > 0);
+}
+
+/**
+ * Validates a single style sample text.
+ * Returns true if the text has at least 100 characters.
+ *
+ * @param text - The style sample text to validate
+ * @returns true if length >= 100 characters
+ *
+ * Requirements: 2.2
+ */
+export function validateStyleSample(text: string): boolean {
+  return text.length >= 100;
+}
+
+/**
+ * Validates a single topic text.
+ * Returns true if the text length is between 3 and 200 characters inclusive.
+ *
+ * @param text - The topic text to validate
+ * @returns true if length is between 3 and 200 characters
+ *
+ * Requirements: 3.2
+ */
+export function validateTopic(text: string): boolean {
+  const length = text.length;
+  return length >= 3 && length <= 200;
 }
 
 /**
@@ -93,6 +124,70 @@ export function isStep3FormValid(
 }
 
 /**
+ * Validation result for signup form
+ */
+export interface SignupValidationResult {
+  valid: boolean;
+  errors: {
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    job?: string;
+  };
+}
+
+/**
+ * Validates signup form data.
+ * Returns validation result with errors for each invalid field.
+ *
+ * @param data - The signup form data to validate
+ * @returns ValidationResult with valid flag and field errors
+ *
+ * Requirements: 4.2
+ */
+export function validateSignupForm(data: {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  job: string;
+}): SignupValidationResult {
+  const errors: SignupValidationResult['errors'] = {};
+
+  // Name validation: minimum 2 characters
+  if (data.name.length < 2) {
+    errors.name = 'Name must be at least 2 characters';
+  }
+
+  // Email validation: valid email pattern
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(data.email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+
+  // Password validation: minimum 8 characters
+  if (data.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters';
+  }
+
+  // Confirm password validation: must match password
+  if (data.confirmPassword !== data.password) {
+    errors.confirmPassword = 'Passwords do not match';
+  }
+
+  // Job validation: minimum 2 characters
+  if (data.job.length < 2) {
+    errors.job = 'Job must be at least 2 characters';
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+/**
  * Selects an AI suggestion and moves it from suggestions to subjects.
  * Returns the updated subjects and suggestions arrays.
  *
@@ -116,5 +211,53 @@ export function selectAISuggestion(
   return {
     subjects: [...subjects, suggestion],
     suggestions: suggestions.filter(s => s !== suggestion),
+  };
+}
+
+/**
+ * Validation result for LinkedIn signup form (no password required)
+ */
+export interface LinkedInSignupValidationResult {
+  valid: boolean;
+  errors: {
+    name?: string;
+    email?: string;
+    job?: string;
+  };
+}
+
+/**
+ * Validates LinkedIn signup form data (no password required).
+ * Returns validation result with errors for each invalid field.
+ *
+ * @param data - The LinkedIn signup form data to validate
+ * @returns ValidationResult with valid flag and field errors
+ */
+export function validateLinkedInSignupForm(data: {
+  name: string;
+  email: string;
+  job: string;
+}): LinkedInSignupValidationResult {
+  const errors: LinkedInSignupValidationResult['errors'] = {};
+
+  // Name validation: minimum 2 characters
+  if (data.name.length < 2) {
+    errors.name = 'Name must be at least 2 characters';
+  }
+
+  // Email validation: valid email pattern
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(data.email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+
+  // Job validation: minimum 2 characters
+  if (data.job.length < 2) {
+    errors.job = 'Job must be at least 2 characters';
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
   };
 }

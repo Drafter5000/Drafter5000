@@ -1,0 +1,127 @@
+# Implementation Plan
+
+- [x] 1. Set up database schema and admin utilities
+  - [x] 1.1 Create audit_logs table migration
+    - Create `scripts/06-audit-logs-schema.sql` with audit_logs table
+    - Add indexes for admin_id, action, and created_at
+    - _Requirements: 6.5_
+  - [x] 1.2 Create admin type definitions
+    - Add admin-specific types to `lib/types.ts` (AdminUserView, AdminOrgView, AuditLogEntry, etc.)
+    - Define AdminAction type and ListParams interface
+    - _Requirements: 3.1, 5.1_
+  - [x] 1.3 Create admin authentication utilities
+    - Create `lib/admin-auth.ts` with validateAdminAccess, getAdminSession, canPerformAdminAction
+    - Implement privilege checking logic for super_admin and org admin roles
+    - _Requirements: 1.2, 1.3, 6.1, 6.2, 6.3_
+  - [ ]\* 1.4 Write property test for admin authentication
+    - **Property 1: Admin authentication grants access**
+    - **Property 2: Non-admin authentication is rejected**
+    - **Validates: Requirements 1.2, 1.3**
+
+- [x] 2. Implement admin services layer
+  - [x] 2.1 Create audit log service
+    - Create `lib/services/audit-log.ts` with createAuditLog function
+    - Implement logging for all admin actions
+    - _Requirements: 6.5_
+  - [ ]\* 2.2 Write property test for audit logging
+    - **Property 13: Admin actions create audit logs**
+    - **Validates: Requirements 6.5**
+  - [x] 2.3 Create admin metrics service
+    - Create `lib/services/admin-metrics.ts` with getDashboardMetrics function
+    - Implement queries for user count, org count, subscriptions by plan, recent registrations
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - [ ]\* 2.4 Write property test for metrics accuracy
+    - **Property 3: Dashboard metrics match database counts**
+    - **Validates: Requirements 2.1, 2.2, 2.3, 2.4**
+  - [x] 2.5 Create admin users service
+    - Create `lib/services/admin-users.ts` with listUsers, getUserById, createUser, updateUserRole, deactivateUser
+    - Implement pagination and search functionality
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.2, 4.3_
+  - [ ]\* 2.6 Write property tests for user service
+    - **Property 4: User search filters correctly**
+    - **Property 5: User role update round-trip**
+    - **Property 6: User deactivation prevents login**
+    - **Property 7: User creation persists correctly**
+    - **Property 8: Duplicate email creation fails**
+    - **Validates: Requirements 3.2, 3.4, 3.5, 4.2, 4.4**
+  - [x] 2.7 Create admin organizations service
+    - Create `lib/services/admin-organizations.ts` with listOrganizations, getOrganizationById, createOrganization, updateOrganization, deactivateOrganization
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - [ ]\* 2.8 Write property tests for organization service
+    - **Property 9: Organization creation with admin assignment**
+    - **Property 10: Organization settings update round-trip**
+    - **Property 11: Organization deactivation prevents member access**
+    - **Validates: Requirements 5.3, 5.4, 5.5**
+
+- [x] 3. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 4. Implement admin API routes
+  - [x] 4.1 Create admin auth API routes
+    - Create `app/api/admin/auth/login/route.ts` for admin login
+    - Create `app/api/admin/auth/session/route.ts` for session validation
+    - Create `app/api/admin/auth/logout/route.ts` for logout
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [x] 4.2 Create admin metrics API route
+    - Create `app/api/admin/metrics/route.ts` returning dashboard metrics
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - [x] 4.3 Create admin users API routes
+    - Create `app/api/admin/users/route.ts` for list and create
+    - Create `app/api/admin/users/[userId]/route.ts` for get, update, delete
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4_
+  - [x] 4.4 Create admin organizations API routes
+    - Create `app/api/admin/organizations/route.ts` for list and create
+    - Create `app/api/admin/organizations/[orgId]/route.ts` for get, update, delete
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - [ ]\* 4.5 Write property test for route protection
+    - **Property 12: Route protection validates auth and privileges**
+    - **Validates: Requirements 6.1, 6.2, 6.3**
+
+- [x] 5. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Create admin UI components
+  - [x] 6.1 Create admin layout and sidebar
+    - Create `components/admin/admin-layout.tsx` with sidebar navigation
+    - Create `components/admin/admin-sidebar.tsx` with nav links
+    - _Requirements: 2.1, 6.1_
+  - [x] 6.2 Create admin metric card component
+    - Create `components/admin/admin-metric-card.tsx` for dashboard metrics display
+    - _Requirements: 2.1, 2.2, 2.3, 2.5_
+  - [x] 6.3 Create user management components
+    - Create `components/admin/user-table.tsx` for user list with pagination
+    - Create `components/admin/user-form.tsx` for create/edit user
+    - Create `components/admin/user-details.tsx` for user detail view
+    - _Requirements: 3.1, 3.2, 3.3, 4.1_
+  - [x] 6.4 Create organization management components
+    - Create `components/admin/org-table.tsx` for organization list
+    - Create `components/admin/org-form.tsx` for create/edit organization
+    - Create `components/admin/org-details.tsx` for organization detail view
+    - _Requirements: 5.1, 5.2_
+
+- [x] 7. Implement admin pages
+  - [x] 7.1 Create admin login page
+    - Create `app/admin/login/page.tsx` with email/password form
+    - Implement admin credential validation and redirect logic
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [x] 7.2 Create admin dashboard overview page
+    - Create `app/admin/page.tsx` with metrics cards and recent activity
+    - Implement loading states for metrics
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [x] 7.3 Create admin users page
+    - Create `app/admin/users/page.tsx` with user table and search
+    - Create `app/admin/users/[userId]/page.tsx` for user details
+    - Create `app/admin/users/new/page.tsx` for user creation
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4_
+  - [x] 7.4 Create admin organizations page
+    - Create `app/admin/organizations/page.tsx` with org table
+    - Create `app/admin/organizations/[orgId]/page.tsx` for org details
+    - Create `app/admin/organizations/new/page.tsx` for org creation
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - [x] 7.5 Create admin layout wrapper
+    - Create `app/admin/layout.tsx` with admin route protection
+    - Implement session validation and redirect for non-admins
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+- [x] 8. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

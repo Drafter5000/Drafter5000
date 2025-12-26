@@ -123,6 +123,20 @@ Before starting any task:
 - Show loading states during async operations
 - Clear error states when user retries an action
 
+#### Form Validation Rules
+
+- **ALWAYS use field-level validation** for form inputs (inline error messages below each field)
+- **DO NOT use toast/alert messages** for form validation errors
+- Toast messages should ONLY be used for:
+  - Backend API errors (server errors, network failures)
+  - Success confirmations after form submission
+- Field-level validation pattern:
+  - Display error message directly below the invalid field
+  - Add `border-destructive` class to highlight invalid fields
+  - Clear field error when user starts typing/selecting
+  - Use `text-xs text-destructive` for error message styling
+- Mark required fields with `<span className="text-destructive">*</span>` after the label
+
 ### Naming Conventions
 
 - Components: PascalCase (`UserProfile.tsx`)
@@ -140,20 +154,24 @@ Use this section to track all tasks. Update as you work.
 
 <!-- AI: Update this section when starting a new task -->
 
-**Task:** [Task description]
-**Status:** [ ] Not Started | [ ] In Progress | [ ] Completed
-**Approach:** [Brief description of the approach]
+**Task:** None
+**Status:** [x] Completed
+**Approach:** N/A
 
 ### Subtasks
 
 <!-- AI: Add subtasks here with checkboxes -->
 
-- [ ] Subtask 1
-- [ ] Subtask 2
+N/A
 
 ### Completed Tasks
 
 <!-- AI: Move completed tasks here with brief notes -->
+
+- [x] LinkedIn OAuth onboarding flow - Auto-fill user data from LinkedIn, hide password fields, hide "Already have an account?" link
+- [x] Payment tracking system - Added payments table and webhook handlers to track all payment transactions
+- [x] Usage/Credits tracking system - Added database-based usage tracking to subscriptions table, replacing Google Sheets-based tracking
+- [x] Google Sheets Stats Sync - Sync stats from all user sheets to database with caching, proper loading skeletons instead of "0+"
 
 ---
 
@@ -161,17 +179,110 @@ Use this section to track all tasks. Update as you work.
 
 Use this section to document the approach taken for complex tasks.
 
-### [Date] - [Task Name]
+### December 15, 2025 - Payment Tracking System
 
-**Problem:** [What needed to be solved]
+**Problem:** The system had subscription tracking but no dedicated payments table to track individual payment transactions for audit and history purposes.
 
-**Solution:** [How it was solved]
+**Solution:**
+
+1. Created `payments` table to store all payment transactions with details (amount, status, payment method, etc.)
+2. Updated Stripe webhook to record payments on `checkout.session.completed`, `invoice.payment_succeeded`, and `invoice.payment_failed` events
+3. Created `/api/payments` endpoint to fetch payment history for users
+4. Added TypeScript types for Payment and PaymentListResponse
 
 **Files Modified:**
 
-- `path/to/file.ts` - [What was changed]
+- `scripts/18-payments-table.sql` - New migration for payments table
+- `app/api/stripe/webhook/route.ts` - Added payment recording logic
+- `app/api/payments/route.ts` - New API endpoint for payment history
+- `lib/types.ts` - Added Payment types
 
-**Notes:** [Any important notes for future reference]
+**Notes:** The payments table tracks: payment intent ID, invoice ID, charge ID, subscription ID, amount, currency, status, payment method details, failure reasons, and timestamps.
+
+### December 15, 2025 - Usage/Credits Tracking System
+
+**Problem:** Usage tracking was based on counting "Sent" articles from Google Sheets, which was unreliable and didn't integrate well with the subscription billing cycle.
+
+**Solution:**
+
+1. Added usage tracking fields to `subscriptions` table: `articles_used`, `articles_limit`, `usage_reset_at`
+2. Updated Stripe webhook to set `articles_limit` from plan when subscription is created/updated
+3. Reset usage automatically when subscription renews (new billing period)
+4. Updated `lib/usage-limits.ts` to read/write usage from database instead of Google Sheets
+5. Created `/api/usage` endpoint for getting and incrementing usage
+6. Updated topic status change to "Sent" to increment usage in database
+
+**Files Modified:**
+
+- `scripts/19-subscription-usage-tracking.sql` - New migration for usage tracking fields
+- `lib/usage-limits.ts` - Rewrote to use database-based tracking
+- `lib/types.ts` - Added SubscriptionUsage, UsageLimitResult, IncrementUsageResult types
+- `app/api/usage/route.ts` - New API endpoint for usage operations
+- `app/api/stripe/webhook/route.ts` - Added usage limit setting and reset on subscription events
+- `app/api/stripe/usage/route.ts` - Updated to use database-based tracking
+- `app/api/topics/[rowIndex]/route.ts` - Added usage increment when status changes to "Sent"
+- `app/actions/billing.ts` - Updated getUsageStats to use database
+
+**Notes:** Usage is now tracked per billing period in the database. When a subscription renews, usage is automatically reset. The `articles_limit` is set from the plan's `articles_per_month` field.
+
+### December 15, 2025 - LinkedIn OAuth Onboarding Flow
+
+**Problem:** After LinkedIn login, users were redirected to step-3 which asked for email, name, and job even though this data was already available from LinkedIn. The header also showed "Already have an account? Sign in" which was confusing for logged-in users.
+
+**Solution:**
+
+1. Updated auth callback to create user profile for new LinkedIn users and redirect to onboarding step-1
+2. Modified step-3 to detect LinkedIn users and pre-fill their data (name, email, job)
+3. Hidden password fields for LinkedIn users since they authenticate via OAuth
+4. Hidden "Already have an account? Sign in" link for authenticated users
+5. Created new API endpoint for LinkedIn users to complete onboarding without password
+6. Added validation function for LinkedIn signup (no password required)
+
+**Files Modified:**
+
+- `app/auth/callback/route.ts` - Added LinkedIn user profile creation and onboarding redirect logic
+- `app/articles/generate/layout.tsx` - Hide sign-in link for LinkedIn users
+- `app/articles/generate/step-1/page.tsx` - Preserve provider parameter in navigation
+- `app/articles/generate/step-2/page.tsx` - Preserve provider parameter in navigation
+- `app/articles/generate/step-3/page.tsx` - Detect LinkedIn users, pre-fill data, hide password fields
+- `lib/onboarding-validation.ts` - Added validateLinkedInSignupForm function
+- `app/api/auth/complete-linkedin-onboarding/route.ts` - New API endpoint for LinkedIn onboarding
+
+**Notes:** LinkedIn users are identified by the `provider=linkedin` query parameter or by checking if user is authenticated. The flow preserves this parameter across all steps.
+
+### December 16, 2025 - Google Sheets Stats Sync & Caching
+
+**Problem:** Dashboard and landing page stats were showing "0+" while loading, confusing users. Stats were fetched directly from Google Sheets on every request, causing slow load times and unnecessary API calls.
+
+**Solution:**
+
+1. Created `user_stats` table to store synced statistics from Google Sheets
+2. Implemented `user-stats-sync.ts` service with caching (5-minute TTL)
+3. Added `/api/stats/sync` endpoint for individual user sync
+4. Added `/api/stats/sync-all` endpoint for admin/cron batch sync
+5. Updated landing page with proper loading skeletons instead of "0+"
+6. Added sessionStorage caching on frontend for landing stats
+7. Added HTTP cache headers (s-maxage=300, stale-while-revalidate=3600)
+8. Created `useDashboardStats` hook with built-in caching
+
+**Files Created:**
+
+- `scripts/19-user-stats-table.sql` - Database migration for user_stats table
+- `lib/services/user-stats-sync.ts` - Stats sync service with caching
+- `lib/hooks/use-dashboard-stats.ts` - Custom hook for dashboard stats
+- `app/api/stats/sync/route.ts` - User stats sync API
+- `app/api/stats/sync-all/route.ts` - Batch sync API for admin/cron
+
+**Files Modified:**
+
+- `components/landing/stats-section.tsx` - Added loading skeletons, memoized stats
+- `app/page.tsx` - Added sessionStorage caching, loading state
+- `app/api/landing-stats/route.ts` - Added cache headers
+- `lib/services/landing-stats.ts` - Added database fallback for stats
+- `app/dashboard/page.tsx` - Added sync button and background sync
+- `lib/types.ts` - Added UserStats type
+
+**Notes:** Stats are now synced from Google Sheets to database with 5-minute cache. Landing page shows proper loading skeletons while fetching. Run `bun run db:migrate` to apply the new migration.
 
 ---
 

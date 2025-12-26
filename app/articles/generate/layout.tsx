@@ -1,0 +1,208 @@
+'use client';
+
+import { usePathname, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useContext, Suspense } from 'react';
+import { DesignContext, type DesignMode } from '@/components/design-provider';
+import { useSiteConfigContext } from '@/components/site-config-provider';
+import { Win95Window, Win95Progress, Win95Button } from '@/components/win95';
+import { Progress } from '@/components/ui/progress';
+import { CheckCircle2 } from 'lucide-react';
+import Image from 'next/image';
+import { useAuth } from '@/components/auth-provider';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const STEPS = [
+  { path: '/articles/generate/step-1', label: 'Writing Style', number: 1 },
+  { path: '/articles/generate/step-2', label: 'Topics', number: 2 },
+  { path: '/articles/generate/step-3', label: 'Settings', number: 3 },
+];
+
+function LayoutSkeleton({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2.5">
+            <Skeleton className="h-9 w-9 rounded-xl" />
+            <Skeleton className="h-6 w-28" />
+          </div>
+        </div>
+        <div className="mb-8">
+          <Skeleton className="h-2 w-full mb-4" />
+          <div className="flex justify-between">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-6 w-24" />
+            ))}
+          </div>
+        </div>
+        <div className="bg-card rounded-lg border p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function GenerateLayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const context = useContext(DesignContext);
+  const { siteName, logoUrl } = useSiteConfigContext();
+  const designMode: DesignMode = context?.designMode ?? 'modern';
+  const toggleAndReload = context?.toggleAndReload;
+  const { user } = useAuth();
+  const currentStepIndex = STEPS.findIndex(s => pathname.startsWith(s.path));
+  const currentStep = currentStepIndex >= 0 ? currentStepIndex + 1 : 1;
+  const progressValue = (currentStep / STEPS.length) * 100;
+
+  // Check if user is authenticated (LinkedIn OAuth user)
+  const isLinkedInUser = searchParams.get('provider') === 'linkedin' || !!user;
+
+  // Win95 Design
+  if (designMode === 'win95') {
+    return (
+      <div className="min-h-screen p-4">
+        <div className="max-w-4xl mx-auto mb-4">
+          <div className="win95-raised p-2 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-[16px]">✨</span>
+              <span className="text-[12px] font-bold">{siteName}</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Win95Button size="sm" onClick={toggleAndReload} title="Switch to Modern Design">
+                🎨 Modern
+              </Win95Button>
+              {!isLinkedInUser && (
+                <Link href="/login" className="text-[11px] text-[var(--win95-link)] underline">
+                  Already have an account? Sign in
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto">
+          <Win95Window title="Create Article Style" icon={<span>📝</span>} showControls={true}>
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold">Progress</span>
+                <span className="text-[11px]">
+                  Step {currentStep} of {STEPS.length}
+                </span>
+              </div>
+              <Win95Progress value={progressValue} />
+
+              <div className="flex justify-between mt-3">
+                {STEPS.map((step, index) => {
+                  const isCompleted = index < currentStepIndex;
+                  const isCurrent = index === currentStepIndex;
+                  return (
+                    <div
+                      key={step.path}
+                      className={`flex items-center gap-1 text-[11px] ${
+                        isCurrent
+                          ? 'font-bold'
+                          : isCompleted
+                            ? 'text-[var(--win95-success)]'
+                            : 'text-[var(--win95-button-shadow)]'
+                      }`}
+                    >
+                      <span
+                        className={`
+                        w-4 h-4 flex items-center justify-center text-[10px]
+                        ${isCompleted ? 'win95-sunken bg-[var(--win95-success)] text-white' : 'win95-sunken'}
+                      `}
+                      >
+                        {isCompleted ? '✓' : step.number}
+                      </span>
+                      <span className="hidden sm:inline">{step.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="win95-sunken p-4">{children}</div>
+          </Win95Window>
+        </div>
+      </div>
+    );
+  }
+
+  // Modern Design
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="flex items-center gap-2.5 font-bold text-lg group">
+            <Image src={logoUrl} alt={`${siteName} Logo`} width={36} height={36} />
+            <span>{siteName}</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            {!isLinkedInUser && (
+              <Link href="/login" className="text-sm text-primary hover:underline">
+                Already have an account? Sign in
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium">Progress</span>
+            <span className="text-sm text-muted-foreground">
+              Step {currentStep} of {STEPS.length}
+            </span>
+          </div>
+          <Progress value={progressValue} className="h-2" />
+
+          <div className="flex justify-between mt-4">
+            {STEPS.map((step, index) => {
+              const isCompleted = index < currentStepIndex;
+              const isCurrent = index === currentStepIndex;
+              return (
+                <div
+                  key={step.path}
+                  className={`flex items-center gap-2 text-sm ${
+                    isCurrent
+                      ? 'font-semibold text-primary'
+                      : isCompleted
+                        ? 'text-green-600'
+                        : 'text-muted-foreground'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <span
+                      className={`
+                      w-6 h-6 rounded-full flex items-center justify-center text-xs
+                      ${isCurrent ? 'bg-primary text-primary-foreground' : 'bg-muted'}
+                    `}
+                    >
+                      {step.number}
+                    </span>
+                  )}
+                  <span className="hidden sm:inline">{step.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-card rounded-lg border p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Public onboarding layout - no authentication required
+ * Requirements: 7.1, 8.1, 8.2
+ */
+export default function GenerateLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<LayoutSkeleton>{children}</LayoutSkeleton>}>
+      <GenerateLayoutContent>{children}</GenerateLayoutContent>
+    </Suspense>
+  );
+}

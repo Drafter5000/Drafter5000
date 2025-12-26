@@ -25,7 +25,6 @@ export const ALL_DAYS: DayCode[] = [...DAYS];
  * @param day - The day code to toggle
  * @returns A new array with the day toggled
  *
- * Requirements: 3.2
  */
 export function toggleDay(selectedDays: DayCode[], day: DayCode): DayCode[] {
   if (selectedDays.includes(day)) {
@@ -42,7 +41,6 @@ export function toggleDay(selectedDays: DayCode[], day: DayCode): DayCode[] {
  * @param selectedDays - Current array of selected day codes
  * @returns Either all days or an empty array
  *
- * Requirements: 3.3
  */
 export function toggleAllDays(selectedDays: DayCode[]): DayCode[] {
   const allSelected = DAYS.every(day => selectedDays.includes(day));

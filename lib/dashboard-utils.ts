@@ -2,6 +2,8 @@
  * Dashboard utility functions for data transformation and display logic
  */
 
+import { LANGUAGES, DAYS } from './constants';
+
 export type ArticleStatus = 'draft' | 'pending' | 'sent';
 export type BadgeVariant = 'default' | 'secondary' | 'outline';
 
@@ -29,22 +31,11 @@ export interface LanguageInfo {
   flag: string;
 }
 
-const LANGUAGE_MAP: Record<string, LanguageInfo> = {
-  en: { label: 'English', flag: '🇺🇸' },
-  es: { label: 'Spanish', flag: '🇪🇸' },
-  fr: { label: 'French', flag: '🇫🇷' },
-  de: { label: 'German', flag: '🇩🇪' },
-  it: { label: 'Italian', flag: '🇮🇹' },
-  pt: { label: 'Portuguese', flag: '🇵🇹' },
-  nl: { label: 'Dutch', flag: '🇳🇱' },
-  pl: { label: 'Polish', flag: '🇵🇱' },
-  ru: { label: 'Russian', flag: '🇷🇺' },
-  ja: { label: 'Japanese', flag: '🇯🇵' },
-  zh: { label: 'Chinese', flag: '🇨🇳' },
-  ko: { label: 'Korean', flag: '🇰🇷' },
-  ar: { label: 'Arabic', flag: '🇸🇦' },
-  hi: { label: 'Hindi', flag: '🇮🇳' },
-};
+// Build language map from shared constants
+const LANGUAGE_MAP: Record<string, LanguageInfo> = LANGUAGES.reduce(
+  (acc, lang) => ({ ...acc, [lang.code]: { label: lang.label, flag: lang.flag } }),
+  {} as Record<string, LanguageInfo>
+);
 
 /**
  * Maps language codes to display labels and flag emojis
@@ -58,20 +49,16 @@ export function getLanguageInfo(code: string): LanguageInfo {
  * Returns list of supported language codes
  */
 export function getSupportedLanguages(): string[] {
-  return Object.keys(LANGUAGE_MAP);
+  return LANGUAGES.map(lang => lang.code);
 }
 
 export type DeliveryDaysResult = { type: 'everyday' } | { type: 'days'; days: string[] };
 
-const DAY_LABELS: Record<string, string> = {
-  mon: 'Mon',
-  tue: 'Tue',
-  wed: 'Wed',
-  thu: 'Thu',
-  fri: 'Fri',
-  sat: 'Sat',
-  sun: 'Sun',
-};
+// Build day labels map from shared constants
+const DAY_LABELS: Record<string, string> = DAYS.reduce(
+  (acc, day) => ({ ...acc, [day.id]: day.short }),
+  {} as Record<string, string>
+);
 
 /**
  * Formats delivery days array for display

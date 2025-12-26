@@ -3,19 +3,26 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import type { SubscriptionPlan, PlanFeature, SubscriptionPlanWithFeatures } from '@/lib/types';
 
 /**
- * Fetches all active subscription plans with their features from the database.
+ * Fetches all active and visible subscription plans with their features from the database.
  * Plans are sorted by sort_order ascending.
  * Features within each plan are sorted by sort_order ascending.
+ * @param includeHidden - If true, includes plans with is_visible=false (for admin use)
  */
-export async function getActivePlans(): Promise<SubscriptionPlanWithFeatures[]> {
+export async function getActivePlans(
+  includeHidden: boolean = false
+): Promise<SubscriptionPlanWithFeatures[]> {
   const supabase = await getServerSupabaseClient();
 
-  // Fetch active plans ordered by sort_order
-  const { data: plans, error: plansError } = await supabase
-    .from('subscription_plans')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
+  // Build query for active plans
+  let query = supabase.from('subscription_plans').select('*').eq('is_active', true);
+
+  // Filter by visibility unless includeHidden is true
+  if (!includeHidden) {
+    query = query.eq('is_visible', true);
+  }
+
+  // Fetch plans ordered by sort_order
+  const { data: plans, error: plansError } = await query.order('sort_order', { ascending: true });
 
   if (plansError) {
     console.error('Error fetching plans:', plansError);
@@ -104,20 +111,60 @@ export async function getPlanByPriceId(priceId: string): Promise<SubscriptionPla
  * Fetches a subscription plan by its Stripe price ID using admin client.
  * Used for webhook handling where there's no authenticated user context.
  */
-export function getPlanByPriceIdAdmin(priceId: string): Promise<SubscriptionPlan | null> {
+export async function getPlanByPriceIdAdmin(priceId: string): Promise<SubscriptionPlan | null> {
   const supabase = getSupabaseAdmin();
 
-  return supabase
+  const { data, error } = await supabase
     .from('subscription_plans')
     .select('*')
     .eq('stripe_price_id', priceId)
-    .single()
-    .then(({ data, error }) => {
-      if (error || !data) {
-        return null;
-      }
-      return data as SubscriptionPlan;
-    });
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as SubscriptionPlan;
+}
+
+/**
+ * Fetches a single subscription plan by ID using admin client.
+ * Used for server-side operations where there's no authenticated user context.
+ */
+export async function getPlanByIdAdmin(id: string): Promise<SubscriptionPlan | null> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: plan, error: planError } = await supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (planError || !plan) {
+    return null;
+  }
+
+  return plan as SubscriptionPlan;
+}
+
+/**
+ * Fetches all active subscription plans using admin client.
+ * Used for server-side operations where there's no authenticated user context.
+ */
+export async function getActivePlansAdmin(): Promise<SubscriptionPlan[]> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: plans, error } = await supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error || !plans) {
+    return [];
+  }
+
+  return plans as SubscriptionPlan[];
 }
 
 /**

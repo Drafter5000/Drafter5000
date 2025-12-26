@@ -1,0 +1,87 @@
+import { type NextRequest, NextResponse } from 'next/server';
+import { generateTopicSuggestions } from '@/lib/services/openai';
+import { getDraft } from '@/lib/services/article-styles';
+import { getServerSupabaseClient } from '@/lib/supabase-client';
+import { checkSubscriptionAccess } from '@/lib/subscription-utils';
+
+export async function POST(request: NextRequest) {
+  try {
+    const {
+      user_id,
+      existing_topics = [],
+      chosen_topics,
+      generated_topics_history = [],
+      style_samples,
+      job,
+    } = await request.json();
+
+    // Support both old (existing_topics) and new (chosen_topics + generated_topics_history) API
+    const chosenTopics = chosen_topics || existing_topics;
+    const generatedHistory = generated_topics_history;
+
+    // Check subscription status for authenticated users
+    if (user_id) {
+      const supabase = await getServerSupabaseClient();
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('subscription_status')
+        .eq('id', user_id)
+        .single();
+
+      const subscriptionCheck = checkSubscriptionAccess(profile?.subscription_status);
+      if (!subscriptionCheck.hasAccess) {
+        return NextResponse.json(
+          {
+            error: 'Subscription required',
+            message: subscriptionCheck.message,
+            subscription_status: subscriptionCheck.status,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    let samplesToUse: string[] = [];
+    let jobTitle = job;
+
+    // If style_samples are provided directly (anonymous flow), use them
+    if (style_samples && Array.isArray(style_samples) && style_samples.length > 0) {
+      samplesToUse = style_samples;
+    } else if (user_id) {
+      // Otherwise, get from database using user_id (authenticated flow)
+      const draft = await getDraft(user_id);
+
+      if (!draft || !draft.style_samples || draft.style_samples.length === 0) {
+        return NextResponse.json(
+          { error: 'No style samples found. Please complete step 1 first.' },
+          { status: 400 }
+        );
+      }
+      samplesToUse = draft.style_samples;
+      // Use job from draft if not provided in request
+      if (!jobTitle && draft.job) {
+        jobTitle = draft.job;
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'Either user_id or style_samples is required' },
+        { status: 400 }
+      );
+    }
+
+    // Generate AI suggestions based on chosen topics, history, and job title
+    const suggestions = await generateTopicSuggestions(
+      samplesToUse,
+      chosenTopics,
+      10,
+      jobTitle,
+      generatedHistory
+    );
+
+    return NextResponse.json({ suggestions });
+  } catch (error: unknown) {
+    console.error('Error generating AI suggestions:', error);
+    const message = error instanceof Error ? error.message : 'Failed to generate suggestions';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

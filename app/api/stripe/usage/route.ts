@@ -1,4 +1,5 @@
-import { getServerSupabaseSession, getServerSupabaseClient } from '@/lib/supabase-client';
+import { getServerSupabaseSession } from '@/lib/supabase-client';
+import { checkUsageLimit, syncUsageFromSheets } from '@/lib/usage-limits';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -8,47 +9,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = await getServerSupabaseClient();
+    // Sync usage from Google Sheets first (count "Sent" articles, case-insensitive)
+    // This ensures the database reflects the actual sent articles in the sheet
+    await syncUsageFromSheets(session.user.id);
 
-    // Get user's current plan
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('subscription_plan')
-      .eq('id', session.user.id)
-      .single();
-
-    const planId = profile?.subscription_plan || 'free';
-
-    // Fetch plan details from database
-    const { data: planDetails } = await supabase
-      .from('subscription_plans')
-      .select('articles_per_month')
-      .eq('id', planId)
-      .single();
-
-    // Default to free tier limit if plan not found
-    const articlesLimit = planDetails?.articles_per_month ?? 2;
-
-    // Get current month's article count
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { count: articlesUsed } = await supabase
-      .from('articles')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
-      .gte('created_at', startOfMonth.toISOString());
+    // Get usage from database (now synced with sheets)
+    const usage = await checkUsageLimit(session.user.id);
 
     return NextResponse.json({
-      plan: planId,
-      articles_used: articlesUsed || 0,
-      articles_limit: articlesLimit,
-      percentage_used: Math.round(((articlesUsed || 0) / articlesLimit) * 100),
-      can_generate: (articlesUsed || 0) < articlesLimit,
+      plan: usage.plan,
+      articles_used: usage.articlesUsed,
+      articles_limit: usage.articlesLimit,
+      percentage_used:
+        usage.articlesLimit > 0 ? Math.round((usage.articlesUsed / usage.articlesLimit) * 100) : 0,
+      can_generate: usage.canGenerate,
+      usage_reset_at: usage.usageResetAt,
+      period_end: usage.periodEnd,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Usage fetch error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch usage';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

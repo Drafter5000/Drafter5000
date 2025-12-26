@@ -1,23 +1,16 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { Brain, Sparkles, Zap } from 'lucide-react';
 import { FloatingCard } from './floating-card';
-import {
-  Sparkles,
-  Brain,
-  Zap,
-  Clock,
-  Target,
-  Shield,
-  BarChart3,
-  Palette,
-  Globe,
-  Rocket,
-  Users,
-  Award,
-} from 'lucide-react';
 
 const features = [
+  {
+    icon: Zap,
+    title: 'Automated Article Generation',
+    description: 'A daily LinkedIn article ready to publish. #Time Saver',
+    gradient: 'from-amber-500 to-orange-600',
+  },
   {
     icon: Brain,
     title: 'AI-Powered Learning',
@@ -31,32 +24,6 @@ const features = [
     description:
       'Get intelligent topic suggestions based on your industry, audience, and content goals.',
     gradient: 'from-primary to-teal-400',
-  },
-  {
-    icon: Zap,
-    title: 'Lightning Fast',
-    description:
-      'Generate high-quality articles in seconds, not hours. Scale your content production effortlessly.',
-    gradient: 'from-amber-500 to-orange-600',
-  },
-  {
-    icon: Palette,
-    title: 'Style Customization',
-    description:
-      'Fine-tune the AI output with adjustable parameters for tone, formality, and creativity levels.',
-    gradient: 'from-pink-500 to-rose-600',
-  },
-  {
-    icon: Globe,
-    title: 'Multi-Language Support',
-    description: 'Create content in 50+ languages while maintaining your authentic writing style.',
-    gradient: 'from-blue-500 to-cyan-500',
-  },
-  {
-    icon: Shield,
-    title: 'Plagiarism Free',
-    description: 'Every article is 100% original and passes all plagiarism detection tools.',
-    gradient: 'from-emerald-500 to-green-600',
   },
 ];
 
@@ -98,7 +65,6 @@ export function FeatureSection() {
               <div className="group relative p-8 rounded-3xl bg-card border border-border hover:border-primary/30 transition-all duration-500 h-full">
                 {/* Hover glow effect */}
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
                 <div className="relative">
                   <div
                     className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} mb-6 shadow-lg`}

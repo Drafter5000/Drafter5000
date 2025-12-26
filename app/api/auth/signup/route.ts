@@ -1,9 +1,13 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/supabase-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { setupSuperAdmin, setupNewUserOrganization } from '@/lib/organization-utils';
+import { UserRoleType } from '@/lib/types';
+import { mapToDbFields } from '@/lib/role-config';
 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
+
+// Get Customer role database fields
+const CUSTOMER_DB_FIELDS = mapToDbFields(UserRoleType.CUSTOMER);
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,16 +33,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await getServerSupabaseClient();
-
-    // Sign up with Supabase Auth
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+    // Use admin API to create user - this ensures user exists in auth.users immediately
+    // Email verification is required - user will receive a confirmation email
+    const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-          `${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/auth/callback`,
+      email_confirm: false, // Require email verification
+      user_metadata: {
+        display_name: name,
       },
     });
 
@@ -50,20 +52,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user' }, { status: 400 });
     }
 
-    // Check if this user should be super admin
+    // Send verification email - user must verify email before logging in
+    const { error: emailError } = await supabaseAdmin.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      },
+    });
+
+    if (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail signup if email fails - user can request resend later
+    }
+
+    // Check if this user should be super admin (based on env config)
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.toLowerCase();
     const isSuperAdmin = superAdminEmail && email.toLowerCase() === superAdminEmail;
 
     // Create user profile using admin client to bypass RLS
     // This is necessary because auth.uid() is not available immediately after signup
+    // Set subscription_status to 'incomplete' - user must complete Stripe checkout before accessing the app
+    // Regular signups always get Customer role (is_super_admin = false)
     const { error: profileError } = await supabaseAdmin.from('user_profiles').insert({
       id: authData.user.id,
       email,
       display_name: name,
-      subscription_status: 'trial',
+      subscription_status: 'incomplete',
       subscription_plan: 'free',
       current_organization_id: DEFAULT_ORG_ID,
-      is_super_admin: isSuperAdmin,
+      // Use Customer role fields unless this is the designated super admin email
+      is_super_admin: isSuperAdmin ? true : CUSTOMER_DB_FIELDS.isSuperAdmin,
     });
 
     if (profileError) {

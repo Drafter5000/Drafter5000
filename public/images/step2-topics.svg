@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 180" fill="none">
+  <!-- Background -->
+  <rect width="280" height="180" fill="#c0c0c0"/>
+  
+  <!-- Window -->
+  <rect x="10" y="10" width="260" height="160" fill="#c0c0c0" stroke="#808080" stroke-width="2"/>
+  
+  <!-- Title bar -->
+  <rect x="12" y="12" width="256" height="16" fill="#000080"/>
+  <text x="18" y="24" font-family="Arial" font-size="9" fill="white" font-weight="bold">💡 Step 2: Choose Topics</text>
+  
+  <!-- Content -->
+  <rect x="15" y="32" width="250" height="132" fill="#ffffff" stroke="#808080"/>
+  
+  <!-- Input field -->
+  <rect x="20" y="40" width="200" height="20" fill="#ffffff" stroke="#808080" stroke-width="2"/>
+  <text x="25" y="54" font-family="Arial" font-size="9" fill="#808080">Add a topic...</text>
+  <rect x="222" y="40" width="38" height="20" fill="#c0c0c0" stroke="#808080"/>
+  <text x="230" y="54" font-family="Arial" font-size="9" fill="#000">Add</text>
+  
+  <!-- Topic tags -->
+  <rect x="20" y="68" width="90" height="22" fill="#008080" rx="3"/>
+  <text x="28" y="83" font-family="Arial" font-size="9" fill="white">🏷️ Technology</text>
+  
+  <rect x="115" y="68" width="70" height="22" fill="#008080" rx="3"/>
+  <text x="123" y="83" font-family="Arial" font-size="9" fill="white">🏷️ AI News</text>
+  
+  <rect x="190" y="68" width="65" height="22" fill="#008080" rx="3"/>
+  <text x="198" y="83" font-family="Arial" font-size="9" fill="white">🏷️ Startup</text>
+  
+  <!-- AI Suggestions label -->
+  <text x="20" y="108" font-family="Arial" font-size="9" fill="#808080">✨ AI Suggestions:</text>
+  
+  <!-- Suggestion chips -->
+  <rect x="20" y="115" width="75" height="18" fill="#e8e8e8" stroke="#c0c0c0" rx="2"/>
+  <text x="28" y="127" font-family="Arial" font-size="8" fill="#333">+ Marketing</text>
+  
+  <rect x="100" y="115" width="65" height="18" fill="#e8e8e8" stroke="#c0c0c0" rx="2"/>
+  <text x="108" y="127" font-family="Arial" font-size="8" fill="#333">+ SaaS</text>
+  
+  <rect x="170" y="115" width="80" height="18" fill="#e8e8e8" stroke="#c0c0c0" rx="2"/>
+  <text x="178" y="127" font-family="Arial" font-size="8" fill="#333">+ Productivity</text>
+  
+  <!-- Button -->
+  <rect x="180" y="145" width="75" height="18" fill="#c0c0c0" stroke="#808080" stroke-width="2"/>
+  <text x="192" y="157" font-family="Arial" font-size="9" fill="#000">Continue →</text>
+</svg>
