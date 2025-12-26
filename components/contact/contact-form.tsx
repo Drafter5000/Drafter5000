@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiClient, APIError } from '@/lib/api-client';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 
-export type ContactCategory = 'general' | 'support' | 'sales' | 'partnership' | 'other';
+export type ContactCategory = string;
 
 export interface ContactFormData {
   name: string;
@@ -36,20 +36,21 @@ export interface ContactFormErrors {
   message?: string;
 }
 
-const CONTACT_CATEGORIES = [
+// Fallback categories if API fails
+const DEFAULT_CATEGORIES = [
   { value: 'general', label: 'General Inquiry' },
   { value: 'support', label: 'Technical Support' },
   { value: 'sales', label: 'Sales Question' },
   { value: 'partnership', label: 'Partnership Opportunity' },
   { value: 'other', label: 'Other' },
-] as const;
+];
 
 const initialFormData: ContactFormData = {
   name: '',
   email: '',
   phone: '',
   subject: '',
-  category: 'general',
+  category: '',
   message: '',
 };
 
@@ -63,11 +64,42 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
   const [errors, setErrors] = useState<ContactFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('/api/contact-settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+            const formattedCategories = data.categories.map((cat: string) => ({
+              value: cat,
+              label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/-/g, ' '),
+            }));
+            setCategories(formattedCategories);
+          } else {
+            setCategories(DEFAULT_CATEGORIES);
+          }
+        } else {
+          setCategories(DEFAULT_CATEGORIES);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setCategories(DEFAULT_CATEGORIES);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: ContactFormErrors = {};
@@ -290,6 +322,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
           <Select
             value={formData.category}
             onValueChange={value => handleChange('category', value)}
+            disabled={loadingCategories}
           >
             <SelectTrigger
               id="contact-category"
@@ -297,10 +330,10 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
               aria-invalid={!!errors.category}
               className={errors.category ? 'border-destructive' : ''}
             >
-              <SelectValue placeholder="Select a category" />
+              <SelectValue placeholder={loadingCategories ? 'Loading...' : 'Select a category'} />
             </SelectTrigger>
             <SelectContent>
-              {CONTACT_CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <SelectItem key={cat.value} value={cat.value}>
                   {cat.label}
                 </SelectItem>
