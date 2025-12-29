@@ -10,7 +10,7 @@ import {
   SUPPORTED_VARIABLES,
   VARIABLE_DESCRIPTIONS,
   SAMPLE_VARIABLES,
-  type PromptConfig,
+  type PromptConfigFull,
 } from '@/lib/services/prompt-config';
 
 /**
@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let body: PromptConfig;
+    let body: PromptConfigFull;
     try {
       body = await request.json();
     } catch {
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let body: { action: string; config?: PromptConfig };
+    let body: { action: string; config?: PromptConfigFull };
     try {
       body = await request.json();
     } catch {

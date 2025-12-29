@@ -56,6 +56,8 @@ import {
 interface PromptConfig {
   systemPrompt: string;
   userPrompt: string;
+  systemSuffix: string;
+  userSuffix: string;
 }
 
 interface PromptData {
@@ -125,13 +127,23 @@ interface UsageData {
 export default function AdminPromptsPage() {
   // Prompt Config State
   const [promptData, setPromptData] = useState<PromptData | null>(null);
-  const [config, setConfig] = useState<PromptConfig>({ systemPrompt: '', userPrompt: '' });
+  const [config, setConfig] = useState<PromptConfig>({
+    systemPrompt: '',
+    userPrompt: '',
+    systemSuffix: '',
+    userSuffix: '',
+  });
   const [preview, setPreview] = useState<PromptConfig | null>(null);
   const [promptLoading, setPromptLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [errors, setErrors] = useState<{ systemPrompt?: string; userPrompt?: string }>({});
+  const [errors, setErrors] = useState<{
+    systemPrompt?: string;
+    userPrompt?: string;
+    systemSuffix?: string;
+    userSuffix?: string;
+  }>({});
 
   // Provider State
   const [providers, setProviders] = useState<LLMProvider[]>([]);
@@ -207,7 +219,12 @@ export default function AdminPromptsPage() {
 
   // Prompt handlers
   const validateForm = (): boolean => {
-    const newErrors: { systemPrompt?: string; userPrompt?: string } = {};
+    const newErrors: {
+      systemPrompt?: string;
+      userPrompt?: string;
+      systemSuffix?: string;
+      userSuffix?: string;
+    } = {};
     if (!config.systemPrompt || config.systemPrompt.trim().length === 0) {
       newErrors.systemPrompt = 'System prompt cannot be empty';
     }
@@ -283,12 +300,19 @@ export default function AdminPromptsPage() {
     }
   };
 
-  const insertVariable = (variable: string, field: 'system' | 'user') => {
+  const insertVariable = (
+    variable: string,
+    field: 'system' | 'user' | 'systemSuffix' | 'userSuffix'
+  ) => {
     const placeholder = `{{${variable}}}`;
     if (field === 'system') {
       setConfig({ ...config, systemPrompt: config.systemPrompt + placeholder });
-    } else {
+    } else if (field === 'user') {
       setConfig({ ...config, userPrompt: config.userPrompt + placeholder });
+    } else if (field === 'systemSuffix') {
+      setConfig({ ...config, systemSuffix: config.systemSuffix + placeholder });
+    } else {
+      setConfig({ ...config, userSuffix: config.userSuffix + placeholder });
     }
   };
 
@@ -371,8 +395,8 @@ export default function AdminPromptsPage() {
   };
 
   const handleLoadCurrentConfig = () => {
-    setPlaygroundSystem(config.systemPrompt);
-    setPlaygroundUser(config.userPrompt);
+    setPlaygroundSystem(config.systemPrompt + '\n\n' + config.systemSuffix);
+    setPlaygroundUser(config.userPrompt + '\n\n' + config.userSuffix);
   };
 
   const getAvailableModels = (): LLMModel[] => {
@@ -576,6 +600,80 @@ export default function AdminPromptsPage() {
                   <p className="text-xs text-destructive">{errors.userPrompt}</p>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="systemSuffix">
+                    System Suffix{' '}
+                    <span className="text-muted-foreground text-xs">
+                      (appended to system prompt)
+                    </span>
+                  </Label>
+                  <div className="flex gap-1">
+                    {promptData?.variables.map(variable => (
+                      <Button
+                        key={variable}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => insertVariable(variable, 'systemSuffix')}
+                      >
+                        +{variable}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <Textarea
+                  id="systemSuffix"
+                  value={config.systemSuffix}
+                  onChange={e => {
+                    setConfig({ ...config, systemSuffix: e.target.value });
+                    if (errors.systemSuffix) setErrors({ ...errors, systemSuffix: undefined });
+                  }}
+                  rows={4}
+                  className={`font-mono text-sm ${errors.systemSuffix ? 'border-destructive' : ''}`}
+                  placeholder="Core instructions appended to system prompt..."
+                />
+                {errors.systemSuffix && (
+                  <p className="text-xs text-destructive">{errors.systemSuffix}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="userSuffix">
+                    User Suffix{' '}
+                    <span className="text-muted-foreground text-xs">(appended to user prompt)</span>
+                  </Label>
+                  <div className="flex gap-1">
+                    {promptData?.variables.map(variable => (
+                      <Button
+                        key={variable}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => insertVariable(variable, 'userSuffix')}
+                      >
+                        +{variable}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <Textarea
+                  id="userSuffix"
+                  value={config.userSuffix}
+                  onChange={e => {
+                    setConfig({ ...config, userSuffix: e.target.value });
+                    if (errors.userSuffix) setErrors({ ...errors, userSuffix: undefined });
+                  }}
+                  rows={4}
+                  className={`font-mono text-sm ${errors.userSuffix ? 'border-destructive' : ''}`}
+                  placeholder="JSON format instructions appended to user prompt..."
+                />
+                {errors.userSuffix && (
+                  <p className="text-xs text-destructive">{errors.userSuffix}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -603,8 +701,10 @@ export default function AdminPromptsPage() {
               {preview && (
                 <Tabs defaultValue="system" className="w-full">
                   <TabsList>
-                    <TabsTrigger value="system">System Prompt Preview</TabsTrigger>
-                    <TabsTrigger value="user">User Prompt Preview</TabsTrigger>
+                    <TabsTrigger value="system">System Prompt</TabsTrigger>
+                    <TabsTrigger value="user">User Prompt</TabsTrigger>
+                    <TabsTrigger value="systemSuffix">System Suffix</TabsTrigger>
+                    <TabsTrigger value="userSuffix">User Suffix</TabsTrigger>
                   </TabsList>
                   <TabsContent value="system" className="mt-4">
                     <div className="relative p-4 rounded-lg border bg-muted/30">
@@ -641,6 +741,20 @@ export default function AdminPromptsPage() {
                       </Button>
                       <pre className="whitespace-pre-wrap text-sm font-mono pr-10">
                         {preview.userPrompt}
+                      </pre>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="systemSuffix" className="mt-4">
+                    <div className="relative p-4 rounded-lg border bg-muted/30">
+                      <pre className="whitespace-pre-wrap text-sm font-mono pr-10">
+                        {preview.systemSuffix}
+                      </pre>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="userSuffix" className="mt-4">
+                    <div className="relative p-4 rounded-lg border bg-muted/30">
+                      <pre className="whitespace-pre-wrap text-sm font-mono pr-10">
+                        {preview.userSuffix}
                       </pre>
                     </div>
                   </TabsContent>
