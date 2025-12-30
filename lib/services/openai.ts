@@ -81,18 +81,15 @@ export async function generateTopicSuggestions(
     style_samples: styleSamplesText,
   };
 
-  // Apply variable substitution to prompts
+  // Apply variable substitution to all prompts
   const systemPrompt = substituteVariables(promptConfig.systemPrompt, variables);
   const userPrompt = substituteVariables(promptConfig.userPrompt, variables);
+  const systemSuffix = substituteVariables(promptConfig.systemSuffix, variables);
+  const userSuffix = substituteVariables(promptConfig.userSuffix, variables);
 
-  // Always append JSON format instruction to ensure proper response format
-  // This is required regardless of admin prompt configuration
-  const jsonInstruction = `\n\nIMPORTANT: You MUST generate exactly ${count} topic suggestions as a JSON array. The job title is "${jobTitle}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`;
-  const finalUserPrompt = userPrompt + jsonInstruction;
-
-  // Ensure system prompt has core instructions for topic generation
-  const systemSuffix = `\n\nCore requirement: Always generate ${count} unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "${jobTitle}". Output must be a valid JSON array of strings.`;
-  const finalSystemPrompt = systemPrompt + systemSuffix;
+  // Combine prompts with their suffixes
+  const finalSystemPrompt = `${systemPrompt}\n\n${systemSuffix}`;
+  const finalUserPrompt = `${userPrompt}\n\n${userSuffix}`;
 
   const messages: OpenAIMessage[] = [
     {

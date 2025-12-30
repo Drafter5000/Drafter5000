@@ -43,6 +43,8 @@ export type SupportedVariable = (typeof SUPPORTED_VARIABLES)[number];
 export const PROMPT_CONFIG_KEYS = {
   SYSTEM_PROMPT: 'ai_system_prompt',
   USER_PROMPT: 'ai_user_prompt',
+  SYSTEM_SUFFIX: 'ai_system_suffix',
+  USER_SUFFIX: 'ai_user_suffix',
 } as const;
 
 // Default prompts (used when no custom prompts exist)
@@ -63,9 +65,20 @@ Generate {{count}} new topic ideas that are different but related to these theme
 
 Return only a JSON array of {{count}} topic strings.`;
 
-export const DEFAULT_PROMPT_CONFIG: PromptConfig = {
+export const DEFAULT_SYSTEM_SUFFIX = `Core requirement: Always generate {{count}} unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "{{job_title}}". Output must be a valid JSON array of strings.`;
+
+export const DEFAULT_USER_SUFFIX = `IMPORTANT: You MUST generate exactly {{count}} topic suggestions as a JSON array. The job title is "{{job_title}}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`;
+
+export interface PromptConfigFull extends PromptConfig {
+  systemSuffix: string;
+  userSuffix: string;
+}
+
+export const DEFAULT_PROMPT_CONFIG: PromptConfigFull = {
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   userPrompt: DEFAULT_USER_PROMPT,
+  systemSuffix: DEFAULT_SYSTEM_SUFFIX,
+  userSuffix: DEFAULT_USER_SUFFIX,
 };
 
 // Sample data for preview functionality
@@ -168,15 +181,20 @@ export function validatePromptConfig(config: PromptConfig): ValidationResult {
  * Retrieves prompt configuration from the database.
  * Returns default prompts if no custom prompts exist.
  */
-export async function getPromptConfig(): Promise<PromptConfig> {
+export async function getPromptConfig(): Promise<PromptConfigFull> {
   const supabase = getSupabaseAdmin();
 
   const { data: configs } = await supabase
     .from('app_config')
     .select('key, value')
-    .in('key', [PROMPT_CONFIG_KEYS.SYSTEM_PROMPT, PROMPT_CONFIG_KEYS.USER_PROMPT]);
+    .in('key', [
+      PROMPT_CONFIG_KEYS.SYSTEM_PROMPT,
+      PROMPT_CONFIG_KEYS.USER_PROMPT,
+      PROMPT_CONFIG_KEYS.SYSTEM_SUFFIX,
+      PROMPT_CONFIG_KEYS.USER_SUFFIX,
+    ]);
 
-  const config: PromptConfig = { ...DEFAULT_PROMPT_CONFIG };
+  const config: PromptConfigFull = { ...DEFAULT_PROMPT_CONFIG };
 
   if (configs) {
     for (const item of configs) {
@@ -184,6 +202,10 @@ export async function getPromptConfig(): Promise<PromptConfig> {
         config.systemPrompt = item.value;
       } else if (item.key === PROMPT_CONFIG_KEYS.USER_PROMPT && item.value) {
         config.userPrompt = item.value;
+      } else if (item.key === PROMPT_CONFIG_KEYS.SYSTEM_SUFFIX && item.value) {
+        config.systemSuffix = item.value;
+      } else if (item.key === PROMPT_CONFIG_KEYS.USER_SUFFIX && item.value) {
+        config.userSuffix = item.value;
       }
     }
   }
@@ -195,7 +217,7 @@ export async function getPromptConfig(): Promise<PromptConfig> {
  * Saves prompt configuration to the database.
  * Validates prompts before saving.
  */
-export async function savePromptConfig(config: PromptConfig): Promise<void> {
+export async function savePromptConfig(config: PromptConfigFull): Promise<void> {
   const validation = validatePromptConfig(config);
   if (!validation.valid) {
     throw new Error(validation.error);
@@ -233,6 +255,36 @@ export async function savePromptConfig(config: PromptConfig): Promise<void> {
   if (userError) {
     throw new Error('Failed to save user prompt');
   }
+
+  // Upsert system suffix
+  const { error: systemSuffixError } = await supabase.from('app_config').upsert(
+    {
+      key: PROMPT_CONFIG_KEYS.SYSTEM_SUFFIX,
+      value: config.systemSuffix,
+      description: 'AI system prompt suffix (appended to system prompt)',
+      updated_at: now,
+    },
+    { onConflict: 'key' }
+  );
+
+  if (systemSuffixError) {
+    throw new Error('Failed to save system suffix');
+  }
+
+  // Upsert user suffix
+  const { error: userSuffixError } = await supabase.from('app_config').upsert(
+    {
+      key: PROMPT_CONFIG_KEYS.USER_SUFFIX,
+      value: config.userSuffix,
+      description: 'AI user prompt suffix (appended to user prompt)',
+      updated_at: now,
+    },
+    { onConflict: 'key' }
+  );
+
+  if (userSuffixError) {
+    throw new Error('Failed to save user suffix');
+  }
 }
 
 /**
@@ -245,9 +297,11 @@ export async function resetPromptConfig(): Promise<void> {
 /**
  * Generates a preview of prompts with sample data substituted.
  */
-export function generatePreview(config: PromptConfig): PromptConfig {
+export function generatePreview(config: PromptConfigFull): PromptConfigFull {
   return {
     systemPrompt: substituteVariables(config.systemPrompt, SAMPLE_VARIABLES),
     userPrompt: substituteVariables(config.userPrompt, SAMPLE_VARIABLES),
+    systemSuffix: substituteVariables(config.systemSuffix, SAMPLE_VARIABLES),
+    userSuffix: substituteVariables(config.userSuffix, SAMPLE_VARIABLES),
   };
 }
