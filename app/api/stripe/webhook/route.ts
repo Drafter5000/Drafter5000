@@ -2,7 +2,7 @@ import { getStripeClient } from '@/lib/stripe-client';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getPlanByPriceIdAdmin } from '@/lib/plan-utils';
 import { syncStyleToSheets } from '@/lib/services/article-styles-sync';
-import { setUsageLimit, resetUsage } from '@/lib/usage-limits';
+import { setUsageLimit, resetUsage, addToUsageLimit } from '@/lib/usage-limits';
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -161,21 +161,91 @@ export async function POST(request: NextRequest) {
 
           // Get articles limit from plan
           const planData = await getPlanByPriceIdAdmin(priceId || '');
-          const articlesLimit = planData?.articles_per_month ?? 2;
+          const planArticlesLimit = planData?.articles_per_month ?? 2;
 
-          await supabase.from('subscriptions').upsert({
-            user_id: profileId,
-            stripe_subscription_id: subscriptionId as string,
-            stripe_price_id: priceId || '',
-            plan,
-            status: subscriptionStatus,
-            current_period_start: new Date(periodStart * 1000).toISOString(),
-            current_period_end: new Date(periodEnd * 1000).toISOString(),
-            articles_used: 0,
-            articles_limit: articlesLimit,
-            usage_reset_at: new Date(periodStart * 1000).toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+          console.log(
+            `[WEBHOOK checkout.session.completed] Starting for user=${profileId}, plan=${plan}, planArticlesLimit=${planArticlesLimit}`
+          );
+
+          // Check if user has an existing subscription (returning user)
+          const { data: existingSub, error: existingSubError } = await supabase
+            .from('subscriptions')
+            .select('articles_used, articles_limit')
+            .eq('user_id', profileId)
+            .single();
+
+          console.log(
+            `[WEBHOOK checkout.session.completed] Existing subscription check: found=${!!existingSub}, error=${existingSubError?.message || 'none'}, data=${JSON.stringify(existingSub)}`
+          );
+
+          // For returning users: ADD the plan's limit to their current limit
+          // This allows users who exhausted their quota to get additional articles
+          // For new users: just use the plan's limit
+          let newArticlesLimit = planArticlesLimit;
+          let newArticlesUsed = 0;
+
+          if (existingSub) {
+            // Returning user - add plan limit to current limit
+            newArticlesLimit = (existingSub.articles_limit || 0) + planArticlesLimit;
+            // Keep their current usage (don't reset to 0)
+            newArticlesUsed = existingSub.articles_used || 0;
+            console.log(
+              `[WEBHOOK checkout.session.completed] Returning user: user=${profileId}, old_limit=${existingSub.articles_limit}, adding=${planArticlesLimit}, new_limit=${newArticlesLimit}, used=${newArticlesUsed}`
+            );
+
+            // Use UPDATE for existing subscription to avoid unique constraint violation
+            const updateResult = await supabase
+              .from('subscriptions')
+              .update({
+                stripe_subscription_id: subscriptionId as string,
+                stripe_price_id: priceId || '',
+                plan,
+                status: subscriptionStatus,
+                current_period_start: new Date(periodStart * 1000).toISOString(),
+                current_period_end: new Date(periodEnd * 1000).toISOString(),
+                articles_used: newArticlesUsed,
+                articles_limit: newArticlesLimit,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', profileId);
+
+            console.log(
+              `[WEBHOOK checkout.session.completed] Update result: error=${updateResult.error?.message || 'none'}`
+            );
+          } else {
+            console.log(
+              `[WEBHOOK checkout.session.completed] New user: user=${profileId}, setting limit=${newArticlesLimit}, used=${newArticlesUsed}`
+            );
+
+            // Use INSERT for new subscription
+            const insertResult = await supabase.from('subscriptions').insert({
+              user_id: profileId,
+              stripe_subscription_id: subscriptionId as string,
+              stripe_price_id: priceId || '',
+              plan,
+              status: subscriptionStatus,
+              current_period_start: new Date(periodStart * 1000).toISOString(),
+              current_period_end: new Date(periodEnd * 1000).toISOString(),
+              articles_used: newArticlesUsed,
+              articles_limit: newArticlesLimit,
+              usage_reset_at: new Date(periodStart * 1000).toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+
+            console.log(
+              `[WEBHOOK checkout.session.completed] Insert result: error=${insertResult.error?.message || 'none'}`
+            );
+          }
+
+          // Verify the update was applied
+          const { data: verifyData } = await supabase
+            .from('subscriptions')
+            .select('articles_used, articles_limit')
+            .eq('user_id', profileId)
+            .single();
+          console.log(
+            `[WEBHOOK checkout.session.completed] Verification after update: ${JSON.stringify(verifyData)}`
+          );
 
           // Record initial payment from checkout session
           const amountTotal = session.amount_total || 0;
@@ -399,6 +469,10 @@ export async function POST(request: NextRequest) {
           .eq('stripe_customer_id', customerId as string)
           .single();
 
+        console.log(
+          `[WEBHOOK ${event.type}] Starting for customer=${customerId}, profile=${profile?.id}, isCreated=${isCreated}`
+        );
+
         if (profile && subscription.current_period_start && subscription.current_period_end) {
           // Get current subscription to check for plan changes
           const { data: currentSub } = await supabase
@@ -407,12 +481,20 @@ export async function POST(request: NextRequest) {
             .eq('user_id', profile.id)
             .single();
 
+          console.log(
+            `[WEBHOOK ${event.type}] Current subscription: ${JSON.stringify(currentSub ? { articles_limit: currentSub.articles_limit, articles_used: currentSub.articles_used, plan: currentSub.plan } : null)}`
+          );
+
           // Check if this is a plan change (upgrade/downgrade)
           const isPlanChange = currentSub && currentSub.plan !== plan && !isCreated;
 
           // Get articles limit from plan
           const planData = await getPlanByPriceIdAdmin(priceId || '');
           const articlesLimit = planData?.articles_per_month ?? 2;
+
+          console.log(
+            `[WEBHOOK ${event.type}] isPlanChange=${isPlanChange}, articlesLimit=${articlesLimit}`
+          );
 
           // Save history for plan changes
           if (isPlanChange && currentSub) {
@@ -428,11 +510,13 @@ export async function POST(request: NextRequest) {
               event_type: eventType,
             });
             console.log(
-              `Subscription ${eventType}: user=${profile.id}, from=${currentSub.plan} to=${plan}`
+              `[WEBHOOK ${event.type}] Subscription ${eventType}: user=${profile.id}, from=${currentSub.plan} to=${plan}`
             );
 
-            // Update usage limit when plan changes
-            await setUsageLimit(profile.id, articlesLimit);
+            // Add to usage limit when plan changes (for returning users who upgrade)
+            // This adds the new plan's limit to their current limit
+            await addToUsageLimit(profile.id, articlesLimit);
+            console.log(`[WEBHOOK ${event.type}] Called addToUsageLimit for plan change`);
           }
 
           // Save history for new subscriptions
@@ -447,34 +531,81 @@ export async function POST(request: NextRequest) {
               period_end: new Date(subscription.current_period_end * 1000).toISOString(),
               event_type: 'created',
             });
-            console.log(`Subscription created: user=${profile.id}, plan=${plan}`);
+            console.log(
+              `[WEBHOOK ${event.type}] Subscription created history saved: user=${profile.id}, plan=${plan}`
+            );
+            // Note: For returning users, checkout.session.completed already added to their limit
+            // We don't add again here to avoid double-counting
           }
 
           // Update subscription record with usage tracking fields
-          await supabase.from('subscriptions').upsert({
-            user_id: profile.id,
-            stripe_subscription_id: subscription.id,
-            stripe_price_id: priceId || '',
-            plan,
-            status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            cancel_at: subscription.cancel_at
-              ? new Date(subscription.cancel_at * 1000).toISOString()
-              : null,
-            canceled_at: subscription.canceled_at
-              ? new Date(subscription.canceled_at * 1000).toISOString()
-              : null,
-            articles_limit: articlesLimit,
-            // Only reset usage for new subscriptions, not updates
-            ...(isCreated
-              ? {
-                  articles_used: 0,
-                  usage_reset_at: new Date(subscription.current_period_start * 1000).toISOString(),
-                }
-              : {}),
-            updated_at: new Date().toISOString(),
-          });
+          // IMPORTANT: Don't set articles_limit or articles_used here for returning users
+          // checkout.session.completed already handled the limit calculation correctly
+          console.log(
+            `[WEBHOOK ${event.type}] currentSub exists=${!!currentSub}, isCreated=${isCreated}`
+          );
+
+          // For returning users (currentSub exists), use UPDATE to preserve articles_limit/used
+          // For new users, use UPSERT with all fields
+          if (currentSub) {
+            // UPDATE only - don't touch articles_limit or articles_used
+            console.log(
+              `[WEBHOOK ${event.type}] Using UPDATE for existing subscription (preserving articles_limit/used)`
+            );
+            await supabase
+              .from('subscriptions')
+              .update({
+                stripe_subscription_id: subscription.id,
+                stripe_price_id: priceId || '',
+                plan,
+                status: subscription.status,
+                current_period_start: new Date(
+                  subscription.current_period_start * 1000
+                ).toISOString(),
+                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                cancel_at: subscription.cancel_at
+                  ? new Date(subscription.cancel_at * 1000).toISOString()
+                  : null,
+                canceled_at: subscription.canceled_at
+                  ? new Date(subscription.canceled_at * 1000).toISOString()
+                  : null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', profile.id);
+          } else {
+            // UPSERT for new users - include all fields
+            console.log(`[WEBHOOK ${event.type}] Using UPSERT for new subscription`);
+            await supabase.from('subscriptions').upsert({
+              user_id: profile.id,
+              stripe_subscription_id: subscription.id,
+              stripe_price_id: priceId || '',
+              plan,
+              status: subscription.status,
+              current_period_start: new Date(
+                subscription.current_period_start * 1000
+              ).toISOString(),
+              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              cancel_at: subscription.cancel_at
+                ? new Date(subscription.cancel_at * 1000).toISOString()
+                : null,
+              canceled_at: subscription.canceled_at
+                ? new Date(subscription.canceled_at * 1000).toISOString()
+                : null,
+              articles_limit: articlesLimit,
+              articles_used: 0,
+              updated_at: new Date().toISOString(),
+            });
+          }
+
+          // Verify final state
+          const { data: finalSub } = await supabase
+            .from('subscriptions')
+            .select('articles_limit, articles_used')
+            .eq('user_id', profile.id)
+            .single();
+          console.log(
+            `[WEBHOOK ${event.type}] Final subscription state: ${JSON.stringify(finalSub)}`
+          );
         }
 
         break;
@@ -672,28 +803,32 @@ export async function POST(request: NextRequest) {
               );
 
               // Reset usage on renewal (new billing period)
+              // Note: We only reset articles_used, NOT articles_limit
               await resetUsage(profile.id);
               console.log(`Usage reset for user ${profile.id} on subscription renewal`);
             }
 
-            // Update subscription record with new period dates and reset usage for renewals
-            await supabase.from('subscriptions').upsert({
-              user_id: profile.id,
-              stripe_subscription_id: subscriptionId as string,
-              stripe_price_id: priceId || '',
-              plan,
-              status: 'active',
-              current_period_start: new Date(periodStart * 1000).toISOString(),
-              current_period_end: new Date(periodEnd * 1000).toISOString(),
-              cancel_at: null,
-              canceled_at: null,
-              articles_limit: articlesLimit,
-              // Reset usage on renewal
-              ...(isRenewal
-                ? { articles_used: 0, usage_reset_at: new Date(periodStart * 1000).toISOString() }
-                : {}),
-              updated_at: new Date().toISOString(),
-            });
+            // Update subscription record with new period dates
+            // IMPORTANT: Don't overwrite articles_limit - it may have been increased by returning user flow
+            // Only update period dates and status
+            await supabase
+              .from('subscriptions')
+              .update({
+                stripe_subscription_id: subscriptionId as string,
+                stripe_price_id: priceId || '',
+                plan,
+                status: 'active',
+                current_period_start: new Date(periodStart * 1000).toISOString(),
+                current_period_end: new Date(periodEnd * 1000).toISOString(),
+                cancel_at: null,
+                canceled_at: null,
+                // Reset usage on renewal but preserve articles_limit
+                ...(isRenewal
+                  ? { articles_used: 0, usage_reset_at: new Date(periodStart * 1000).toISOString() }
+                  : {}),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', profile.id);
 
             console.log(
               `Subscription ${isRenewal ? 'renewed' : 'payment succeeded'}: customer=${customerId}, user=${profile.id}, period=${new Date(periodStart * 1000).toISOString()} to ${new Date(periodEnd * 1000).toISOString()}`

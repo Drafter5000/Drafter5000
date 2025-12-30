@@ -63,29 +63,44 @@ export default function BillingPage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [topupLoading, setTopupLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchBillingData = async () => {
-      if (!user) return;
+  // Fetch billing data function (extracted for reuse)
+  const fetchBillingData = useCallback(async () => {
+    if (!user) return;
 
-      try {
-        setLoading(true);
-        const [usageData, subscriptionData, plansData] = await Promise.all([
-          apiClient.get<UsageData>('/stripe/usage'),
-          apiClient.get<SubscriptionData>('/stripe/subscription'),
-          apiClient.get<PlansResponse>('/stripe/plans'),
-        ]);
-        setUsage(usageData);
-        setSubscription(subscriptionData);
-        setPlans(plansData.plans);
-      } catch (error) {
-        console.error('Billing data error:', error);
-      } finally {
-        setLoading(false);
-      }
+    try {
+      setLoading(true);
+      const [usageData, subscriptionData, plansData] = await Promise.all([
+        apiClient.get<UsageData>('/stripe/usage'),
+        apiClient.get<SubscriptionData>('/stripe/subscription'),
+        apiClient.get<PlansResponse>('/stripe/plans'),
+      ]);
+      setUsage(usageData);
+      setSubscription(subscriptionData);
+      setPlans(plansData.plans);
+    } catch (error) {
+      console.error('Billing data error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchBillingData();
+  }, [fetchBillingData]);
+
+  // Refetch data when window regains focus (e.g., returning from Stripe portal)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Small delay to allow Stripe webhook to process
+      setTimeout(() => {
+        fetchBillingData();
+      }, 1000);
     };
 
-    fetchBillingData();
-  }, [user]);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchBillingData]);
 
   const handleManageSubscription = useCallback(async () => {
     try {

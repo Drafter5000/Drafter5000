@@ -260,6 +260,48 @@ export async function setUsageLimit(userId: string, limit: number): Promise<bool
 }
 
 /**
+ * Add to the articles limit for a user's subscription.
+ * Used for returning users who re-subscribe or upgrade - adds the plan's limit
+ * to their current limit instead of replacing it.
+ */
+export async function addToUsageLimit(userId: string, additionalLimit: number): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+
+  // Get current limit
+  const { data: subscription, error: fetchError } = await supabase
+    .from('subscriptions')
+    .select('articles_limit')
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError || !subscription) {
+    console.error('Failed to fetch subscription for limit update:', fetchError);
+    return false;
+  }
+
+  const currentLimit = subscription.articles_limit || 0;
+  const newLimit = currentLimit + additionalLimit;
+
+  const { error } = await supabase
+    .from('subscriptions')
+    .update({
+      articles_limit: newLimit,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Failed to add to usage limit:', error);
+    return false;
+  }
+
+  console.log(
+    `Usage limit increased: user=${userId}, old=${currentLimit}, new=${newLimit}, added=${additionalLimit}`
+  );
+  return true;
+}
+
+/**
  * Sync usage from Google Sheets by counting "Sent" articles (case-insensitive).
  * This ensures the database usage matches the actual sent articles in the sheet.
  */

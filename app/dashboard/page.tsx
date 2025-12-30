@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient, APIError } from '@/lib/api-client';
 import { SubscriptionExpirationBanner } from '@/components/subscription-expiration-banner';
+import { UsageLimitModal, hasModalBeenShown } from '@/components/usage-limit-modal';
 import { useSubscriptionStatus } from '@/lib/hooks/use-subscription-status';
 import {
   FileText,
@@ -121,15 +122,27 @@ function DashboardContent() {
     expirationDate,
     status: subscriptionStatus,
     canAccessFeatures,
+    refetch: refetchSubscription,
   } = useSubscriptionStatus();
   const [isRenewing, setIsRenewing] = useState(false);
 
   // Usage limits state
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
 
   // Determine if features should be disabled (expired OR no active subscription OR usage limit reached)
   const usageLimitReached = usage ? !usage.can_generate : false;
   const featuresDisabled = !canAccessFeatures || usageLimitReached;
+
+  // Function to refetch usage data
+  const refetchUsage = useCallback(async () => {
+    try {
+      const usageData = await apiClient.get<UsageData>('/stripe/usage');
+      setUsage(usageData);
+    } catch (err) {
+      console.error('Failed to refetch usage:', err);
+    }
+  }, []);
 
   // Navigate to pricing page for renewal/upgrade
   const handleRenewSubscription = useCallback(() => {
@@ -154,14 +167,24 @@ function DashboardContent() {
   const fetchingRef = React.useRef(false);
   const topicsFetchedRef = React.useRef(false);
 
+  // Handle payment success - refetch subscription and usage data after returning from Stripe
   useEffect(() => {
     if (searchParams.get('payment_success') === 'true') {
       setShowPaymentSuccess(true);
       if (typeof window !== 'undefined') {
         window.history.replaceState({}, '', '/dashboard');
       }
+
+      // Refetch subscription and usage data after a short delay
+      // to allow Stripe webhook to process the payment
+      const refetchAfterPayment = async () => {
+        // Wait 2 seconds for webhook to process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await Promise.all([refetchSubscription(), refetchUsage()]);
+      };
+      refetchAfterPayment();
     }
-  }, [searchParams]);
+  }, [searchParams, refetchSubscription, refetchUsage]);
 
   const fetchTopics = async (styleData?: ArticleStyle | null) => {
     if (topicsFetchedRef.current && !styleData) return;
@@ -213,17 +236,19 @@ function DashboardContent() {
   // Stats sync state
   const [syncing, setSyncing] = useState(false);
 
-  // Force sync stats from Google Sheets
+  // Force sync stats from Google Sheets and refresh subscription/usage data
   const handleSyncStats = useCallback(async () => {
     if (syncing) return;
     setSyncing(true);
     try {
       await apiClient.post('/stats/sync', {});
-      // Refetch dashboard data after sync
+      // Refetch all data after sync (dashboard, subscription, usage)
       if (user) {
-        const dashboardData = await apiClient.get<DashboardData>(
-          `/dashboard/metrics?user_id=${user.id}`
-        );
+        const [dashboardData] = await Promise.all([
+          apiClient.get<DashboardData>(`/dashboard/metrics?user_id=${user.id}`),
+          refetchSubscription(),
+          refetchUsage(),
+        ]);
         setData(dashboardData);
       }
     } catch (err) {
@@ -231,7 +256,7 @@ function DashboardContent() {
     } finally {
       setSyncing(false);
     }
-  }, [syncing, user]);
+  }, [syncing, user, refetchSubscription, refetchUsage]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -249,6 +274,11 @@ function DashboardContent() {
         ]);
         setData(dashboardData);
         setUsage(usageData);
+
+        // Show usage limit modal if limit reached and not shown this billing period
+        if (usageData && !usageData.can_generate && !hasModalBeenShown()) {
+          setShowUsageLimitModal(true);
+        }
 
         let userStyle = stylesData.length > 0 ? stylesData[0] : null;
 
@@ -284,6 +314,20 @@ function DashboardContent() {
     };
     fetchData();
   }, [user]);
+
+  // Refetch subscription and usage data when window regains focus
+  // (e.g., returning from Stripe portal or checkout)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Small delay to allow Stripe webhook to process
+      setTimeout(async () => {
+        await Promise.all([refetchSubscription(), refetchUsage()]);
+      }, 1000);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refetchSubscription, refetchUsage]);
 
   const handleUpdateTopic = async (rowIndex: number, topic?: string, status?: string) => {
     setSavingTopic(true);
@@ -436,6 +480,17 @@ function DashboardContent() {
                       articles_used: usage.articles_used,
                       articles_limit: usage.articles_limit,
                     }}
+                  />
+                )}
+                {/* Usage Limit Modal - shown once when limit is first reached */}
+                {usage && (
+                  <UsageLimitModal
+                    isOpen={showUsageLimitModal}
+                    onClose={() => setShowUsageLimitModal(false)}
+                    onUpgrade={handleRenewSubscription}
+                    isLoading={isRenewing}
+                    articlesUsed={usage.articles_used}
+                    articlesLimit={usage.articles_limit}
                   />
                 )}
                 {showPaymentSuccess && (
@@ -721,6 +776,18 @@ function DashboardContent() {
                   articles_used: usage.articles_used,
                   articles_limit: usage.articles_limit,
                 }}
+              />
+            )}
+
+            {/* Usage Limit Modal - shown once when limit is first reached */}
+            {usage && (
+              <UsageLimitModal
+                isOpen={showUsageLimitModal}
+                onClose={() => setShowUsageLimitModal(false)}
+                onUpgrade={handleRenewSubscription}
+                isLoading={isRenewing}
+                articlesUsed={usage.articles_used}
+                articlesLimit={usage.articles_limit}
               />
             )}
 
@@ -1020,36 +1087,37 @@ function DashboardContent() {
                   </div>
 
                   {/* Add Topic Button - Redirects to step-2 edit section for AI-assisted topic generation */}
-                  <div className="flex gap-3 px-6">
-                    {style ? (
-                      <Link
-                        href={`/articles/styles/${style.id}/edit/step-2?returnTo=${encodeURIComponent('/dashboard')}`}
-                        className="flex-1"
-                      >
-                        <Button
-                          variant="outline"
-                          disabled={featuresDisabled}
-                          className="w-full h-10 gap-2"
-                          title={
-                            usageLimitReached
-                              ? `Monthly limit reached (${usage?.articles_used}/${usage?.articles_limit})`
-                              : featuresDisabled
+                  {/* Hidden when monthly usage limit is reached */}
+                  {!usageLimitReached && (
+                    <div className="flex gap-3 px-6">
+                      {style ? (
+                        <Link
+                          href={`/articles/styles/${style.id}/edit/step-2?returnTo=${encodeURIComponent('/dashboard')}`}
+                          className="flex-1"
+                        >
+                          <Button
+                            variant="outline"
+                            disabled={featuresDisabled}
+                            className="w-full h-10 gap-2"
+                            title={
+                              featuresDisabled
                                 ? 'Active subscription required to add topics'
                                 : 'Add topics with AI assistance'
-                          }
-                        >
+                            }
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Topics
+                            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button variant="outline" disabled className="flex-1 h-10 gap-2">
                           <Plus className="h-4 w-4" />
                           Add Topics
-                          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                         </Button>
-                      </Link>
-                    ) : (
-                      <Button variant="outline" disabled className="flex-1 h-10 gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Topics
-                      </Button>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Status Filter Pills */}
                   <div className="flex flex-wrap gap-2 px-6 pt-4">

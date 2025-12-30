@@ -67,6 +67,25 @@ export default function EditStyleLayout({ children }: { children: React.ReactNod
           apiClient.get<ArticleStyle>(`/article-styles/${styleId}?user_id=${user.id}`),
           apiClient.get<{ job?: string }>('/auth/profile'),
         ]);
+
+        // Sync topics from Google Sheets to ensure database is up-to-date
+        try {
+          const syncResult = await apiClient.post<{
+            success: boolean;
+            synced_count: number;
+            topics?: string[];
+          }>('/topics/sync', {});
+
+          if (syncResult.success && syncResult.topics) {
+            // Update the style data with synced topics
+            styleData.subjects = syncResult.topics;
+            console.log(`[EditLayout] Synced ${syncResult.synced_count} topics from sheets`);
+          }
+        } catch (syncErr) {
+          console.error('Failed to sync topics from sheets:', syncErr);
+          // Continue with existing data if sync fails
+        }
+
         setStyle(styleData);
         setJob(profileData.job || '');
       } catch (err) {

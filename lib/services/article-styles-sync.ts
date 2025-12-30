@@ -593,12 +593,16 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
           const rows = existingData.data.values || [];
           console.log('Total rows in sheet:', rows.length);
 
-          // Build map of existing topics (skip header row)
-          const existingTopicsMap: Map<string, number> = new Map();
+          // Build map of existing topics with their status (skip header row)
+          const existingTopicsMap: Map<string, { rowIndex: number; status: string }> = new Map();
           for (let i = 1; i < rows.length; i++) {
             const topic = rows[i]?.[0];
+            const status = rows[i]?.[1] || '';
             if (topic && topic !== 'Topic') {
-              existingTopicsMap.set(topic.toLowerCase(), i);
+              existingTopicsMap.set(topic.toLowerCase(), {
+                rowIndex: i,
+                status: status.toLowerCase(),
+              });
             }
           }
           console.log('Existing topics count:', existingTopicsMap.size);
@@ -606,10 +610,17 @@ export async function updateStyleInSheets(style: ArticleStyle): Promise<SyncResu
           const styleSubjectsLower = (style.subjects || []).map((s: string) => s.toLowerCase());
 
           // Find topics to DELETE (exist in sheet but not in style.subjects)
+          // IMPORTANT: Never delete topics with "Sent" status - they represent generated articles
           const rowsToDelete: number[] = [];
-          for (const [topic, rowIndex] of existingTopicsMap) {
+          for (const [topic, { rowIndex, status }] of existingTopicsMap) {
             if (!styleSubjectsLower.includes(topic)) {
-              rowsToDelete.push(rowIndex);
+              // Only delete if status is NOT "sent" (preserve generated articles)
+              if (status !== 'sent') {
+                rowsToDelete.push(rowIndex);
+                console.log(`Will delete topic "${topic}" (status: ${status})`);
+              } else {
+                console.log(`Preserving sent topic "${topic}" - cannot delete generated articles`);
+              }
             }
           }
 

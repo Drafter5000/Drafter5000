@@ -60,32 +60,48 @@ export default function EditStep2Page() {
   // Track all AI-generated topics during this session (includes added and ignored)
   const [generatedTopicsHistory, setGeneratedTopicsHistory] = useState<string[]>([]);
 
-  // Fetch topics with status from API
+  // Fetch topics with status from API on initial load only (Google Sheets is the source of truth)
   useEffect(() => {
+    // Only fetch once on mount
+    if (initialized) return;
+
     const fetchTopicsWithStatus = async () => {
       try {
         const response = await apiClient.get<{ topics: TopicWithStatus[] }>('/topics');
         setTopicsWithStatus(response.topics || []);
+
+        // Google Sheets is the source of truth - use sheet topics on initial load
+        if (response.topics && response.topics.length > 0) {
+          const sheetTopics = response.topics.map(t => t.topic);
+          setSubjects(sheetTopics);
+          // Also update the context so it stays in sync
+          if (editContext?.updateStyle) {
+            editContext.updateStyle({ subjects: sheetTopics });
+          }
+          console.log(`[Step2] Loaded ${sheetTopics.length} topics from Google Sheets`);
+        } else if (editContext?.style?.subjects) {
+          // Fallback to DB subjects only if sheets is empty
+          setSubjects(editContext.style.subjects);
+        }
+        setInitialized(true);
       } catch (err) {
         console.error('Failed to fetch topics with status:', err);
+        // Fallback to DB subjects on error
+        if (editContext?.style?.subjects) {
+          setSubjects(editContext.style.subjects);
+        }
+        setInitialized(true);
       }
     };
     fetchTopicsWithStatus();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized]);
 
   // Check if a topic is generated (has "Sent" status)
   const isTopicGenerated = (subject: string): boolean => {
     const topicData = topicsWithStatus.find(t => t.topic.toLowerCase() === subject.toLowerCase());
     return topicData?.status?.toLowerCase() === 'sent';
   };
-
-  // Initialize from style data
-  useEffect(() => {
-    if (editContext?.style && !initialized) {
-      setSubjects(editContext.style.subjects || []);
-      setInitialized(true);
-    }
-  }, [editContext?.style, initialized]);
 
   const addSubject = (subject: string) => {
     if (isSubjectValid(subject, subjects)) {
@@ -193,7 +209,27 @@ export default function EditStep2Page() {
     }
   };
 
-  if (editContext?.loading) {
+  if (editContext?.loading || !initialized) {
+    // Show skeleton while loading context or fetching topics
+    if (designMode === 'win95') {
+      return (
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="text-[32px] mb-2">💡</div>
+            <h2 className="text-[14px] font-bold">Edit Topics</h2>
+            <p className="text-[11px] text-[var(--win95-button-shadow)]">Loading topics...</p>
+          </div>
+          <div className="win95-field p-2">
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-8 win95-sunken animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         {/* Header Skeleton */}
@@ -204,7 +240,7 @@ export default function EditStep2Page() {
         </div>
 
         {/* Two Column Grid Skeleton */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
           {/* Your Topics Card Skeleton */}
           <Card className="border-0 shadow-sm">
             <CardHeader>
@@ -223,15 +259,11 @@ export default function EditStep2Page() {
                 <Skeleton className="h-10 w-10 rounded-md" />
               </div>
               <div className="space-y-2">
-                {[...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-3 rounded-xl"
-                    style={{ opacity: 1 - i * 0.2 }}
-                  >
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl border">
                     <div className="flex items-center gap-3">
                       <Skeleton className="h-6 w-6 rounded-full" />
-                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-32 sm:w-48" />
                     </div>
                     <Skeleton className="h-8 w-8 rounded" />
                   </div>
@@ -264,7 +296,10 @@ export default function EditStep2Page() {
         {/* Footer Skeleton */}
         <div className="flex items-center justify-between pt-4">
           <Skeleton className="h-10 w-24 rounded-md" />
-          <Skeleton className="h-11 w-36 rounded-md" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-11 w-32 rounded-md" />
+            <Skeleton className="h-11 w-36 rounded-md" />
+          </div>
         </div>
       </div>
     );
