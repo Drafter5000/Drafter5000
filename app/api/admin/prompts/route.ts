@@ -1,21 +1,19 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/admin-auth';
 import {
-  getPromptConfig,
-  savePromptConfig,
-  resetPromptConfig,
-  validatePromptConfig,
-  generatePreview,
-  DEFAULT_PROMPT_CONFIG,
+  getAIConfig,
+  saveAIConfig,
+  resetAIConfig,
+  DEFAULT_AI_CONFIG,
   SUPPORTED_VARIABLES,
   VARIABLE_DESCRIPTIONS,
   SAMPLE_VARIABLES,
-  type PromptConfigFull,
+  type AIConfig,
 } from '@/lib/services/prompt-config';
 
 /**
  * GET /api/admin/prompts
- * Retrieves current prompt configuration
+ * Retrieves current AI configuration
  */
 export async function GET() {
   try {
@@ -24,25 +22,25 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const config = await getPromptConfig();
+    const config = await getAIConfig();
 
     return NextResponse.json({
       config,
-      defaults: DEFAULT_PROMPT_CONFIG,
+      defaults: DEFAULT_AI_CONFIG,
       variables: SUPPORTED_VARIABLES,
       variableDescriptions: VARIABLE_DESCRIPTIONS,
       sampleVariables: SAMPLE_VARIABLES,
     });
   } catch (error: unknown) {
-    console.error('Error fetching prompt config:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch prompt configuration';
+    console.error('Error fetching AI config:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch AI configuration';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 /**
  * PUT /api/admin/prompts
- * Updates prompt configuration
+ * Updates AI configuration
  */
 export async function PUT(request: NextRequest) {
   try {
@@ -51,32 +49,38 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let body: PromptConfigFull;
+    let body: AIConfig;
     try {
       body = await request.json();
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    // Validate the prompt configuration
-    const validation = validatePromptConfig(body);
-    if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+    // Validate required fields
+    if (!body.provider) {
+      return NextResponse.json({ error: 'Provider is required' }, { status: 400 });
     }
 
-    await savePromptConfig(body);
+    if (!body.apiConfig || typeof body.apiConfig !== 'object') {
+      return NextResponse.json(
+        { error: 'API config is required and must be an object' },
+        { status: 400 }
+      );
+    }
+
+    await saveAIConfig(body);
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error('Error saving prompt config:', error);
-    const message = error instanceof Error ? error.message : 'Failed to save prompt configuration';
+    console.error('Error saving AI config:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save AI configuration';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 /**
  * POST /api/admin/prompts
- * Resets prompts to default values or generates preview
+ * Resets configuration to defaults
  */
 export async function POST(request: NextRequest) {
   try {
@@ -85,34 +89,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let body: { action: string; config?: PromptConfigFull };
+    let body: { action: string };
     try {
       body = await request.json();
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { action, config } = body;
+    const { action } = body;
 
     if (action === 'reset') {
-      await resetPromptConfig();
+      await resetAIConfig();
       return NextResponse.json({
         success: true,
-        config: DEFAULT_PROMPT_CONFIG,
+        config: DEFAULT_AI_CONFIG,
       });
-    }
-
-    if (action === 'preview') {
-      if (!config) {
-        return NextResponse.json({ error: 'Config is required for preview' }, { status: 400 });
-      }
-      const preview = generatePreview(config);
-      return NextResponse.json({ preview });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error: unknown) {
-    console.error('Error processing prompt action:', error);
+    console.error('Error processing action:', error);
     const message = error instanceof Error ? error.message : 'Failed to process action';
     return NextResponse.json({ error: message }, { status: 500 });
   }

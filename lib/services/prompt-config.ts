@@ -9,9 +9,9 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 // Types and Interfaces
 // ============================================================================
 
-export interface PromptConfig {
-  systemPrompt: string;
-  userPrompt: string;
+export interface AIConfig {
+  provider: string;
+  apiConfig: Record<string, unknown>;
 }
 
 export interface PromptVariables {
@@ -19,7 +19,6 @@ export interface PromptVariables {
   existing_topics: string;
   chosen_topics: string;
   generated_topics_history: string;
-  count: number;
   style_samples: string;
 }
 
@@ -33,7 +32,6 @@ export const SUPPORTED_VARIABLES = [
   'existing_topics',
   'chosen_topics',
   'generated_topics_history',
-  'count',
   'style_samples',
 ] as const;
 
@@ -41,14 +39,16 @@ export type SupportedVariable = (typeof SUPPORTED_VARIABLES)[number];
 
 // Database keys for app_config table
 export const PROMPT_CONFIG_KEYS = {
-  SYSTEM_PROMPT: 'ai_system_prompt',
-  USER_PROMPT: 'ai_user_prompt',
-  SYSTEM_SUFFIX: 'ai_system_suffix',
-  USER_SUFFIX: 'ai_user_suffix',
+  AI_CONFIG: 'ai_config',
 } as const;
 
-// Default prompts (used when no custom prompts exist)
-export const DEFAULT_SYSTEM_PROMPT = `You're a LinkedIn topic drafter. Your job is to act as a {{job_title}}, look at the topic ideas already drafted and generate {{count}} more like it that are different enough to be novel.
+// Default OpenAI configuration
+export const DEFAULT_OPENAI_CONFIG = {
+  model: 'gpt-4o-mini',
+  messages: [
+    {
+      role: 'system',
+      content: `You're a LinkedIn topic drafter. Your job is to act as a {{job_title}}, look at the topic ideas already drafted and generate 10 more like it that are different enough to be novel.
 
 Each topic should be:
 - Specific and actionable
@@ -56,29 +56,63 @@ Each topic should be:
 - Different from the existing topics but in a similar professional domain
 - Formatted like: "Why [Problem/Observation]—And [Solution/Insight]"
 
-Return ONLY a JSON array of topic strings, nothing else.`;
+Return ONLY a JSON array of topic strings, nothing else.
 
-export const DEFAULT_USER_PROMPT = `Here are the existing topic ideas:
+Core requirement: Always generate 10 unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "{{job_title}}". Output must be a valid JSON array of strings.`,
+    },
+    {
+      role: 'user',
+      content: `Here are the existing topic ideas:
 {{existing_topics}}
 
-Generate {{count}} new topic ideas that are different but related to these themes.
+Generate 10 new topic ideas that are different but related to these themes.
 
-Return only a JSON array of {{count}} topic strings.`;
+Return only a JSON array of 10 topic strings.
 
-export const DEFAULT_SYSTEM_SUFFIX = `Core requirement: Always generate {{count}} unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "{{job_title}}". Output must be a valid JSON array of strings.`;
+IMPORTANT: You MUST generate exactly 10 topic suggestions as a JSON array. The job title is "{{job_title}}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`,
+    },
+  ],
+  temperature: 0.8,
+  max_tokens: 2000,
+  top_p: 1,
+  frequency_penalty: 0,
+  presence_penalty: 0,
+};
 
-export const DEFAULT_USER_SUFFIX = `IMPORTANT: You MUST generate exactly {{count}} topic suggestions as a JSON array. The job title is "{{job_title}}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`;
+// Default Anthropic configuration
+export const DEFAULT_ANTHROPIC_CONFIG = {
+  model: 'claude-3-5-sonnet-20241022',
+  system: `You're a LinkedIn topic drafter. Your job is to act as a {{job_title}}, look at the topic ideas already drafted and generate 10 more like it that are different enough to be novel.
 
-export interface PromptConfigFull extends PromptConfig {
-  systemSuffix: string;
-  userSuffix: string;
-}
+Each topic should be:
+- Specific and actionable
+- Written as a compelling LinkedIn post title
+- Different from the existing topics but in a similar professional domain
+- Formatted like: "Why [Problem/Observation]—And [Solution/Insight]"
 
-export const DEFAULT_PROMPT_CONFIG: PromptConfigFull = {
-  systemPrompt: DEFAULT_SYSTEM_PROMPT,
-  userPrompt: DEFAULT_USER_PROMPT,
-  systemSuffix: DEFAULT_SYSTEM_SUFFIX,
-  userSuffix: DEFAULT_USER_SUFFIX,
+Return ONLY a JSON array of topic strings, nothing else.
+
+Core requirement: Always generate 10 unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "{{job_title}}". Output must be a valid JSON array of strings.`,
+  messages: [
+    {
+      role: 'user',
+      content: `Here are the existing topic ideas:
+{{existing_topics}}
+
+Generate 10 new topic ideas that are different but related to these themes.
+
+Return only a JSON array of 10 topic strings.
+
+IMPORTANT: You MUST generate exactly 10 topic suggestions as a JSON array. The job title is "{{job_title}}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`,
+    },
+  ],
+  max_tokens: 2000,
+  temperature: 0.8,
+};
+
+export const DEFAULT_AI_CONFIG: AIConfig = {
+  provider: 'openai',
+  apiConfig: DEFAULT_OPENAI_CONFIG,
 };
 
 // Sample data for preview functionality
@@ -90,7 +124,6 @@ export const SAMPLE_VARIABLES: PromptVariables = {
     '- Why Most Product Roadmaps Fail—And How to Fix Yours\n- The Hidden Cost of Feature Creep—And What Smart PMs Do Instead',
   generated_topics_history:
     '- Why Most Product Roadmaps Fail—And How to Fix Yours\n- The Hidden Cost of Feature Creep—And What Smart PMs Do Instead\n- How to Say No to Stakeholders Without Burning Bridges\n- The 3 Metrics Every PM Should Track Daily',
-  count: 10,
   style_samples: 'Professional, insightful, actionable content style',
 };
 
@@ -102,7 +135,6 @@ export const VARIABLE_DESCRIPTIONS: Record<SupportedVariable, string> = {
   chosen_topics: 'Topics the user has added to their list (left side in step 2) - topics they love',
   generated_topics_history:
     'All topics previously generated by AI during the session (includes added and ignored)',
-  count: 'Number of topic suggestions to generate',
   style_samples: "User's writing style samples from step 1",
 };
 
@@ -111,18 +143,15 @@ export const VARIABLE_DESCRIPTIONS: Record<SupportedVariable, string> = {
 // ============================================================================
 
 /**
- * Substitutes dynamic variables in a prompt template with actual values.
- * Supported variables are replaced; unsupported variables remain unchanged.
+ * Substitutes dynamic variables in a string with actual values.
  */
 export function substituteVariables(template: string, variables: Partial<PromptVariables>): string {
   let result = template;
 
-  // Replace each supported variable if it exists in the variables object
   for (const varName of SUPPORTED_VARIABLES) {
     const placeholder = `{{${varName}}}`;
     if (varName in variables) {
       const value = variables[varName as keyof PromptVariables];
-      // Convert value to string (handles numbers like count)
       const stringValue = value !== undefined && value !== null ? String(value) : '';
       result = result.split(placeholder).join(stringValue);
     }
@@ -131,46 +160,30 @@ export function substituteVariables(template: string, variables: Partial<PromptV
   return result;
 }
 
-// ============================================================================
-// Validation
-// ============================================================================
-
 /**
- * Validates a prompt string.
- * Returns validation result with error message if invalid.
+ * Recursively substitutes variables in an object (for JSON config)
  */
-export function validatePrompt(prompt: string): ValidationResult {
-  if (!prompt || prompt.trim().length === 0) {
-    return {
-      valid: false,
-      error: 'Prompt cannot be empty',
-    };
+export function substituteVariablesInObject(
+  obj: unknown,
+  variables: Partial<PromptVariables>
+): unknown {
+  if (typeof obj === 'string') {
+    return substituteVariables(obj, variables);
   }
 
-  return { valid: true };
-}
-
-/**
- * Validates the entire prompt configuration.
- */
-export function validatePromptConfig(config: PromptConfig): ValidationResult {
-  const systemValidation = validatePrompt(config.systemPrompt);
-  if (!systemValidation.valid) {
-    return {
-      valid: false,
-      error: `System prompt: ${systemValidation.error}`,
-    };
+  if (Array.isArray(obj)) {
+    return obj.map(item => substituteVariablesInObject(item, variables));
   }
 
-  const userValidation = validatePrompt(config.userPrompt);
-  if (!userValidation.valid) {
-    return {
-      valid: false,
-      error: `User prompt: ${userValidation.error}`,
-    };
+  if (obj !== null && typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = substituteVariablesInObject(value, variables);
+    }
+    return result;
   }
 
-  return { valid: true };
+  return obj;
 }
 
 // ============================================================================
@@ -178,130 +191,112 @@ export function validatePromptConfig(config: PromptConfig): ValidationResult {
 // ============================================================================
 
 /**
- * Retrieves prompt configuration from the database.
- * Returns default prompts if no custom prompts exist.
+ * Retrieves AI configuration from the database.
+ * Returns default config if no custom config exists.
  */
-export async function getPromptConfig(): Promise<PromptConfigFull> {
+export async function getAIConfig(): Promise<AIConfig> {
   const supabase = getSupabaseAdmin();
 
-  const { data: configs } = await supabase
+  const { data } = await supabase
     .from('app_config')
-    .select('key, value')
-    .in('key', [
-      PROMPT_CONFIG_KEYS.SYSTEM_PROMPT,
-      PROMPT_CONFIG_KEYS.USER_PROMPT,
-      PROMPT_CONFIG_KEYS.SYSTEM_SUFFIX,
-      PROMPT_CONFIG_KEYS.USER_SUFFIX,
-    ]);
+    .select('value')
+    .eq('key', PROMPT_CONFIG_KEYS.AI_CONFIG)
+    .single();
 
-  const config: PromptConfigFull = { ...DEFAULT_PROMPT_CONFIG };
-
-  if (configs) {
-    for (const item of configs) {
-      if (item.key === PROMPT_CONFIG_KEYS.SYSTEM_PROMPT && item.value) {
-        config.systemPrompt = item.value;
-      } else if (item.key === PROMPT_CONFIG_KEYS.USER_PROMPT && item.value) {
-        config.userPrompt = item.value;
-      } else if (item.key === PROMPT_CONFIG_KEYS.SYSTEM_SUFFIX && item.value) {
-        config.systemSuffix = item.value;
-      } else if (item.key === PROMPT_CONFIG_KEYS.USER_SUFFIX && item.value) {
-        config.userSuffix = item.value;
-      }
+  if (data?.value) {
+    try {
+      return JSON.parse(data.value);
+    } catch {
+      return DEFAULT_AI_CONFIG;
     }
   }
 
-  return config;
+  return DEFAULT_AI_CONFIG;
 }
 
 /**
- * Saves prompt configuration to the database.
- * Validates prompts before saving.
+ * Saves AI configuration to the database.
  */
-export async function savePromptConfig(config: PromptConfigFull): Promise<void> {
-  const validation = validatePromptConfig(config);
-  if (!validation.valid) {
-    throw new Error(validation.error);
-  }
-
+export async function saveAIConfig(config: AIConfig): Promise<void> {
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
 
-  // Upsert system prompt
-  const { error: systemError } = await supabase.from('app_config').upsert(
+  const { error } = await supabase.from('app_config').upsert(
     {
-      key: PROMPT_CONFIG_KEYS.SYSTEM_PROMPT,
-      value: config.systemPrompt,
-      description: 'AI system prompt for topic generation',
+      key: PROMPT_CONFIG_KEYS.AI_CONFIG,
+      value: JSON.stringify(config),
+      description: 'AI configuration for topic generation (provider and API config)',
       updated_at: now,
     },
     { onConflict: 'key' }
   );
 
-  if (systemError) {
-    throw new Error('Failed to save system prompt');
-  }
-
-  // Upsert user prompt
-  const { error: userError } = await supabase.from('app_config').upsert(
-    {
-      key: PROMPT_CONFIG_KEYS.USER_PROMPT,
-      value: config.userPrompt,
-      description: 'AI user prompt for topic generation',
-      updated_at: now,
-    },
-    { onConflict: 'key' }
-  );
-
-  if (userError) {
-    throw new Error('Failed to save user prompt');
-  }
-
-  // Upsert system suffix
-  const { error: systemSuffixError } = await supabase.from('app_config').upsert(
-    {
-      key: PROMPT_CONFIG_KEYS.SYSTEM_SUFFIX,
-      value: config.systemSuffix,
-      description: 'AI system prompt suffix (appended to system prompt)',
-      updated_at: now,
-    },
-    { onConflict: 'key' }
-  );
-
-  if (systemSuffixError) {
-    throw new Error('Failed to save system suffix');
-  }
-
-  // Upsert user suffix
-  const { error: userSuffixError } = await supabase.from('app_config').upsert(
-    {
-      key: PROMPT_CONFIG_KEYS.USER_SUFFIX,
-      value: config.userSuffix,
-      description: 'AI user prompt suffix (appended to user prompt)',
-      updated_at: now,
-    },
-    { onConflict: 'key' }
-  );
-
-  if (userSuffixError) {
-    throw new Error('Failed to save user suffix');
+  if (error) {
+    throw new Error('Failed to save AI configuration');
   }
 }
 
 /**
- * Resets prompt configuration to default values.
+ * Resets AI configuration to default values.
  */
-export async function resetPromptConfig(): Promise<void> {
-  await savePromptConfig(DEFAULT_PROMPT_CONFIG);
+export async function resetAIConfig(): Promise<void> {
+  await saveAIConfig(DEFAULT_AI_CONFIG);
+}
+
+// ============================================================================
+// Legacy Support - Keep old functions for backward compatibility
+// ============================================================================
+
+export interface PromptConfig {
+  systemPrompt: string;
+  userPrompt: string;
+}
+
+export interface PromptConfigFull extends PromptConfig {
+  systemSuffix: string;
+  userSuffix: string;
 }
 
 /**
- * Generates a preview of prompts with sample data substituted.
+ * Legacy function - converts new AI config to old format for backward compatibility
  */
-export function generatePreview(config: PromptConfigFull): PromptConfigFull {
+export async function getPromptConfig(): Promise<PromptConfigFull> {
+  const aiConfig = await getAIConfig();
+
+  // Extract prompts from the API config based on provider
+  if (aiConfig.provider === 'openai') {
+    const messages =
+      (aiConfig.apiConfig.messages as Array<{ role: string; content: string }>) || [];
+    const systemMsg = messages.find(m => m.role === 'system');
+    const userMsg = messages.find(m => m.role === 'user');
+
+    return {
+      systemPrompt: systemMsg?.content || '',
+      userPrompt: userMsg?.content || '',
+      systemSuffix: '',
+      userSuffix: '',
+    };
+  }
+
+  if (aiConfig.provider === 'anthropic') {
+    const system = (aiConfig.apiConfig.system as string) || '';
+    const messages =
+      (aiConfig.apiConfig.messages as Array<{ role: string; content: string }>) || [];
+    const userMsg = messages.find(m => m.role === 'user');
+
+    return {
+      systemPrompt: system,
+      userPrompt: userMsg?.content || '',
+      systemSuffix: '',
+      userSuffix: '',
+    };
+  }
+
+  // Default fallback
   return {
-    systemPrompt: substituteVariables(config.systemPrompt, SAMPLE_VARIABLES),
-    userPrompt: substituteVariables(config.userPrompt, SAMPLE_VARIABLES),
-    systemSuffix: substituteVariables(config.systemSuffix, SAMPLE_VARIABLES),
-    userSuffix: substituteVariables(config.userSuffix, SAMPLE_VARIABLES),
+    systemPrompt: '',
+    userPrompt: '',
+    systemSuffix: '',
+    userSuffix: '',
   };
 }
