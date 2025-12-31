@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,19 +17,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import {
-  Loader2,
-  Save,
-  RotateCcw,
-  Sparkles,
-  Check,
-  Copy,
-  Code,
-  Key,
-  Globe,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Loader2, Save, RotateCcw, Sparkles, Check, Copy, Code } from 'lucide-react';
 
 // Types
 interface AIConfig {
@@ -150,8 +137,6 @@ export default function AdminPromptsPage() {
     JSON.stringify(DEFAULT_OPENAI_CONFIG, null, 2)
   );
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [showApiKey, setShowApiKey] = useState(false);
-
   // Copy state
   const [copied, setCopied] = useState(false);
 
@@ -268,24 +253,6 @@ export default function AdminPromptsPage() {
     setTimeout(() => setMessage(null), 2000);
   };
 
-  // Mask API key in display
-  const getMaskedConfig = () => {
-    if (showApiKey) return jsonConfig;
-    try {
-      const config = JSON.parse(jsonConfig);
-      if (config.apiKey) {
-        const masked = {
-          ...config,
-          apiKey: config.apiKey.slice(0, 8) + '...' + config.apiKey.slice(-4),
-        };
-        return JSON.stringify(masked, null, 2);
-      }
-      return jsonConfig;
-    } catch {
-      return jsonConfig;
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -371,39 +338,19 @@ export default function AdminPromptsPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="jsonConfig">Full Configuration (JSON)</Label>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="h-8 gap-1"
-                >
-                  {showApiKey ? (
-                    <>
-                      <EyeOff className="h-4 w-4" />
-                      Hide Key
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4" />
-                      Show Key
-                    </>
-                  )}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-8 gap-1">
-                  {copied ? (
-                    <>
-                      <Check className="h-4 w-4 text-green-500" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-8 gap-1">
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 text-green-500" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
             </div>
             <Textarea
               id="jsonConfig"
