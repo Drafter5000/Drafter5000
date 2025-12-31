@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,29 +17,46 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, RotateCcw, Sparkles, Check, Copy, Code } from 'lucide-react';
+import {
+  Loader2,
+  Save,
+  RotateCcw,
+  Sparkles,
+  Check,
+  Copy,
+  Code,
+  Key,
+  Globe,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 
 // Types
 interface AIConfig {
   provider: string;
+  apiEndpoint: string;
+  apiKey?: string;
+  apiKeyHeader?: string;
+  apiKeyPrefix?: string;
+  extraHeaders?: Record<string, string>;
+  responsePath?: string;
   apiConfig: Record<string, unknown>;
 }
 
 // Default API configurations for each provider
 const DEFAULT_OPENAI_CONFIG = {
-  model: 'gpt-4o-mini',
-  messages: [
-    {
-      role: 'system',
-      content: `You're a LinkedIn topic drafter. Your job is to act as a {{job_title}}, look at the topic ideas already drafted and generate 10 more like it that are different enough to be novel.
+  provider: 'openai',
+  apiEndpoint: 'https://api.openai.com/v1/chat/completions',
+  apiKeyHeader: 'Authorization',
+  apiKeyPrefix: 'Bearer ',
+  responsePath: 'choices[0].message.content',
+  apiConfig: {
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `You're a LinkedIn topic drafter. Your job is to act as a {{job_title}}, look at the topic ideas already drafted and generate 10 more like it that are different enough to be novel.
 
 Each topic should be:
 - Specific and actionable
@@ -49,10 +67,10 @@ Each topic should be:
 Return ONLY a JSON array of topic strings, nothing else.
 
 Core requirement: Always generate 10 unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "{{job_title}}". Output must be a valid JSON array of strings.`,
-    },
-    {
-      role: 'user',
-      content: `Here are the existing topic ideas:
+      },
+      {
+        role: 'user',
+        content: `Here are the existing topic ideas:
 {{existing_topics}}
 
 Generate 10 new topic ideas that are different but related to these themes.
@@ -60,18 +78,28 @@ Generate 10 new topic ideas that are different but related to these themes.
 Return only a JSON array of 10 topic strings.
 
 IMPORTANT: You MUST generate exactly 10 topic suggestions as a JSON array. The job title is "{{job_title}}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`,
-    },
-  ],
-  temperature: 0.8,
-  max_tokens: 2000,
-  top_p: 1,
-  frequency_penalty: 0,
-  presence_penalty: 0,
+      },
+    ],
+    temperature: 0.8,
+    max_tokens: 2000,
+    top_p: 1,
+    frequency_penalty: 0,
+    presence_penalty: 0,
+  },
 };
 
 const DEFAULT_ANTHROPIC_CONFIG = {
-  model: 'claude-3-5-sonnet-20241022',
-  system: `You're a LinkedIn topic drafter. Your job is to act as a {{job_title}}, look at the topic ideas already drafted and generate 10 more like it that are different enough to be novel.
+  provider: 'anthropic',
+  apiEndpoint: 'https://api.anthropic.com/v1/messages',
+  apiKeyHeader: 'x-api-key',
+  apiKeyPrefix: '',
+  extraHeaders: {
+    'anthropic-version': '2023-06-01',
+  },
+  responsePath: 'content[0].text',
+  apiConfig: {
+    model: 'claude-3-5-sonnet-20241022',
+    system: `You're a LinkedIn topic drafter. Your job is to act as a {{job_title}}, look at the topic ideas already drafted and generate 10 more like it that are different enough to be novel.
 
 Each topic should be:
 - Specific and actionable
@@ -82,10 +110,10 @@ Each topic should be:
 Return ONLY a JSON array of topic strings, nothing else.
 
 Core requirement: Always generate 10 unique, professional LinkedIn post topic ideas. If no existing topics are provided, create fresh topics relevant to the job title "{{job_title}}". Output must be a valid JSON array of strings.`,
-  messages: [
-    {
-      role: 'user',
-      content: `Here are the existing topic ideas:
+    messages: [
+      {
+        role: 'user',
+        content: `Here are the existing topic ideas:
 {{existing_topics}}
 
 Generate 10 new topic ideas that are different but related to these themes.
@@ -93,16 +121,12 @@ Generate 10 new topic ideas that are different but related to these themes.
 Return only a JSON array of 10 topic strings.
 
 IMPORTANT: You MUST generate exactly 10 topic suggestions as a JSON array. The job title is "{{job_title}}" - generate relevant professional topics for this role. Return ONLY a valid JSON array of strings like: ["Topic 1", "Topic 2", ...]. No markdown, no explanation, no code blocks, just the raw JSON array.`,
-    },
-  ],
-  max_tokens: 2000,
-  temperature: 0.8,
+      },
+    ],
+    max_tokens: 2000,
+    temperature: 0.8,
+  },
 };
-
-const PROVIDERS = [
-  { id: 'openai', name: 'OpenAI', defaultConfig: DEFAULT_OPENAI_CONFIG },
-  { id: 'anthropic', name: 'Anthropic', defaultConfig: DEFAULT_ANTHROPIC_CONFIG },
-];
 
 const VARIABLE_DESCRIPTIONS: Record<string, string> = {
   job_title: "User's job title (e.g., 'Entrepreneur', 'Senior Product Manager')",
@@ -121,12 +145,12 @@ export default function AdminPromptsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Config state
-  const [selectedProvider, setSelectedProvider] = useState<string>('openai');
+  // Config state - single JSON for entire configuration
   const [jsonConfig, setJsonConfig] = useState<string>(
     JSON.stringify(DEFAULT_OPENAI_CONFIG, null, 2)
   );
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Copy state
   const [copied, setCopied] = useState(false);
@@ -137,11 +161,8 @@ export default function AdminPromptsPage() {
       const res = await fetch('/api/admin/prompts');
       if (res.ok) {
         const data = await res.json();
-        if (data.config?.provider) {
-          setSelectedProvider(data.config.provider);
-        }
-        if (data.config?.apiConfig) {
-          setJsonConfig(JSON.stringify(data.config.apiConfig, null, 2));
+        if (data.config) {
+          setJsonConfig(JSON.stringify(data.config, null, 2));
         }
       }
     } catch (error) {
@@ -155,44 +176,60 @@ export default function AdminPromptsPage() {
     fetchConfig();
   }, [fetchConfig]);
 
-  // Handle provider change
-  const handleProviderChange = (provider: string) => {
-    setSelectedProvider(provider);
-    const providerConfig = PROVIDERS.find(p => p.id === provider);
-    if (providerConfig) {
-      setJsonConfig(JSON.stringify(providerConfig.defaultConfig, null, 2));
-      setJsonError(null);
-    }
-  };
-
-  // Validate JSON
-  const validateJson = (json: string): boolean => {
+  // Validate JSON configuration
+  const validateConfig = (json: string): { valid: boolean; error?: string; config?: AIConfig } => {
     try {
-      JSON.parse(json);
-      setJsonError(null);
-      return true;
+      const config = JSON.parse(json);
+
+      // Required fields validation
+      if (!config.provider || typeof config.provider !== 'string') {
+        return { valid: false, error: 'Missing or invalid "provider" field (string required)' };
+      }
+
+      if (!config.apiEndpoint || typeof config.apiEndpoint !== 'string') {
+        return {
+          valid: false,
+          error: 'Missing or invalid "apiEndpoint" field (URL string required)',
+        };
+      }
+
+      if (!config.apiConfig || typeof config.apiConfig !== 'object') {
+        return { valid: false, error: 'Missing or invalid "apiConfig" field (object required)' };
+      }
+
+      // Validate URL format
+      try {
+        new URL(config.apiEndpoint);
+      } catch {
+        return { valid: false, error: 'Invalid "apiEndpoint" URL format' };
+      }
+
+      return { valid: true, config };
     } catch (e) {
-      setJsonError(`Invalid JSON: ${e instanceof Error ? e.message : 'Parse error'}`);
-      return false;
+      return {
+        valid: false,
+        error: `Invalid JSON: ${e instanceof Error ? e.message : 'Parse error'}`,
+      };
     }
   };
 
   // Save config
   const handleSave = async () => {
-    if (!validateJson(jsonConfig)) return;
+    const validation = validateConfig(jsonConfig);
+    if (!validation.valid) {
+      setJsonError(validation.error || 'Invalid configuration');
+      return;
+    }
 
     setSaving(true);
     setMessage(null);
+    setJsonError(null);
 
     try {
-      const apiConfig = JSON.parse(jsonConfig);
       const res = await fetch('/api/admin/prompts', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: selectedProvider,
-          apiConfig,
-        }),
+        body: jsonConfig, // Send the entire config object
       });
 
       if (!res.ok) {
@@ -211,12 +248,9 @@ export default function AdminPromptsPage() {
 
   // Reset to defaults
   const handleReset = () => {
-    const providerConfig = PROVIDERS.find(p => p.id === selectedProvider);
-    if (providerConfig) {
-      setJsonConfig(JSON.stringify(providerConfig.defaultConfig, null, 2));
-      setJsonError(null);
-      setMessage({ type: 'success', text: 'Reset to default configuration' });
-    }
+    setJsonConfig(JSON.stringify(DEFAULT_OPENAI_CONFIG, null, 2));
+    setJsonError(null);
+    setMessage({ type: 'success', text: 'Reset to default OpenAI configuration' });
   };
 
   // Copy to clipboard
@@ -232,6 +266,24 @@ export default function AdminPromptsPage() {
     navigator.clipboard.writeText(placeholder);
     setMessage({ type: 'success', text: `Copied ${placeholder} to clipboard` });
     setTimeout(() => setMessage(null), 2000);
+  };
+
+  // Mask API key in display
+  const getMaskedConfig = () => {
+    if (showApiKey) return jsonConfig;
+    try {
+      const config = JSON.parse(jsonConfig);
+      if (config.apiKey) {
+        const masked = {
+          ...config,
+          apiKey: config.apiKey.slice(0, 8) + '...' + config.apiKey.slice(-4),
+        };
+        return JSON.stringify(masked, null, 2);
+      }
+      return jsonConfig;
+    } catch {
+      return jsonConfig;
+    }
   };
 
   if (loading) {
@@ -303,28 +355,11 @@ export default function AdminPromptsPage() {
             API Configuration
           </CardTitle>
           <CardDescription>
-            Select a provider and configure the full API request JSON. This JSON will be sent
-            directly to the provider&apos;s API.
+            Configure any LLM provider with full JSON configuration. Include API endpoint, headers,
+            API key, and request body.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Provider Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="provider">Provider</Label>
-            <Select value={selectedProvider} onValueChange={handleProviderChange}>
-              <SelectTrigger id="provider" className="w-48">
-                <SelectValue placeholder="Select provider" />
-              </SelectTrigger>
-              <SelectContent>
-                {PROVIDERS.map(provider => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* JSON Error */}
           {jsonError && (
             <div className="p-3 rounded-lg border bg-destructive/10 border-destructive/30 text-destructive text-sm">
@@ -335,20 +370,40 @@ export default function AdminPromptsPage() {
           {/* JSON Editor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="jsonConfig">API Request Body (JSON)</Label>
-              <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-8 gap-1">
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4 text-green-500" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    Copy
-                  </>
-                )}
-              </Button>
+              <Label htmlFor="jsonConfig">Full Configuration (JSON)</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="h-8 gap-1"
+                >
+                  {showApiKey ? (
+                    <>
+                      <EyeOff className="h-4 w-4" />
+                      Hide Key
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      Show Key
+                    </>
+                  )}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-8 gap-1">
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 text-green-500" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
             <Textarea
               id="jsonConfig"
@@ -357,9 +412,9 @@ export default function AdminPromptsPage() {
                 setJsonConfig(e.target.value);
                 setJsonError(null);
               }}
-              rows={25}
+              rows={30}
               className="font-mono text-sm"
-              placeholder="Enter API configuration JSON..."
+              placeholder="Enter full API configuration JSON..."
             />
           </div>
 
@@ -376,8 +431,7 @@ export default function AdminPromptsPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Reset to Default Configuration?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will restore the JSON configuration to the default for{' '}
-                    {PROVIDERS.find(p => p.id === selectedProvider)?.name}.
+                    This will restore the JSON configuration to the default OpenAI configuration.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -395,27 +449,40 @@ export default function AdminPromptsPage() {
 
           {/* Help Text */}
           <div className="text-xs text-muted-foreground space-y-2 pt-4 border-t">
-            <p className="font-medium">Notes:</p>
+            <p className="font-medium">Required Fields:</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>The JSON is sent directly to the selected provider&apos;s API endpoint</li>
               <li>
-                Use <code className="bg-muted px-1 rounded">{'{{variable}}'}</code> placeholders in
-                your prompts - they&apos;ll be replaced at runtime
+                <code className="bg-muted px-1 rounded">provider</code> - Provider name (e.g.,
+                &quot;openai&quot;, &quot;anthropic&quot;, &quot;groq&quot;, &quot;mistral&quot;)
               </li>
               <li>
-                Control the number of suggestions by specifying it directly in your prompts (e.g.,
-                &quot;generate 10 topics&quot;)
+                <code className="bg-muted px-1 rounded">apiEndpoint</code> - Full API URL
               </li>
               <li>
-                For OpenAI: Configure <code className="bg-muted px-1 rounded">model</code>,{' '}
-                <code className="bg-muted px-1 rounded">messages</code>,{' '}
-                <code className="bg-muted px-1 rounded">temperature</code>, etc.
+                <code className="bg-muted px-1 rounded">apiConfig</code> - Request body object
+              </li>
+            </ul>
+            <p className="font-medium mt-3">Optional Fields:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>
+                <code className="bg-muted px-1 rounded">apiKey</code> - API key (or use environment
+                variable)
               </li>
               <li>
-                For Anthropic: Configure <code className="bg-muted px-1 rounded">model</code>,{' '}
-                <code className="bg-muted px-1 rounded">system</code>,{' '}
-                <code className="bg-muted px-1 rounded">messages</code>,{' '}
-                <code className="bg-muted px-1 rounded">max_tokens</code>, etc.
+                <code className="bg-muted px-1 rounded">apiKeyHeader</code> - Header name (default:
+                &quot;Authorization&quot;)
+              </li>
+              <li>
+                <code className="bg-muted px-1 rounded">apiKeyPrefix</code> - Key prefix (default:
+                &quot;Bearer &quot;)
+              </li>
+              <li>
+                <code className="bg-muted px-1 rounded">extraHeaders</code> - Additional headers
+                object
+              </li>
+              <li>
+                <code className="bg-muted px-1 rounded">responsePath</code> - JSON path to extract
+                content (e.g., &quot;choices[0].message.content&quot;)
               </li>
             </ul>
           </div>

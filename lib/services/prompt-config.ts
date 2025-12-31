@@ -1,6 +1,7 @@
 /**
  * Prompt Configuration Service
  * Handles storage, retrieval, and variable substitution for AI prompts
+ * Supports any LLM provider with flexible JSON configuration
  */
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
@@ -9,9 +10,19 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 // Types and Interfaces
 // ============================================================================
 
+/**
+ * Flexible AI Configuration
+ * Supports any LLM with custom endpoint, headers, and request body
+ */
 export interface AIConfig {
-  provider: string;
-  apiConfig: Record<string, unknown>;
+  provider: string; // Provider identifier (e.g., 'openai', 'anthropic', 'groq', 'custom')
+  apiEndpoint: string; // Full API endpoint URL
+  apiKey?: string; // API key (stored in DB, optional - can use env var fallback)
+  apiKeyHeader?: string; // Header name for API key (default: 'Authorization')
+  apiKeyPrefix?: string; // Prefix for API key (default: 'Bearer ')
+  extraHeaders?: Record<string, string>; // Additional headers
+  responsePath?: string; // JSON path to extract content (e.g., 'choices[0].message.content')
+  apiConfig: Record<string, unknown>; // Request body configuration
 }
 
 export interface PromptVariables {
@@ -40,6 +51,12 @@ export type SupportedVariable = (typeof SUPPORTED_VARIABLES)[number];
 // Database keys for app_config table
 export const PROMPT_CONFIG_KEYS = {
   AI_CONFIG: 'ai_config',
+} as const;
+
+// Default API endpoints
+export const DEFAULT_ENDPOINTS = {
+  openai: 'https://api.openai.com/v1/chat/completions',
+  anthropic: 'https://api.anthropic.com/v1/messages',
 } as const;
 
 // Default OpenAI configuration
@@ -112,6 +129,10 @@ IMPORTANT: You MUST generate exactly 10 topic suggestions as a JSON array. The j
 
 export const DEFAULT_AI_CONFIG: AIConfig = {
   provider: 'openai',
+  apiEndpoint: DEFAULT_ENDPOINTS.openai,
+  apiKeyHeader: 'Authorization',
+  apiKeyPrefix: 'Bearer ',
+  responsePath: 'choices[0].message.content',
   apiConfig: DEFAULT_OPENAI_CONFIG,
 };
 

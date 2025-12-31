@@ -57,8 +57,19 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!body.provider) {
-      return NextResponse.json({ error: 'Provider is required' }, { status: 400 });
+    if (!body.provider || typeof body.provider !== 'string') {
+      return NextResponse.json({ error: 'Provider is required (string)' }, { status: 400 });
+    }
+
+    if (!body.apiEndpoint || typeof body.apiEndpoint !== 'string') {
+      return NextResponse.json({ error: 'API endpoint is required (URL string)' }, { status: 400 });
+    }
+
+    // Validate URL format
+    try {
+      new URL(body.apiEndpoint);
+    } catch {
+      return NextResponse.json({ error: 'Invalid API endpoint URL format' }, { status: 400 });
     }
 
     if (!body.apiConfig || typeof body.apiConfig !== 'object') {
